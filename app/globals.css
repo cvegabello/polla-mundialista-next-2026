@@ -1,26 +1,37 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  /* MODO DÍA: Este es su "Celeste Especial" */
+  /* Un degradado sutil que definiremos abajo en el body */
+  --background: #e0f2fe; /* Color base (Sky-100) por si acaso */
+  --foreground: #0f172a;
 }
+
+/* MODO OSCURO */
+.dark {
+  /* OJO: Aquí ponemos TRANSPARENT para que se vean las estrellas de fondo */
+  --background: transparent;
+  --foreground: #ededed;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 body {
-  background: var(--background);
+  /* AQUÍ ESTÁ LA MAGIA DEL FONDO: */
+  /* Si es de día: Degradado Celeste (Cyan a Azulito) */
+  /* Si es de noche: Transparente (para ver estrellas) */
+  background: #3d4e6d;
+
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+}
+
+/* En modo oscuro, quitamos el degradado celeste para que se vea el negro/estrellas */
+.dark body {
+  background: none;
 }

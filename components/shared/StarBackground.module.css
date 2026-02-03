@@ -1,0 +1,45 @@
+/* components/shared/StarBackground.module.css */
+.starsContainer {
+  position: fixed;
+  inset: 0;
+  z-index: -1; /* Se queda atrás de todo */
+  /* AQUÍ ESTÁ EL AZUL PROFUNDO: Un degradado de azul noche a un azul un tris más claro abajo */
+  background: linear-gradient(to bottom, #020617 0%, #0f172a 100%);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.stars1 {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 20px 30px, #eee, rgba(0, 0, 0, 0)),
+    radial-gradient(2px 2px at 40px 70px, #fff, rgba(0, 0, 0, 0)),
+    radial-gradient(2px 2px at 50px 160px, #ddd, rgba(0, 0, 0, 0)),
+    radial-gradient(2px 2px at 90px 40px, #fff, rgba(0, 0, 0, 0)),
+    radial-gradient(2px 2px at 130px 80px, #fff, rgba(0, 0, 0, 0));
+  background-size: 200px 200px;
+  animation: spaceDrift 100s linear infinite;
+  opacity: 0.8; /* Más visibles */
+}
+
+.stars2 {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 100px 150px, #fff, rgba(0, 0, 0, 0)),
+    radial-gradient(2px 2px at 150px 100px, #ddd, rgba(0, 0, 0, 0)),
+    radial-gradient(2px 2px at 120px 20px, #ddd, rgba(0, 0, 0, 0));
+  background-size: 300px 300px;
+  animation: spaceDrift 150s linear infinite reverse;
+  opacity: 0.6;
+}
+
+@keyframes spaceDrift {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-1000px);
+  }
+}
