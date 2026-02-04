@@ -35,3 +35,17 @@ body {
 .dark body {
   background: none;
 }
+
+/* --- AGREGUE ESTO AL FINAL DE globals.css --- */
+
+/* Ocultar flechas (spinners) en inputs numéricos */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Para Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
