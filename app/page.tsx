@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { GroupCard } from "@/components/groups/GroupCard";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { StarBackground } from "@/components/shared/StarBackground";
+import { CloudsBackground } from "@/components/shared/CloudsBackground";
 
 // 1. INICIALIZAMOS SUPABASE (Lado del Servidor)
 // Usamos las mismas variables que ya configuramos en .env.local
@@ -49,21 +51,27 @@ export default async function Home() {
   }));
 
   return (
-    <main className="min-h-screen p-4 md:p-8 transition-colors duration-300 bg-gray-50 dark:bg-slate-950">
-      {/* Título con Gradiente */}
-      <h1 className="text-3xl md:text-5xl font-bold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-red-500 pb-2">
+    // RECORDATORIO: Mantener 'bg-transparent' y 'dark:bg-transparent'
+    // para que se vean los fondos que están detrás.
+    <main className="min-h-screen p-4 md:p-8 transition-colors duration-300 bg-transparent dark:bg-transparent relative">
+      {/* --- FONDOS ANIMADOS --- */}
+      {/* Estrellas (Solo noche) */}
+      <StarBackground />
+      {/* 2. AGREGAR NUBES (Solo día) AQUÍ */}
+      <CloudsBackground />
+      {/* ----------------------- */}
+
+      <h1 className="text-3xl md:text-5xl font-bold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-red-500 pb-2 relative z-10">
         Mi Polla Mundialista 2026
       </h1>
 
-      <div className="flex justify-center mb-8">
+      <div className="flex justify-center mb-8 relative z-10">
         <ThemeToggle />
       </div>
 
-      {/* GRILLA DE TARJETAS (Responsiva) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 max-w-[1600px] mx-auto justify-items-center">
-        {/* Aquí ya no usamos dummyGroups, usamos la data real 'groupsSorted' */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 max-w-[1600px] mx-auto justify-items-center relative z-10">
         {groupsSorted?.map((group) => (
-          // @ts-ignore (Ignoramos error estricto de tipos por ahora para ver el resultado ya)
+          // @ts-ignore
           <GroupCard key={group.id} group={group} />
         ))}
       </div>

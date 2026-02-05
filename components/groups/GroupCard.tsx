@@ -5,7 +5,6 @@ import { MatchRow } from "./MatchRow";
 import { GroupTable } from "./GroupTable";
 
 // --- 1. DEFINIMOS LA FORMA DE LOS DATOS REALES (Supabase) ---
-// (Lo ideal es llevar esto a su archivo types.ts después)
 interface Team {
   name_es: string;
   flag_code: string;
@@ -18,13 +17,13 @@ interface MatchReal {
   city: string;
   home_score?: number | null;
   away_score?: number | null;
-  home_team: Team; // Relación con la tabla teams
-  away_team: Team; // Relación con la tabla teams
+  home_team: Team;
+  away_team: Team;
 }
 
 interface GroupDataReal {
-  id: string; // "A"
-  name: string; // "Grupo A"
+  id: string;
+  name: string;
   matches: MatchReal[];
 }
 
@@ -35,7 +34,7 @@ interface GroupCardProps {
 export const GroupCard = ({ group }: GroupCardProps) => {
   return (
     <div className="relative group w-full max-w-[350px] mx-auto transition-all duration-300">
-      {/* --- GLOW (RESPLANDOR) - SU DISEÑO ORIGINAL --- */}
+      {/* --- GLOW (RESPLANDOR) - SU DISEÑO ORIGINAL (Lo dejo quieto) --- */}
       <div
         className="absolute -inset-1 rounded-2xl blur-md transition duration-500
         bg-gradient-to-r 
@@ -46,13 +45,32 @@ export const GroupCard = ({ group }: GroupCardProps) => {
       "
       ></div>
 
-      {/* TARJETA PRINCIPAL */}
+      {/* TARJETA PRINCIPAL (Aquí aplicamos el Borde Neón Interactivo) */}
       <div
-        className="relative 
-        bg-slate-900/90 border-white/10 text-white
-        dark:bg-gradient-to-br dark:from-blue-50/95 dark:via-white/90 dark:to-blue-100/90 
-        dark:border-white/60 dark:text-slate-800
-        backdrop-blur-xl border rounded-xl h-full flex flex-col justify-between overflow-hidden shadow-sm transition-colors duration-300"
+        className={`
+          relative 
+          bg-slate-900/90 text-white
+          dark:bg-gradient-to-br dark:from-blue-50/95 dark:via-white/90 dark:to-blue-100/90 
+          dark:text-slate-800
+          backdrop-blur-xl rounded-xl h-full flex flex-col justify-between overflow-hidden 
+          
+          /* --- MODIFICACIÓN: BORDE NEÓN --- */
+          /* 1. Base: Borde delgado (border) y color sutil */
+          border border-cyan-500/30 dark:border-cyan-600/20
+          
+          /* 2. Transición suave */
+          transition-all duration-300 ease-out
+
+          /* 3. HOVER: El efecto mágico */
+          /* Color de borde más intenso */
+          hover:border-cyan-400 dark:hover:border-cyan-500
+          
+          /* Truco para "hacerlo más ancho" sin que salte el contenido (Ring) */
+          hover:ring-1 hover:ring-cyan-400 dark:hover:ring-cyan-500
+          
+          /* La luz de neón (Sombra difuminada del mismo color) */
+          hover:shadow-[0_0_15px_rgba(34,211,238,0.5)] 
+        `}
       >
         {/* Barra Neón Superior */}
         <div className="h-1.5 w-full bg-gradient-to-r from-[#00c6ff] to-[#ff4b2b]"></div>
@@ -70,7 +88,6 @@ export const GroupCard = ({ group }: GroupCardProps) => {
 
           {/* Partidos */}
           <div className="space-y-1 mb-4">
-            {/* AQUÍ OCURRE LA MAGIA: Pasamos el 'match' real al MatchRow */}
             {group.matches.map((match) => (
               <MatchRow key={match.id} match={match} editable={true} />
             ))}

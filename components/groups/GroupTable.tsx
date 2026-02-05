@@ -46,19 +46,21 @@ export const GroupTable = () => {
       className="mt-2 
       bg-slate-200/90 border-slate-300
       dark:bg-slate-50/80 dark:border-slate-200/60
-      rounded-lg p-2 text-xs border shadow-sm overflow-hidden transition-all"
+      rounded-lg p-3 text-xs border shadow-sm overflow-hidden transition-all"
     >
       <table className="w-full text-center border-collapse">
         <thead>
-          <tr className="text-slate-500 dark:text-slate-600 font-bold border-b border-slate-300/50 dark:border-slate-300/50 text-[10px] uppercase tracking-tighter">
-            <th className="py-1 w-10">#</th>
-            <th className="text-left pl-1">Equipo</th>
-            <th className="w-6 text-amber-700 dark:text-amber-800 font-extrabold">
+          {/* MAQUILLAJE 1: Títulos azules y letra un poquito más grande (text-xs) */}
+          <tr className="text-cyan-600 dark:text-cyan-500 font-bold border-b border-slate-300/50 dark:border-slate-300/50 text-xs uppercase tracking-tighter">
+            <th className="py-2 w-10">#</th>
+            <th className="text-left pl-2">Equipo</th>
+            {/* MAQUILLAJE 2: PTS Dorado y columnas más anchas (w-8) */}
+            <th className="w-8 text-yellow-600 dark:text-yellow-500 font-extrabold">
               PTS
             </th>
-            <th className="w-5 text-slate-400">GF</th>
-            <th className="w-5 text-slate-400">GC</th>
-            <th className="w-5 text-slate-400">DG</th>
+            <th className="w-8 text-cyan-600/70 dark:text-cyan-500/70">GF</th>
+            <th className="w-8 text-cyan-600/70 dark:text-cyan-500/70">GC</th>
+            <th className="w-8 text-cyan-600/70 dark:text-cyan-500/70">DG</th>
           </tr>
         </thead>
         <tbody className="relative">
@@ -72,15 +74,16 @@ export const GroupTable = () => {
                 border-b border-slate-300/50 dark:border-slate-300/50 last:border-0 transition-all duration-500 ease-in-out
                 ${
                   isTop2
-                    ? "bg-green-100/60 dark:bg-green-100/40"
+                    ? /* MAQUILLAJE 3: Fondo Neon Sutil (Emerald muy transparente en dark mode) */
+                      "bg-emerald-100/60 dark:bg-emerald-500/10"
                     : "hover:bg-white/40 dark:hover:bg-white/20"
                 }
               `}
               >
-                <td className="py-1 px-0.5 relative">
+                <td className="py-1.5 px-0.5 relative">
                   {row.isTied ? (
-                    /* --- CAJA DEL COMBO (Ahora aparece en TODOS) --- */
-                    <div className="relative w-10 h-6 bg-slate-900 border border-slate-600 rounded flex items-center justify-center mx-auto overflow-hidden">
+                    /* --- CAJA DEL COMBO --- */
+                    <div className="relative w-10 h-6 bg-slate-900 border border-slate-600 rounded flex items-center justify-center mx-auto overflow-hidden shadow-sm">
                       <select
                         className="
                           appearance-none cursor-pointer
@@ -95,7 +98,6 @@ export const GroupTable = () => {
                           handlePositionChange(row.team, e.target.value)
                         }
                       >
-                        {/* AHORA MOSTRAMOS LAS 4 OPCIONES PORQUE TODOS ESTÁN EMPATADOS */}
                         <option
                           className="bg-slate-900 text-amber-400"
                           value="1"
@@ -126,33 +128,45 @@ export const GroupTable = () => {
                     </div>
                   ) : (
                     <span
-                      className={`font-bold text-sm ${isTop2 ? "text-green-700 dark:text-green-800" : "text-slate-500"}`}
+                      className={`font-bold text-sm ${
+                        isTop2
+                          ? "text-emerald-700 dark:text-emerald-400"
+                          : "text-slate-500"
+                      }`}
                     >
                       {row.pos}
                     </span>
                   )}
                 </td>
 
+                {/* NOMBRE DEL EQUIPO */}
                 <td
                   className={`
-                  text-left pl-1 font-bold truncate max-w-[80px] text-sm
-                  ${isTop2 ? "text-green-700 dark:text-green-900" : "text-slate-700 dark:text-slate-800"}
+                  text-left pl-2 font-bold truncate max-w-[90px] text-sm
+                  ${
+                    isTop2
+                      ? /* MAQUILLAJE 4: Texto Neon (Verde brillante en dark mode) */
+                        "text-emerald-800 dark:text-emerald-400"
+                      : "text-slate-700 dark:text-slate-800"
+                  }
                 `}
                 >
                   {row.team}
                 </td>
 
-                <td className="font-extrabold text-amber-600 dark:text-amber-700 text-sm">
+                {/* MAQUILLAJE 5: PTS Grande y Dorado */}
+                <td className="font-extrabold text-yellow-600 dark:text-yellow-500 text-base">
                   {row.pts}
                 </td>
 
-                <td className="text-slate-600 dark:text-slate-700 font-medium">
+                {/* NÚMEROS MÁS GRANDECITOS (text-sm) */}
+                <td className="text-slate-600 dark:text-slate-700 font-medium text-sm">
                   {row.gf}
                 </td>
-                <td className="text-slate-600 dark:text-slate-700 font-medium">
+                <td className="text-slate-600 dark:text-slate-700 font-medium text-sm">
                   {row.gc}
                 </td>
-                <td className="text-slate-500 dark:text-slate-600">
+                <td className="text-slate-500 dark:text-slate-600 text-sm">
                   {row.gf - row.gc}
                 </td>
               </tr>

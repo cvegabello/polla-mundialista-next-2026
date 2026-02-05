@@ -1,0 +1,71 @@
+/* components/shared/CloudsBackground.module.css */
+
+.skyContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+
+  /* Degradado azul (Esto es lo que usted ve "azul clarito") */
+  background: radial-gradient(
+    circle,
+    rgba(237, 236, 230, 1) 0%,
+    rgba(111, 144, 189, 1) 36%
+  );
+
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+
+  /* ❌ BORRAMOS OPACITY Y TRANSITION DE AQUÍ. 
+     Se controlarán desde el archivo TSX para que el iPhone haga caso. */
+}
+
+/* ❌ BORRE EL BLOQUE :global(.dark) ENTERO */
+
+.cloudLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200%;
+  height: 100%;
+  background-image:
+    radial-gradient(
+      circle at 20% 60%,
+      rgba(255, 255, 255, 0.7) 0%,
+      transparent 20%
+    ),
+    radial-gradient(
+      circle at 60% 40%,
+      rgba(255, 255, 255, 0.5) 0%,
+      transparent 80%
+    ),
+    radial-gradient(
+      circle at 90% 70%,
+      rgba(255, 255, 255, 0.6) 0%,
+      transparent 10%
+    );
+  filter: blur(20px);
+  mix-blend-mode: overlay;
+}
+
+.clouds1 {
+  opacity: 0.8;
+  animation: floatClouds 80s linear infinite;
+}
+
+.clouds2 {
+  opacity: 0.5;
+  background-position: -150px 100px;
+  animation: floatClouds 120s linear infinite reverse;
+}
+
+@keyframes floatClouds {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}

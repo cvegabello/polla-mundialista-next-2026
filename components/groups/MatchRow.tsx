@@ -177,10 +177,10 @@ export const MatchRow = ({ match, editable = false }: MatchRowProps) => {
         text-gray-400 dark:text-slate-600"
       >
         <div className="flex items-center gap-2">
-          <span className="text-cyan-400 dark:text-blue-700 font-bold">
+          <span className="text-cyan-400 dark:text-blue-700 font-bold suppressHydrationWarning={true}">
             📅 {dayStr}
           </span>
-          <span>⏰ {timeStr}</span>
+          <span suppressHydrationWarning={true}>⏰ {timeStr}</span>
         </div>
         <div className="truncate max-w-[150px] text-right font-semibold">
           📍 {match.city}

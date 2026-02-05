@@ -1,13 +1,20 @@
 /* components/shared/StarBackground.module.css */
+
 .starsContainer {
   position: fixed;
   inset: 0;
-  z-index: -1; /* Se queda atrás de todo */
-  /* AQUÍ ESTÁ EL AZUL PROFUNDO: Un degradado de azul noche a un azul un tris más claro abajo */
+  z-index: -1;
+
+  /* Fondo Oscuro */
   background: linear-gradient(to bottom, #020617 0%, #0f172a 100%);
+
   overflow: hidden;
   pointer-events: none;
+
+  /* ❌ BORRAMOS OPACITY Y TRANSITION DE AQUÍ */
 }
+
+/* ❌ BORRE EL BLOQUE :global(.dark) ENTERO */
 
 .stars1 {
   position: absolute;
@@ -20,7 +27,7 @@
     radial-gradient(2px 2px at 130px 80px, #fff, rgba(0, 0, 0, 0));
   background-size: 200px 200px;
   animation: spaceDrift 100s linear infinite;
-  opacity: 0.8; /* Más visibles */
+  opacity: 0.8;
 }
 
 .stars2 {
