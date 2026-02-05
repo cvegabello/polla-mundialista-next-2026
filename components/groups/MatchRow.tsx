@@ -21,10 +21,19 @@ interface MatchData {
 interface MatchRowProps {
   match: MatchData;
   editable?: boolean;
+  // NUEVO: Función para avisar al padre que cambió el marcador
+  onScoreChange?: (
+    matchId: number,
+    type: "home" | "away",
+    value: string,
+  ) => void;
 }
 
-export const MatchRow = ({ match, editable = false }: MatchRowProps) => {
-  // --- TRUCO BANDERAS ---
+export const MatchRow = ({
+  match,
+  editable = false,
+  onScoreChange,
+}: MatchRowProps) => {
   const getFlagUrl = (code3: string) => {
     const map: Record<string, string> = {
       col: "co",
@@ -70,13 +79,11 @@ export const MatchRow = ({ match, editable = false }: MatchRowProps) => {
       uzb: "uz",
       pan: "pa",
     };
-
     if (code3.includes("_rep_")) return null;
     const code2 = map[code3.toLowerCase()] || code3.slice(0, 2).toLowerCase();
     return `https://flagcdn.com/w80/${code2}.png`;
   };
 
-  // --- FECHA Y HORA ---
   const formatMatchInfo = (dateString: string) => {
     if (!dateString) return { date: "", time: "" };
     const date = new Date(dateString);
@@ -94,46 +101,38 @@ export const MatchRow = ({ match, editable = false }: MatchRowProps) => {
 
   const { dayStr, timeStr } = formatMatchInfo(match.match_date);
 
-  // --- CONTROL DE INPUT (Máximo 2 dígitos) ---
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // --- CONTROL DE INPUT ---
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: "home" | "away",
+  ) => {
     const val = e.target.value;
-    if (val.length > 2) {
-      e.target.value = val.slice(0, 2);
+    // Validar máx 2 dígitos
+    if (val.length > 2) return;
+
+    // Avisar al padre (GroupCard) que hubo un gol
+    if (onScoreChange) {
+      onScoreChange(match.id, type, val);
     }
   };
 
-  // --- MAGIA DE NAVEGACIÓN (ENTER Y TAB + SELECCIÓN) ---
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Si oprime ENTER o TAB (sin Shift)
     if (e.key === "Enter" || (e.key === "Tab" && !e.shiftKey)) {
       e.preventDefault();
-
-      // 1. Buscamos TODOS los inputs numéricos
       const allInputs = Array.from(
         document.querySelectorAll('input[type="number"]'),
       );
-
-      // 2. Encontramos dónde estamos
       const currentIndex = allInputs.indexOf(e.currentTarget);
-
-      // 3. Saltamos al siguiente
       if (currentIndex !== -1 && currentIndex < allInputs.length - 1) {
         const nextInput = allInputs[currentIndex + 1] as HTMLInputElement;
-
-        // A) Le damos foco (cursor ahí)
         nextInput.focus();
-
-        // B) ¡NUEVO! Seleccionamos todo el texto (Highlight)
-        // Esto permite sobrescribir inmediatamente sin borrar manual
         nextInput.select();
       } else {
-        // Si es el último, quitamos foco
         e.currentTarget.blur();
       }
     }
   };
 
-  // --- COMPONENTE BANDERITA ---
   const TeamFlag = ({ code, name }: { code: string; name: string }) => {
     const [imgError, setImgError] = useState(false);
     const flagUrl = getFlagUrl(code);
@@ -168,35 +167,28 @@ export const MatchRow = ({ match, editable = false }: MatchRowProps) => {
 
   return (
     <div className="flex flex-col bg-white/5 dark:bg-slate-100 border border-white/10 dark:border-slate-200 rounded-lg mb-3 overflow-hidden shadow-sm hover:border-white/20 transition-all">
-      {/* 1. TECHITO */}
-      <div
-        className="flex justify-between items-center px-3 py-1.5 
-        bg-black/40 dark:bg-slate-300 
-        border-b border-white/5 dark:border-slate-300/50
-        text-[10px] uppercase tracking-wider font-medium 
-        text-gray-400 dark:text-slate-600"
-      >
+      <div className="flex justify-between items-center px-3 py-1.5 bg-black/40 dark:bg-slate-300 border-b border-white/5 dark:border-slate-300/50 text-[10px] uppercase tracking-wider font-medium text-gray-400 dark:text-slate-600">
         <div className="flex items-center gap-2">
-          <span className="text-cyan-400 dark:text-blue-700 font-bold suppressHydrationWarning={true}">
-            📅 {dayStr}
+          <span
+            className="text-cyan-400 dark:text-blue-700 font-bold"
+            suppressHydrationWarning
+          >
+            {dayStr}
           </span>
-          <span suppressHydrationWarning={true}>⏰ {timeStr}</span>
+          <span suppressHydrationWarning>⏰ {timeStr}</span>
         </div>
         <div className="truncate max-w-[150px] text-right font-semibold">
           📍 {match.city}
         </div>
       </div>
 
-      {/* 2. EL PARTIDO */}
       <div className="flex items-center justify-between p-2 relative h-16">
-        {/* --- NOMBRE LOCAL --- */}
         <div className="flex-1 flex items-center justify-end pr-3">
           <span className="text-sm font-medium text-gray-300 dark:text-slate-700 text-right leading-tight block break-words">
             {match.home_team.name_es}
           </span>
         </div>
 
-        {/* --- CENTRO --- */}
         <div className="flex items-end justify-center gap-2">
           {/* LOCAL */}
           <div className="flex flex-col items-center gap-1">
@@ -210,16 +202,16 @@ export const MatchRow = ({ match, editable = false }: MatchRowProps) => {
               <input
                 type="number"
                 placeholder="-"
-                onInput={handleInputChange}
+                // Conectamos el valor al estado del match
+                value={
+                  match.home_score === null || match.home_score === undefined
+                    ? ""
+                    : match.home_score
+                }
+                onChange={(e) => handleInputChange(e, "home")}
                 onKeyDown={handleKeyDown}
                 enterKeyHint="next"
-                className="
-                  w-10 h-8 text-center text-lg font-bold 
-                  bg-blue-200 text-slate-900 
-                  border border-cyan-400 rounded
-                  focus:border-2 focus:border-cyan-600 focus:outline-none focus:ring-0
-                  appearance-none transition-all
-                "
+                className="w-10 h-8 text-center text-lg font-bold bg-blue-200 text-slate-900 border border-cyan-400 rounded focus:border-2 focus:border-cyan-600 focus:outline-none focus:ring-0 appearance-none transition-all"
               />
             ) : (
               <div className="w-10 h-8 flex items-center justify-center bg-black/40 dark:bg-slate-300 rounded border border-white/10 dark:border-slate-400 font-mono font-bold text-white dark:text-slate-800 text-sm">
@@ -244,16 +236,15 @@ export const MatchRow = ({ match, editable = false }: MatchRowProps) => {
               <input
                 type="number"
                 placeholder="-"
-                onInput={handleInputChange}
+                value={
+                  match.away_score === null || match.away_score === undefined
+                    ? ""
+                    : match.away_score
+                }
+                onChange={(e) => handleInputChange(e, "away")}
                 onKeyDown={handleKeyDown}
                 enterKeyHint="next"
-                className="
-                  w-10 h-8 text-center text-lg font-bold 
-                  bg-blue-200 text-slate-900 
-                  border border-cyan-400 rounded
-                  focus:border-2 focus:border-cyan-600 focus:outline-none focus:ring-0
-                  appearance-none transition-all
-                "
+                className="w-10 h-8 text-center text-lg font-bold bg-blue-200 text-slate-900 border border-cyan-400 rounded focus:border-2 focus:border-cyan-600 focus:outline-none focus:ring-0 appearance-none transition-all"
               />
             ) : (
               <div className="w-10 h-8 flex items-center justify-center bg-black/40 dark:bg-slate-300 rounded border border-white/10 dark:border-slate-400 font-mono font-bold text-white dark:text-slate-800 text-sm">
@@ -263,7 +254,6 @@ export const MatchRow = ({ match, editable = false }: MatchRowProps) => {
           </div>
         </div>
 
-        {/* --- NOMBRE VISITANTE --- */}
         <div className="flex-1 flex items-center justify-start pl-3">
           <span className="text-sm font-medium text-gray-300 dark:text-slate-700 text-left leading-tight block break-words">
             {match.away_team.name_es}
