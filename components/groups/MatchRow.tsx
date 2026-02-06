@@ -2,8 +2,10 @@
 
 import React, { useState } from "react";
 
+// 1. ACTUALIZAR INTERFAZ: Agregamos name_en opcional
 interface Team {
   name_es: string;
+  name_en?: string;
   flag_code: string;
 }
 
@@ -21,7 +23,7 @@ interface MatchData {
 interface MatchRowProps {
   match: MatchData;
   editable?: boolean;
-  // NUEVO: Función para avisar al padre que cambió el marcador
+  lang?: "es" | "en";
   onScoreChange?: (
     matchId: number,
     type: "home" | "away",
@@ -32,8 +34,17 @@ interface MatchRowProps {
 export const MatchRow = ({
   match,
   editable = false,
+  lang = "es",
   onScoreChange,
 }: MatchRowProps) => {
+  // --- HELPER PARA OBTENER NOMBRE SEGÚN IDIOMA ---
+  const getName = (team: Team) => {
+    if (lang === "en") {
+      return team.name_en || team.name_es;
+    }
+    return team.name_es;
+  };
+
   const getFlagUrl = (code3: string) => {
     const map: Record<string, string> = {
       col: "co",
@@ -87,11 +98,14 @@ export const MatchRow = ({
   const formatMatchInfo = (dateString: string) => {
     if (!dateString) return { date: "", time: "" };
     const date = new Date(dateString);
-    const dayStr = date.toLocaleDateString("es-ES", {
+    // Usamos el locale dinámico
+    const locale = lang === "en" ? "en-US" : "es-ES";
+
+    const dayStr = date.toLocaleDateString(locale, {
       day: "numeric",
       month: "short",
     });
-    const timeStr = date.toLocaleTimeString("es-ES", {
+    const timeStr = date.toLocaleTimeString(locale, {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
@@ -107,10 +121,7 @@ export const MatchRow = ({
     type: "home" | "away",
   ) => {
     const val = e.target.value;
-    // Validar máx 2 dígitos
     if (val.length > 2) return;
-
-    // Avisar al padre (GroupCard) que hubo un gol
     if (onScoreChange) {
       onScoreChange(match.id, type, val);
     }
@@ -183,26 +194,26 @@ export const MatchRow = ({
       </div>
 
       <div className="flex items-center justify-between p-2 relative h-16">
+        {/* NOMBRE LOCAL (CORREGIDO) */}
         <div className="flex-1 flex items-center justify-end pr-3">
           <span className="text-sm font-medium text-gray-300 dark:text-slate-700 text-right leading-tight block break-words">
-            {match.home_team.name_es}
+            {getName(match.home_team)}
           </span>
         </div>
 
         <div className="flex items-end justify-center gap-2">
-          {/* LOCAL */}
+          {/* BANDERA LOCAL */}
           <div className="flex flex-col items-center gap-1">
             <div className="w-6 h-4 rounded shadow-sm overflow-hidden border border-white/20 dark:border-slate-300 relative bg-gray-800">
               <TeamFlag
                 code={match.home_team.flag_code}
-                name={match.home_team.name_es}
+                name={getName(match.home_team)}
               />
             </div>
             {editable ? (
               <input
                 type="number"
                 placeholder="-"
-                // Conectamos el valor al estado del match
                 value={
                   match.home_score === null || match.home_score === undefined
                     ? ""
@@ -229,7 +240,7 @@ export const MatchRow = ({
             <div className="w-6 h-4 rounded shadow-sm overflow-hidden border border-white/20 dark:border-slate-300 relative bg-gray-800">
               <TeamFlag
                 code={match.away_team.flag_code}
-                name={match.away_team.name_es}
+                name={getName(match.away_team)}
               />
             </div>
             {editable ? (
@@ -254,9 +265,10 @@ export const MatchRow = ({
           </div>
         </div>
 
+        {/* NOMBRE VISITANTE (CORREGIDO) */}
         <div className="flex-1 flex items-center justify-start pl-3">
           <span className="text-sm font-medium text-gray-300 dark:text-slate-700 text-left leading-tight block break-words">
-            {match.away_team.name_es}
+            {getName(match.away_team)}
           </span>
         </div>
       </div>
