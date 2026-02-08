@@ -3,6 +3,7 @@ import { GroupCard } from "@/components/groups/GroupCard";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { StarBackground } from "@/components/shared/StarBackground";
 import { CloudsBackground } from "@/components/shared/CloudsBackground";
+import { LoginMockup } from "@/components/auth/LoginMockup"; // Importe el nuevo archivo
 
 // Evitamos caché para ver siempre datos frescos
 export const dynamic = "force-dynamic";
@@ -52,30 +53,31 @@ export default async function Home() {
     ),
   }));
 
-  return (
-    <main className="min-h-screen p-4 md:p-8 transition-colors duration-300 bg-transparent dark:bg-transparent relative">
-      <StarBackground />
-      <CloudsBackground />
+  // return (
+  //   <main className="min-h-screen p-4 md:p-8 transition-colors duration-300 bg-transparent dark:bg-transparent relative">
+  //     <StarBackground />
+  //     <CloudsBackground />
 
-      <h1 className="text-3xl md:text-5xl font-bold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-red-500 pb-2 relative z-10">
-        Mi Polla Mundialista 2026
-      </h1>
+  //     <h1 className="text-3xl md:text-5xl font-bold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-red-500 pb-2 relative z-10">
+  //       Mi Polla Mundialista 2026
+  //     </h1>
 
-      <div className="flex justify-center mb-8 relative z-10">
-        <ThemeToggle />
-      </div>
+  //     <div className="flex justify-center mb-8 relative z-10">
+  //       <ThemeToggle />
+  //     </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 max-w-[1600px] mx-auto justify-items-center relative z-10">
-        {groupsSorted?.map((group, index) => (
-          // @ts-ignore
-          <GroupCard
-            key={group.id}
-            group={group}
-            lang={index < 2 ? "es" : "en"}
-            // YA NO PASAMOS TOKENS, NO HACEN FALTA
-          />
-        ))}
-      </div>
-    </main>
-  );
+  //     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 max-w-[1600px] mx-auto justify-items-center relative z-10">
+  //       {groupsSorted?.map((group, index) => (
+  //         // @ts-ignore
+  //         <GroupCard
+  //           key={group.id}
+  //           group={group}
+  //           lang={index < 2 ? "es" : "en"}
+  //           // YA NO PASAMOS TOKENS, NO HACEN FALTA
+  //         />
+  //       ))}
+  //     </div>
+  //   </main>
+  // );
+  return <LoginMockup />;
 }
