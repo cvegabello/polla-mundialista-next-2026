@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { MatchRow } from "./MatchRow";
 import { GroupTable } from "./GroupTable";
 import { DICTIONARY, Language } from "@/components/constants/dictionary";
+import { Loader2 } from "lucide-react"; // Usamos el ícono de carga para que se vea pro
 
 // --- TIPOS ---
 export interface Team {
@@ -59,35 +60,51 @@ export const GroupCard = ({ group, lang = "es" }: GroupCardProps) => {
   const [saveStatus, setSaveStatus] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
+
+  // ESTADOS DE SESIÓN
   const [adminUserId, setAdminUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  // 👇 NUEVO: Estado para saber si estamos leyendo el brazalete
+  const [isSessionLoading, setIsSessionLoading] = useState(true);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // --- 2. CARGA INICIAL (Lectura de Datos) ---
+  // --- 2. CARGA INICIAL (Lectura de Datos y Sesión) ---
   useEffect(() => {
     const initData = async () => {
       try {
-        // A. Buscar ID
-        const { data: userData, error: userError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("username", "CarlosAdmin")
-          .single();
+        setIsSessionLoading(true); // Arrancamos cargando
 
-        if (userError || !userData) {
-          console.error("❌ No se encontró usuario 'CarlosAdmin'", userError);
+        // A. LEER LA SESIÓN REAL (localStorage)
+        const sessionStr = localStorage.getItem("polla_session");
+
+        // Validamos si hay sesión
+        if (!sessionStr) {
+          console.error("❌ No hay sesión activa en GroupCard");
+          setIsSessionLoading(false);
           return;
         }
 
-        const userId = userData.id;
-        setAdminUserId(userId);
+        const session = JSON.parse(sessionStr);
+        const currentUserId = session.id;
+        const currentRole = session.role;
 
-        // B. Cargar pronósticos iniciales
+        // Guardamos la identidad
+        setAdminUserId(currentUserId);
+        setUserRole(currentRole);
+
+        // SI ES ADMIN: Cortamos aquí, no necesita cargar predicciones
+        if (currentRole === "ADMIN_GRUPO") {
+          setIsSessionLoading(false);
+          return;
+        }
+
+        // B. Cargar pronósticos (SOLO SI ES FAN)
         const matchIdsInGroup = group.matches.map((m) => m.id);
         const { data: predictions } = await supabase
           .from("predictions")
           .select("match_id, pred_home, pred_away")
-          .eq("user_id", userId)
+          .eq("user_id", currentUserId)
           .in("match_id", matchIdsInGroup);
 
         if (predictions && predictions.length > 0) {
@@ -107,34 +124,31 @@ export const GroupCard = ({ group, lang = "es" }: GroupCardProps) => {
         }
       } catch (err) {
         console.error("Error initData:", err);
+      } finally {
+        // 👇 IMPORTANTE: Pase lo que pase, terminamos de cargar
+        setIsSessionLoading(false);
       }
     };
 
     initData();
-  }, []);
+  }, [group.matches]);
 
-  // --- 3. TIEMPO REAL (REALTIME MAGIC ✨) ---
+  // --- 3. TIEMPO REAL ---
   useEffect(() => {
-    // Solo nos suscribimos si ya tenemos el ID del usuario (para filtrar y no escuchar basura)
     if (!adminUserId) return;
 
-    // Creamos un canal único para este grupo
     const channel = supabase
       .channel(`realtime-predictions-${group.id}`)
       .on(
         "postgres_changes",
         {
-          event: "*", // Escuchar INSERT, UPDATE, DELETE
+          event: "*",
           schema: "public",
           table: "predictions",
-          filter: `user_id=eq.${adminUserId}`, // ¡OPTIMIZACIÓN! Solo escucha mis cambios
+          filter: `user_id=eq.${adminUserId}`,
         },
         (payload) => {
-          console.log("⚡ Cambio detectado en tiempo real:", payload);
-
-          const newPrediction = payload.new as any; // Datos que llegaron
-
-          // Si el cambio pertenece a un partido de este grupo, actualizamos
+          const newPrediction = payload.new as any;
           setMatches((prevMatches) =>
             prevMatches.map((match) => {
               if (match.id === newPrediction.match_id) {
@@ -151,13 +165,12 @@ export const GroupCard = ({ group, lang = "es" }: GroupCardProps) => {
       )
       .subscribe();
 
-    // Limpieza: Cuando el usuario cierre la página, cerramos la conexión
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [adminUserId, group.id]); // Se activa apenas tengamos el ID del usuario
+  }, [adminUserId, group.id]);
 
-  // --- LÓGICA TABLA (Se ejecuta auto cuando cambia 'matches') ---
+  // --- LÓGICA TABLA ---
   const calculateStandings = (currentMatches: MatchReal[]) => {
     const stats: Record<string, { pts: 0; gf: 0; gc: 0 }> = {};
     const getName = (team: Team) =>
@@ -237,30 +250,20 @@ export const GroupCard = ({ group, lang = "es" }: GroupCardProps) => {
   ) => {
     try {
       setSaveStatus("saving");
-
       if (!adminUserId) {
-        console.error("Falta ID CarlosAdmin");
         setSaveStatus("error");
         return;
       }
-
       const payload = {
         user_id: adminUserId,
         match_id: matchId,
         pred_home: homeScore,
         pred_away: awayScore,
       };
-
-      // Nota: Al hacer upsert, Supabase dispara el evento realtime
-      // Nuestro propio 'useEffect' de realtime escuchará esto y actualizará el estado también,
-      // pero como ya hicimos "Optimistic UI" (actualización visual instantánea) en handleScoreChange,
-      // el usuario no notará nada raro, solo consistencia.
       const { error } = await supabase
         .from("predictions")
         .upsert(payload, { onConflict: "user_id, match_id" });
-
       if (error) throw error;
-
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 2000);
     } catch (error) {
@@ -275,8 +278,6 @@ export const GroupCard = ({ group, lang = "es" }: GroupCardProps) => {
     value: string,
   ) => {
     const newVal = value === "" ? null : parseInt(value);
-
-    // UI Optimista (Para que se sienta rápido al escribir)
     const updatedMatches = matches.map((m) => {
       if (m.id === matchId)
         return type === "home"
@@ -285,8 +286,6 @@ export const GroupCard = ({ group, lang = "es" }: GroupCardProps) => {
       return m;
     });
     setMatches(updatedMatches);
-
-    // Debounce
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     const matchToSave = updatedMatches.find((m) => m.id === matchId);
     if (matchToSave) {
@@ -300,19 +299,43 @@ export const GroupCard = ({ group, lang = "es" }: GroupCardProps) => {
     }
   };
 
+  // ----------------------------------------------------
+  // 👇 RENDERIZADO CONTROLADO (Evita pantalla blanca)
+  // ----------------------------------------------------
+
+  // 1. CARGANDO... (Muestra algo mientras lee el localStorage)
+  if (isSessionLoading) {
+    return (
+      <div className="w-full h-[400px] flex items-center justify-center bg-slate-900/20 rounded-xl border border-white/5 animate-pulse">
+        <Loader2 className="h-8 w-8 text-cyan-500 animate-spin" />
+      </div>
+    );
+  }
+
+  // 2. VISTA DE ADMIN (Si el rol es ADMIN_GRUPO)
+  if (userRole === "ADMIN_GRUPO") {
+    return (
+      <div className="w-full p-6 flex flex-col items-center justify-center bg-slate-900/50 rounded-xl border border-white/10 mt-4 backdrop-blur-md">
+        <h2 className="text-xl font-bold text-gray-300">Vista de Admin</h2>
+        <p className="text-sm text-gray-500 mt-2">
+          Gestiona este grupo desde el panel principal.
+        </p>
+      </div>
+    );
+  }
+
+  // 3. VISTA DE FAN (Si es fan y ya cargó)
   return (
     <div className="relative group w-full max-w-[350px] mx-auto transition-all duration-300">
-      <div className="absolute -inset-1 rounded-2xl blur-md transition duration-500 bg-gradient-to-r from-cyan-500 to-purple-600 dark:from-orange-500 dark:to-white opacity-25 group-hover:opacity-100 dark:opacity-0 dark:group-hover:opacity-100"></div>
+      <div className="absolute -inset-1 rounded-2xl blur-md transition duration-500 bg-linear-to-r from-cyan-500 to-purple-600 dark:from-orange-500 dark:to-white opacity-25 group-hover:opacity-100 dark:opacity-0 dark:group-hover:opacity-100"></div>
 
-      <div className="relative bg-slate-900/90 text-white dark:bg-gradient-to-br dark:from-blue-50/95 dark:via-white/90 dark:to-blue-100/90 dark:text-slate-800 backdrop-blur-xl rounded-xl h-full flex flex-col justify-between overflow-hidden border border-cyan-500/30 dark:border-cyan-600/20 transition-all duration-300 ease-out hover:border-cyan-400 dark:hover:border-cyan-500 hover:ring-1 hover:ring-cyan-400 dark:hover:ring-cyan-500 hover:shadow-[0_0_15px_rgba(34,211,238,0.5)]">
-        <div className="h-1.5 w-full bg-gradient-to-r from-[#00c6ff] to-[#ff4b2b]"></div>
+      <div className="relative bg-slate-900/90 text-white dark:bg-linear-to-br dark:from-blue-50/95 dark:via-white/90 dark:to-blue-100/90 dark:text-slate-800 backdrop-blur-xl rounded-xl h-full flex flex-col justify-between overflow-hidden border border-cyan-500/30 dark:border-cyan-600/20 transition-all duration-300 ease-out hover:border-cyan-400 dark:hover:border-cyan-500 hover:ring-1 hover:ring-cyan-400 dark:hover:ring-cyan-500 hover:shadow-[0_0_15px_rgba(34,211,238,0.5)]">
+        <div className="h-1.5 w-full bg-linear-to-r from-[#00c6ff] to-[#ff4b2b]"></div>
 
         <div className="p-4 flex flex-col h-full justify-between">
           <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/10 dark:border-slate-200/50">
             <div className="flex flex-col">
-              <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400 dark:from-blue-700 dark:to-purple-600">
-                {/* Lógica: Si el idioma es inglés pone "Group", si no "Grupo". 
-      Luego tomamos el nombre de la DB (ej: "Grupo A") y le borramos la palabra "Grupo " para dejar solo la letra "A" */}
+              <h3 className="text-xl font-bold text-transparent bg-clip-text bg-linear-to-r from-cyan-400 to-blue-400 dark:from-blue-700 dark:to-purple-600">
                 {lang === "en" ? "Group" : "Grupo"}{" "}
                 {group.name.replace("Grupo ", "").replace("Group ", "")}
               </h3>
