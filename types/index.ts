@@ -1,22 +1,34 @@
-// types/index.ts
+// src/types/index.ts
 
 export interface Team {
-  id: number;
-  name: string; // Aquí luego usaremos la traducción
-  flagCode: string; // Para la banderita (ej: 'co', 'de')
+  name_es: string;
+  name_en?: string;
+  flag_code: string; // En tu DB se llama flag_code, no flagCode
 }
 
-export interface Match {
+export interface MatchReal {
   id: number;
-  homeTeam: Team;
-  awayTeam: Team;
-  date: string;
-  homeScore?: number | null; // Puede ser null si no han jugado
-  awayScore?: number | null;
+  match_date: string; // En tu DB es match_date, no date
+  stadium: string;
+  city: string;
+  home_score?: number | null;
+  away_score?: number | null;
+  home_team: Team; // En tu DB viene como objeto home_team
+  away_team: Team;
 }
 
-export interface GroupData {
-  name: string; // "Grupo A"
-  matches: Match[];
-  // Aquí iría la info de la tabla de posiciones calculada
+export interface GroupDataReal {
+  id: string;
+  name: string;
+  matches: MatchReal[];
+}
+
+export interface TableStats {
+  team: string;
+  pts: number;
+  gf: number;
+  gc: number;
+  dg: number; // Diferencia de gol
+  pos: number;
+  isTied: boolean;
 }
