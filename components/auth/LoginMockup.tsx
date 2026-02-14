@@ -11,65 +11,33 @@ interface LoginMockupProps {
 }
 
 export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
-  // Estado inicial visual (mientras carga la lógica real)
+  // Estados de interfaz
   const [language, setLanguage] = useState("es");
-
   const [group, setGroup] = useState("");
   const [isGroupOpen, setIsGroupOpen] = useState(false);
   const [isLangOpen, setIsLangOpen] = useState(false);
-
-  // Estados Data y Formulario
   const [poolOptions, setPoolOptions] = useState<any[]>([]);
   const [isLoadingPools, setIsLoadingPools] = useState(true);
+
+  // Estados de formulario
   const [username, setUsername] = useState("");
   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // 👇 1. EL CEREBRO DE IDIOMA (Se ejecuta UNA sola vez al iniciar)
+  // 1. Cargar idioma y última polla seleccionada
   useEffect(() => {
-    // A. ¿Qué hay en el Storage?
     const savedLang = localStorage.getItem("polla_lang");
-
-    if (savedLang) {
-      // CASO 1: Hay algo guardado. ¡Eso es sagrado!
-      console.log("Idioma recuperado del storage:", savedLang);
-      setLanguage(savedLang);
-    } else {
-      // CASO 2: Storage vacío. Miramos la máquina.
-      const browserLang = navigator.language || navigator.languages[0];
-      console.log("Idioma detectado de máquina:", browserLang);
-
-      if (browserLang.toLowerCase().startsWith("es")) {
-        // Máquina en Español -> Español
-        setLanguage("es");
-      } else {
-        // Máquina en Alemán, Chino, Ruso o Inglés -> Inglés
-        setLanguage("en");
-      }
-    }
-  }, []); // El array vacío [] asegura que esto SOLO pase una vez al montar.
-
-  // 👇 2. FUNCIÓN MANUAL PARA CAMBIAR IDIOMA
-  // Esta función reemplaza al setLanguage directo en el combo
-  const handleLanguageChange = (val: string) => {
-    setLanguage(val); // Cambia visualmente
-    localStorage.setItem("polla_lang", val); // Guarda en piedra
-    console.log("Nuevo idioma guardado:", val);
-  };
-
-  // 3. Recuperar última polla (Igual que antes)
-  useEffect(() => {
+    if (savedLang) setLanguage(savedLang);
     const lastPolla = localStorage.getItem("last_selected_polla");
     if (lastPolla) setGroup(lastPolla);
   }, []);
 
-  // 4. Guardar polla al cambiar
-  useEffect(() => {
-    if (group) localStorage.setItem("last_selected_polla", group);
-  }, [group]);
+  const handleLanguageChange = (val: string) => {
+    setLanguage(val);
+    localStorage.setItem("polla_lang", val);
+  };
 
-  // 5. Carga de Pollas (BD)
   useEffect(() => {
     const loadPollas = async () => {
       try {
@@ -77,7 +45,7 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
         const pollas = await getActivePollas();
         setPoolOptions(pollas);
       } catch (err) {
-        console.error("Error cargando pollas");
+        console.error("Error cargando pollas:", err);
       } finally {
         setIsLoadingPools(false);
       }
@@ -85,9 +53,16 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
     loadPollas();
   }, []);
 
-  // 6. Login
+  // 2. Persistir polla seleccionada
+  useEffect(() => {
+    if (group) localStorage.setItem("last_selected_polla", group);
+  }, [group]);
+
+  // 3. LÓGICA DE LOGIN SENCILLA (Back to basics 🚀)
   const handleLogin = async () => {
     setErrorMsg("");
+
+    // Validaciones básicas de interfaz
     if (!group) {
       setErrorMsg(language === "es" ? "Selecciona una Polla" : "Select a Pool");
       return;
@@ -98,26 +73,45 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
     }
 
     setLoading(true);
-    const result = await loginOrRegister(username, pin, group);
 
-    if (result.success && result.user) {
-      if (result.isNewUser) {
-        alert(
-          language === "es"
-            ? "¡Bienvenido! Usuario creado."
-            : "Welcome! User created.",
-        );
+    try {
+      // LLAMADA A TU SERVICIO ORIGINAL (Sin cambios en tu DB)
+      const result = await loginOrRegister(username, pin, group);
+
+      if (result.success && result.user) {
+        if (result.isNewUser) {
+          alert(
+            language === "es"
+              ? "¡Bienvenido! Usuario creado."
+              : "Welcome! User created.",
+          );
+        }
+
+        const sessionData = {
+          id: result.user.id,
+          username: result.user.username,
+          role: result.user.role,
+          polla_id: result.user.polla_id,
+        };
+
+        // 👇 LA "SERVILLETA" (CREACIÓN DE COOKIE MANUAL)
+        // Guardamos los datos para que el servidor los pueda leer. Dura 30 días.
+        const cookieValue = encodeURIComponent(JSON.stringify(sessionData));
+        document.cookie = `polla_session=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
+
+        // Guardamos en localStorage por si algún componente viejo todavía lo busca
+        localStorage.setItem("polla_session", JSON.stringify(sessionData));
+
+        // ¡ÉXITO! Mandamos al usuario a la pista de baile
+        onLoginSuccess();
+      } else {
+        // Aquí sale tu mensaje de "PIN incorrecto" o "Usuario ya existe"
+        setErrorMsg(result.message || "Error al ingresar");
+        setLoading(false);
       }
-      const sessionData = {
-        id: result.user.id,
-        username: result.user.username,
-        role: result.user.role,
-        polla_id: result.user.polla_id,
-      };
-      localStorage.setItem("polla_session", JSON.stringify(sessionData));
-      onLoginSuccess();
-    } else {
-      setErrorMsg(result.message || "Error desconocido");
+    } catch (err) {
+      console.error("Error en el proceso de login:", err);
+      setErrorMsg("Error de conexión");
       setLoading(false);
     }
   };
@@ -129,7 +123,6 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
           <LoginImageCard />
           <LoginForm
             language={language}
-            // 👇 AQUÍ USAMOS NUESTRA NUEVA FUNCIÓN CONTROLADA
             setLanguage={handleLanguageChange}
             poolOptions={poolOptions}
             isLoadingPools={isLoadingPools}

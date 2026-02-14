@@ -6,6 +6,10 @@ import { CloudsBackground } from "@/components/shared/CloudsBackground";
 import { GroupCard } from "@/components/groups/GroupCard";
 import { DICTIONARY, Language } from "@/components/constants/dictionary";
 
+// 👇 Importaciones para el Logout interno
+import { createBrowserClient } from "@supabase/ssr";
+import { useRouter } from "next/navigation";
+
 // Componentes propios
 import { FanHeader } from "@/components/fan/header/FanHeader";
 import { FloatingProgress } from "@/components/fan/FloatingProgress";
@@ -19,7 +23,7 @@ interface FanDashboardProps {
   userPredictions: any[];
   loadingData: boolean;
   lang: Language;
-  onLogout: () => void;
+  onLogout?: () => void; // Lo dejamos opcional para que el Server Component no chille
 }
 
 export const FanDashboard = ({
@@ -28,9 +32,15 @@ export const FanDashboard = ({
   userPredictions,
   loadingData,
   lang,
-  onLogout,
 }: FanDashboardProps) => {
   const t = DICTIONARY[lang];
+  const router = useRouter();
+
+  // 👇 Inicializamos Supabase para el cliente
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
   // 👇 1. TRAEMOS TODO DEL HOOK
   const {
@@ -38,20 +48,16 @@ export const FanDashboard = ({
     setCurrentView,
     progress,
     totalMatches,
-    // isComplete, (no lo usamos directo aquí, pero el hook lo maneja)
     showFloating,
-    handleSubmit, // 👈 La función real de enviar
-    hasSubmitted, // 👈 Estado local de "Acabo de enviar"
+    handleSubmit,
+    hasSubmitted,
     handlePredictionChange,
   } = useFanDashboardLogic(userPredictions, userSession?.id);
 
-  // 👇 2. LÓGICA DE BLOQUEO (CRÍTICO) 🔒
-  // Está bloqueado si: Ya venía enviado de DB (userSession) O Acabamos de enviar (hasSubmitted)
+  // 👇 2. LÓGICA DE BLOQUEO🔒
   const isLocked = !!userSession?.submission_date || hasSubmitted;
 
   // 👇 3. TRUCO VISUAL PARA EL HEADER
-  // Si acabamos de enviar (hasSubmitted), engañamos al header para que muestre
-  // el estado "Enviado" sin tener que recargar la página.
   const headerSession = isLocked
     ? {
         ...userSession,
@@ -60,6 +66,18 @@ export const FanDashboard = ({
       }
     : userSession;
 
+  const handleInternalLogout = () => {
+    // 1. Borramos la cookie manual (le ponemos fecha de ayer para que expire)
+    document.cookie =
+      "polla_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Lax";
+
+    // 2. Limpiamos el localStorage por si las moscas
+    localStorage.removeItem("polla_session");
+
+    // 3. Mandamos pal login con recarga total
+    window.location.href = "/login";
+  };
+
   return (
     <main className="min-h-screen transition-colors duration-300 bg-transparent dark:bg-transparent relative pb-20">
       <StarBackground />
@@ -67,15 +85,14 @@ export const FanDashboard = ({
 
       {/* HEADER */}
       <FanHeader
-        userSession={headerSession} // 👈 Pasamos la sesión "trucada" si ya envió
+        userSession={headerSession}
         lang={lang}
-        onLogout={onLogout}
+        onLogout={handleInternalLogout} // 👈 CAMBIO AQUÍ: Ahora usa la función interna
         currentView={currentView}
         onViewChange={setCurrentView}
-        // 👇 Datos VIVOS
         totalPredictions={progress}
         totalMatches={totalMatches}
-        onSubmitPredictions={handleSubmit} // 👈 Pasamos la función REAL del Hook
+        onSubmitPredictions={handleSubmit}
       />
 
       {/* CONTENIDO PRINCIPAL */}
@@ -85,7 +102,6 @@ export const FanDashboard = ({
         </div>
       ) : (
         <div className="relative z-10">
-          {/* VISTA: FASE DE GRUPOS */}
           {currentView === "pred_groups" && (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 max-w-[1600px] mx-auto justify-items-center px-4">
               {groupsData?.map((group) => (
@@ -95,14 +111,12 @@ export const FanDashboard = ({
                   lang={lang}
                   initialPredictions={userPredictions}
                   onPredictionChange={handlePredictionChange}
-                  // 👇 4. PASAMOS EL BLOQUEO A LAS TARJETAS
                   isLocked={isLocked}
                 />
               ))}
             </div>
           )}
 
-          {/* VISTA: OTRAS (Placeholder) */}
           {currentView !== "pred_groups" && (
             <div className="flex flex-col items-center justify-center min-h-[300px] text-white/50 bg-slate-900/40 backdrop-blur-md mx-auto max-w-2xl rounded-xl border border-white/10 p-8">
               <p className="text-xl mb-2">🚧 {t.worldCupTitle} 🚧</p>
@@ -115,8 +129,6 @@ export const FanDashboard = ({
         </div>
       )}
 
-      {/* 👇 PASTILLA FLOTANTE */}
-      {/* Solo sale si: Estamos en grupos Y NO está bloqueado (ya enviado) */}
       {currentView === "pred_groups" && !isLocked && (
         <FloatingProgress
           current={progress}
