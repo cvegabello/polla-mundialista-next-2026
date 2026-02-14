@@ -13,12 +13,16 @@ interface GroupCardProps {
   group: GroupDataReal;
   lang?: Language;
   initialPredictions?: any[];
+  onPredictionChange: (matchId: string, isComplete: boolean) => void;
+  isLocked?: boolean;
 }
 
 export const GroupCard = ({
   group,
   lang = "es",
   initialPredictions = [],
+  onPredictionChange,
+  isLocked = false,
 }: GroupCardProps) => {
   const t = DICTIONARY[lang];
 
@@ -105,9 +109,10 @@ export const GroupCard = ({
               <MatchRow
                 key={match.id}
                 match={match}
-                editable={true}
+                editable={!isLocked}
                 onScoreChange={handleScoreChange}
                 lang={lang}
+                onPredictionChange={onPredictionChange}
               />
             ))}
           </div>

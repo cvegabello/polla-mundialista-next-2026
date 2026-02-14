@@ -24,6 +24,7 @@ interface MatchRowProps {
   match: MatchData;
   editable?: boolean;
   lang?: "es" | "en";
+  onPredictionChange?: (matchId: string, isComplete: boolean) => void;
   onScoreChange?: (
     matchId: number,
     type: "home" | "away",
@@ -36,6 +37,7 @@ export const MatchRow = ({
   editable = false,
   lang = "es",
   onScoreChange,
+  onPredictionChange,
 }: MatchRowProps) => {
   // --- HELPER PARA OBTENER NOMBRE SEGÚN IDIOMA ---
   const getName = (team: Team) => {
@@ -175,6 +177,30 @@ export const MatchRow = ({
       />
     );
   };
+
+  // Guardamos el estado anterior para comparar
+  const prevIsCompleteRef = React.useRef<boolean | null>(null);
+
+  // 👇 2. PEGUE ESTE EFECTO JUSTO ANTES DEL RETURN
+  React.useEffect(() => {
+    const home = match.home_score;
+    const away = match.away_score;
+
+    // Verificamos SOLO que no sean null ni undefined.
+    // (TypeScript sabe que si existe, es un número, así que el 0 cuenta como válido)
+    const isComplete =
+      home !== null &&
+      home !== undefined &&
+      away !== null &&
+      away !== undefined;
+
+    if (prevIsCompleteRef.current !== isComplete) {
+      if (onPredictionChange) {
+        onPredictionChange(match.id.toString(), isComplete);
+      }
+      prevIsCompleteRef.current = isComplete; // Actualizamos la referencia
+    }
+  }, [match.home_score, match.away_score, match.id, onPredictionChange]);
 
   return (
     <div className="flex flex-col bg-white/5 dark:bg-slate-100 border border-white/10 dark:border-slate-200 rounded-lg mb-3 overflow-hidden shadow-sm hover:border-white/20 transition-all">

@@ -6,6 +6,8 @@ import { FanDashboard } from "@/components/dashboards/FanDashboard";
 import { AdminDashboard } from "@/components/dashboards/AdminDashboard";
 import { getFullGroupsData } from "@/services/groupService";
 import { getUserPredictions } from "@/services/predictionService";
+// 👇 Importamos esto para poder consultar la fecha real en Supabase
+import { createBrowserClient } from "@supabase/ssr";
 
 // Importamos el tipo Language
 import { Language } from "@/components/constants/dictionary";
@@ -16,7 +18,7 @@ export default function Home() {
   );
   const [userSession, setUserSession] = useState<any>(null);
 
-  // 👇 ESTADO PARA EL IDIOMA (Por defecto español, pero se actualiza rápido)
+  // 👇 ESTADO PARA EL IDIOMA
   const [currentLang, setCurrentLang] = useState<Language>("es");
 
   const [groupsData, setGroupsData] = useState<any[]>([]);
@@ -36,8 +38,7 @@ export default function Home() {
         setView("login");
       }
 
-      // B. Recuperar Idioma (ESTO ES LO NUEVO) 🌍
-      // El login guardó esto en "polla_lang"
+      // B. Recuperar Idioma
       const storedLang = localStorage.getItem("polla_lang");
       if (storedLang === "en" || storedLang === "es") {
         setCurrentLang(storedLang);
@@ -46,18 +47,46 @@ export default function Home() {
     checkSession();
   }, []);
 
-  // 2. CARGA DE DATOS
+  // 2. CARGA DE DATOS (AQUÍ ESTÁ LA MAGIA NUEVA ✨)
   useEffect(() => {
     if ((view === "fan" || view === "admin") && userSession?.id) {
       const loadData = async () => {
         setLoadingData(true);
+
+        // Inicializamos Supabase Cliente aquí mismo para no complicarnos
+        const supabase = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        );
+
         try {
-          const [groups, predictions] = await Promise.all([
+          // Ejecutamos 3 promesas al tiempo: Grupos, Predicciones y PERFIL ACTUALIZADO
+          const [groups, predictions, profileResponse] = await Promise.all([
             getFullGroupsData(),
             getUserPredictions(userSession.id),
+            // 👇 Consultamos si ya envió la polla (submission_date)
+            supabase
+              .from("profiles")
+              .select("submission_date")
+              .eq("id", userSession.id)
+              .single(),
           ]);
+
           setGroupsData(groups);
           setUserPredictions(predictions);
+
+          // 👇 SI ENCONTRAMOS FECHA DE ENVÍO, ACTUALIZAMOS LA SESIÓN LOCAL
+          if (profileResponse.data?.submission_date) {
+            setUserSession((prev: any) => {
+              const updated = {
+                ...prev,
+                submission_date: profileResponse.data.submission_date,
+              };
+              // (Opcional) Actualizamos el localStorage para que la próxima carga sea más rápida
+              localStorage.setItem("polla_session", JSON.stringify(updated));
+              return updated;
+            });
+          }
         } catch (error) {
           console.error("Error cargando datos", error);
         } finally {
@@ -66,12 +95,12 @@ export default function Home() {
       };
       loadData();
     }
-  }, [view, userSession]);
+  }, [view, userSession?.id]); // Ojo: dependemos del ID, no de toda la sesión para evitar loops
 
   const handleLoginSuccess = () => {
     // Al loguearse, volvemos a leer todo para asegurar sincronía
     const storedSession = localStorage.getItem("polla_session");
-    const storedLang = localStorage.getItem("polla_lang"); // Leemos idioma recién guardado
+    const storedLang = localStorage.getItem("polla_lang");
 
     if (storedSession) {
       const parsedSession = JSON.parse(storedSession);
@@ -112,20 +141,14 @@ export default function Home() {
         groupsData={groupsData}
         userPredictions={userPredictions}
         loadingData={loadingData}
-        lang={currentLang} // 👈 ¡AQUÍ PASAMOS EL IDIOMA!
+        lang={currentLang}
         onLogout={handleLogout}
       />
     );
   }
 
   if (view === "admin") {
-    return (
-      <AdminDashboard
-        groupsData={groupsData}
-        onLogout={handleLogout}
-        // lang={currentLang} // Si quisiera que el admin también tenga idioma
-      />
-    );
+    return <AdminDashboard groupsData={groupsData} onLogout={handleLogout} />;
   }
 
   return null;
