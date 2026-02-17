@@ -49,3 +49,48 @@ input[type="number"]::-webkit-outer-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
 }
+
+/* app/globals.css */
+
+/* app/globals.css */
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    /* 🛠️ Más ancho para que sea fácil de agarrar */
+    width: 12px;
+    height: 12px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    margin: 5px; /* Le da aire en los bordes */
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    /* 🛠️ Más visible y con más color naranja */
+    background: rgba(249, 115, 22, 0.5);
+    border-radius: 10px;
+    border: 2px solid rgba(15, 23, 42, 0.8); /* Borde para que resalte del fondo */
+    transition: all 0.3s;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(249, 115, 22, 0.9); /* Casi sólido al pasar el mouse */
+  }
+
+  /* 🔥 CIRUGÍA PARA LA ESQUINA INTRUSA 🔥 */
+
+  /* 1. Atacamos la esquina directamente con máxima prioridad */
+  .custom-scrollbar::-webkit-scrollbar-corner {
+    background-color: transparent !important;
+    background: transparent !important;
+    border: none !important;
+  }
+
+  /* 2. Por si acaso es el 'resizer' (el que deja estirar la caja) */
+  .custom-scrollbar::-webkit-resizer {
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+}
