@@ -4,6 +4,7 @@ import React, { useState } from "react";
 
 // 1. ACTUALIZAR INTERFAZ: Agregamos name_en opcional
 interface Team {
+  id: string;
   name_es: string;
   name_en?: string;
   flag_code: string;
@@ -18,6 +19,8 @@ interface MatchData {
   away_score?: number | null;
   home_team: Team;
   away_team: Team;
+  home_team_id: string; // 👈 AGREGUE ESTA
+  away_team_id: string;
 }
 
 interface MatchRowProps {

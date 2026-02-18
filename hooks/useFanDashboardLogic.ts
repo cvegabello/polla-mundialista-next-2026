@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-// 👇 Importar la acción que acabamos de crear
-import { submitPredictionsAction } from "@/lib/actions/fan-actions";
 import confetti from "canvas-confetti";
+
+// 👇 IMPORTAMOS LAS ACCIONES Y EL RESOLVER
+import {
+  submitPredictionsAction,
+  getUserStandingsAction,
+} from "@/lib/actions/fan-actions";
+import { resolveBracketMatches } from "@/utils/bracket-resolver";
 
 export const useFanDashboardLogic = (
   initialPredictions: any[],
@@ -14,8 +19,7 @@ export const useFanDashboardLogic = (
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
-  // 2. ESTADO DEL CONTADOR EN VIVO
-  // Usamos un Set para guardar IDs únicos de partidos listos
+  // 2. ESTADO DEL CONTADOR EN VIVO (Para barra de progreso)
   const [completedMatches, setCompletedMatches] = useState<Set<string>>(
     new Set(),
   );
@@ -23,13 +27,15 @@ export const useFanDashboardLogic = (
   // 3. ESTADO PARA LA BARRA FLOTANTE (Scroll)
   const [showFloating, setShowFloating] = useState(false);
 
-  // EFECTO 1: Cargar predicciones iniciales (CORREGIDO)
+  // 🚀 4. ESTADO PARA EL BRACKET (Finales)
+  const [bracketMatches, setBracketMatches] = useState<any[]>([]);
+  const [isLoadingBracket, setIsLoadingBracket] = useState(false);
+
+  // --- EFECTO 1: Cargar predicciones iniciales (Progreso) ---
   useEffect(() => {
     if (initialPredictions && initialPredictions.length > 0) {
       const validIds = new Set<string>();
-
       initialPredictions.forEach((p) => {
-        // 👇 AQUÍ ESTÁ LA CLAVE: Validamos que tenga goles antes de contarla
         const isComplete =
           p.home_score !== null &&
           p.home_score !== undefined &&
@@ -37,42 +43,62 @@ export const useFanDashboardLogic = (
           p.away_score !== undefined;
 
         if (isComplete) {
-          validIds.add(p.match_id.toString()); // Aseguramos que sea string
+          validIds.add(p.match_id.toString());
         }
       });
-
       setCompletedMatches(validIds);
     }
   }, [initialPredictions]);
 
-  // EFECTO 2: Detectar Scroll (Optimizado)
+  // --- EFECTO 2: Detectar Scroll ---
   useEffect(() => {
-    let ticking = false; // Bandera para no saturar
-
+    let ticking = false;
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
           const shouldShow = window.scrollY > 400;
-          // Solo actualizamos el estado si es diferente (evita re-renders innecesarios)
           setShowFloating((prev) => (prev !== shouldShow ? shouldShow : prev));
           ticking = false;
         });
         ticking = true;
       }
     };
-
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // CAMBIO: Envolvemos en useCallback
+  // 🚀 --- EFECTO 3: CARGAR Y RESOLVER BRACKET AL CAMBIAR VISTA ---
+  useEffect(() => {
+    const loadBracket = async () => {
+      if (currentView === "pred_finals" && userId) {
+        setIsLoadingBracket(true);
+        try {
+          // A. Traemos las posiciones guardadas en 'user_group_standings'
+          const standings = await getUserStandingsAction(userId);
+
+          // B. Resolvemos quién juega contra quién (Traductor A1, B2, etc.)
+          // Pasamos "es" como default, luego puede hacerlo dinámico
+          const resolved = resolveBracketMatches(standings, "es");
+
+          setBracketMatches(resolved);
+        } catch (error) {
+          console.error("Error cargando el bracket:", error);
+        } finally {
+          setIsLoadingBracket(false);
+        }
+      }
+    };
+
+    loadBracket();
+  }, [currentView, userId]);
+
+  // --- HANDLER: Cambio de marcadores (Para el contador) ---
   const handlePredictionChange = useCallback(
     (matchId: string, isComplete: boolean) => {
       setCompletedMatches((prev) => {
-        // Optimizamos: Si ya tiene el estado correcto, no hacemos nada (evita re-render)
         const hasMatch = prev.has(matchId);
-        if (isComplete && hasMatch) return prev; // Ya estaba completo, no cambie nada
-        if (!isComplete && !hasMatch) return prev; // Ya estaba incompleto, no cambie nada
+        if (isComplete && hasMatch) return prev;
+        if (!isComplete && !hasMatch) return prev;
 
         const newSet = new Set(prev);
         if (isComplete) {
@@ -84,11 +110,10 @@ export const useFanDashboardLogic = (
       });
     },
     [],
-  ); // Dependencias vacías = La función nunca cambia
+  );
 
-  // 👇 LÓGICA DE ENVÍO FINAL
+  // --- LÓGICA DE ENVÍO FINAL ---
   const handleSubmit = async () => {
-    // 1. Candado de seguridad
     if (isSubmitting || hasSubmitted) return;
     if (!userId) {
       alert("Error: No se identifica el usuario.");
@@ -96,31 +121,18 @@ export const useFanDashboardLogic = (
     }
 
     setIsSubmitting(true);
-
     try {
-      // 2. LLAMADA AL SERVIDOR (A la tabla 'profiles')
       const result = await submitPredictionsAction(userId);
-
       if (result.success) {
-        // --- ÉXITO ---
-
-        // a. Bloqueo inmediato visual
         setHasSubmitted(true);
-
-        // b. Scroll suave arriba
         window.scrollTo({ top: 0, behavior: "smooth" });
-
-        // c. CONFETI (Celebración) 🎉
-        // Tiro central
         confetti({
           particleCount: 150,
           spread: 70,
           origin: { y: 0.6 },
-          colors: ["#22c55e", "#eab308", "#ffffff"], // Verde, Oro, Blanco
+          colors: ["#22c55e", "#eab308", "#ffffff"],
           zIndex: 9999,
         });
-
-        // Tiros laterales (más fiesta)
         setTimeout(() => {
           confetti({
             particleCount: 50,
@@ -147,7 +159,7 @@ export const useFanDashboardLogic = (
   };
 
   // VALORES COMPUTADOS
-  const totalMatches = 72; // Fase de grupos
+  const totalMatches = 72;
   const progress = completedMatches.size;
   const isComplete = progress >= totalMatches;
 
@@ -163,5 +175,8 @@ export const useFanDashboardLogic = (
     handleSubmit,
     isSubmitting,
     hasSubmitted,
+    // 🚀 EXPORTAMOS LOS NUEVOS ESTADOS DEL BRACKET
+    bracketMatches,
+    isLoadingBracket,
   };
 };

@@ -10,10 +10,10 @@ import { DICTIONARY, Language } from "@/components/constants/dictionary";
 import { FanHeader } from "@/components/fan/header/FanHeader";
 import { FloatingProgress } from "@/components/fan/FloatingProgress";
 
-// Componentes del Bracket (Los nuevos del taller)
+// Componentes del Bracket
 import { BracketContainer } from "@/components/bracket/BracketContainer";
 import { PhaseColumn } from "@/components/bracket/PhaseColumn";
-import { BracketMatchCard } from "@/components/bracket/BracketMatchCard"; // 👈 No olvide este import
+import { BracketMatchCard } from "@/components/bracket/BracketMatchCard";
 
 // Hook de Lógica
 import { useFanDashboardLogic } from "@/hooks/useFanDashboardLogic";
@@ -44,6 +44,8 @@ export const FanDashboard = ({
     handleSubmit,
     hasSubmitted,
     handlePredictionChange,
+    bracketMatches, // 👈 TRAEMOS LOS MATCHES DEL HOOK
+    isLoadingBracket, // 👈 TRAEMOS EL ESTADO DE CARGA
   } = useFanDashboardLogic(userPredictions, userSession?.id);
 
   const isLocked = !!userSession?.submission_date || hasSubmitted;
@@ -105,128 +107,72 @@ export const FanDashboard = ({
               </div>
             )}
 
-            {/* VISTA 2: FASE FINAL (El Bracket con pastillas de prueba) */}
+            {/* VISTA 2: FASE FINAL (Bracket Dinámico) */}
             {(currentView === "pred_finals" ||
               currentView === "res_finals") && (
               <div className="max-w-[1600px] mx-auto mt-4">
-                <BracketContainer>
-                  {/* --- COLUMNA 16AVOS (2 PASTILLAS) --- */}
-                  <PhaseColumn
-                    title={lang === "es" ? "16avos de Final" : "Round of 32"}
-                    isActive={currentView === "pred_finals"}
-                  >
-                    <BracketMatchCard
-                      matchCode="M73"
-                      homeTeam={{
-                        seed: "1A",
-                        name: lang === "es" ? "MÉXICO" : "MEXICO",
-                      }}
-                      awayTeam={{
-                        seed: "2B",
-                        name: lang === "es" ? "CANADÁ" : "CANADA",
-                      }}
-                    />
+                {isLoadingBracket ? (
+                  <div className="flex justify-center items-center h-64 text-cyan-400 font-bold animate-pulse tracking-widest text-lg">
+                    CALCULANDO LLAVES...
+                  </div>
+                ) : (
+                  <BracketContainer>
+                    {/* --- COLUMNA 16AVOS --- */}
+                    <PhaseColumn
+                      title={lang === "es" ? "16avos de Final" : "Round of 32"}
+                      isActive={currentView === "pred_finals"}
+                    >
+                      {/* 🚀 MAPEO DINÁMICO DE LOS PARTIDOS CALCULADOS */}
+                      {bracketMatches.length > 0 ? (
+                        bracketMatches.map((match, idx) => (
+                          <BracketMatchCard
+                            key={match.id}
+                            matchCode={`M${match.id}`}
+                            // Aplicamos márgenes alternados para dar efecto de "llave"
+                            style={
+                              idx % 2 !== 0
+                                ? { marginTop: "-8px" }
+                                : { marginTop: "30px" }
+                            }
+                            homeTeam={{
+                              seed: match.h, // Código original (Ej: A1)
+                              name: match.home.name, // Nombre real (Ej: México)
+                            }}
+                            awayTeam={{
+                              seed: match.a,
+                              name: match.away.name,
+                            }}
+                          />
+                        ))
+                      ) : (
+                        <div className="text-white/50 text-xs p-4 bg-slate-900/50 rounded-lg text-center border border-white/10">
+                          {lang === "es"
+                            ? "Completa la fase de grupos para ver las llaves."
+                            : "Complete group stage to see matchups."}
+                        </div>
+                      )}
+                    </PhaseColumn>
 
-                    <BracketMatchCard
-                      matchCode="M74"
-                      style={{ marginTop: "-8px" }}
-                      homeTeam={{
-                        seed: "1C",
-                        name: lang === "es" ? "BRASIL" : "BRAZIL",
-                      }}
-                      awayTeam={{
-                        seed: "2D",
-                        name: lang === "es" ? "AUSTRALIA" : "AUSTRALIA",
-                      }}
+                    {/* --- COLUMNAS FUTURAS (OCTAVOS, CUARTOS...) --- */}
+                    {/* Aquí irán apareciendo las siguientes fases cuando conectemos la lógica de ganadores */}
+                    <PhaseColumn
+                      title={lang === "es" ? "Octavos" : "Round of 16"}
+                      isActive={false}
                     />
-
-                    <BracketMatchCard
-                      matchCode="M74"
-                      style={{ marginTop: "30px" }}
-                      homeTeam={{
-                        seed: "1C",
-                        name: lang === "es" ? "BRASIL" : "BRAZIL",
-                      }}
-                      awayTeam={{
-                        seed: "2D",
-                        name: lang === "es" ? "AUSTRALIA" : "AUSTRALIA",
-                      }}
+                    <PhaseColumn
+                      title={lang === "es" ? "Cuartos" : "Quarter Finals"}
+                      isActive={false}
                     />
-
-                    <BracketMatchCard
-                      matchCode="M74"
-                      style={{ marginTop: "-8px" }}
-                      homeTeam={{
-                        seed: "1C",
-                        name: lang === "es" ? "BRASIL" : "BRAZIL",
-                      }}
-                      awayTeam={{
-                        seed: "2D",
-                        name: lang === "es" ? "AUSTRALIA" : "AUSTRALIA",
-                      }}
+                    <PhaseColumn
+                      title={lang === "es" ? "Semifinal" : "Semi Finals"}
+                      isActive={false}
                     />
-
-                    <BracketMatchCard
-                      matchCode="M74"
-                      style={{ marginTop: "30px" }}
-                      homeTeam={{
-                        seed: "1C",
-                        name: lang === "es" ? "BRASIL" : "BRAZIL",
-                      }}
-                      awayTeam={{
-                        seed: "2D",
-                        name: lang === "es" ? "AUSTRALIA" : "AUSTRALIA",
-                      }}
+                    <PhaseColumn
+                      title={lang === "es" ? "Gran Final" : "World Cup Final"}
+                      isActive={false}
                     />
-
-                    <BracketMatchCard
-                      matchCode="M74"
-                      style={{ marginTop: "-8px" }}
-                      homeTeam={{
-                        seed: "1C",
-                        name: lang === "es" ? "BRASIL" : "BRAZIL",
-                      }}
-                      awayTeam={{
-                        seed: "2D",
-                        name: lang === "es" ? "AUSTRALIA" : "AUSTRALIA",
-                      }}
-                    />
-                  </PhaseColumn>
-
-                  {/* --- COLUMNA OCTAVOS (1 PASTILLA) --- */}
-                  <PhaseColumn
-                    title={lang === "es" ? "Octavos" : "Round of 16"}
-                    isActive={false}
-                  >
-                    <BracketMatchCard
-                      matchCode="M89"
-                      style={{ marginTop: "80px" }}
-                      homeTeam={{ seed: "W73", name: "GANADOR M73" }}
-                      awayTeam={{ seed: "W74", name: "GANADOR M74" }}
-                    />
-
-                    <BracketMatchCard
-                      matchCode="M89"
-                      style={{ marginTop: "200px" }}
-                      homeTeam={{ seed: "W73", name: "GANADOR M73" }}
-                      awayTeam={{ seed: "W74", name: "GANADOR M74" }}
-                    />
-                  </PhaseColumn>
-
-                  {/* --- COLUMNAS RESTANTES (VACÍAS) --- */}
-                  <PhaseColumn
-                    title={lang === "es" ? "Cuartos" : "Quarter Finals"}
-                    isActive={false}
-                  />
-                  <PhaseColumn
-                    title={lang === "es" ? "Semifinal" : "Semi Finals"}
-                    isActive={false}
-                  />
-                  <PhaseColumn
-                    title={lang === "es" ? "Gran Final" : "World Cup Final"}
-                    isActive={false}
-                  />
-                </BracketContainer>
+                  </BracketContainer>
+                )}
               </div>
             )}
 

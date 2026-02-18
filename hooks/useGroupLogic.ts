@@ -7,12 +7,15 @@ import {
   subscribeToGroupPredictions,
 } from "@/services/predictionService";
 
+// 🔥 IMPORTAMOS LA NUEVA ACCIÓN
+import { saveGroupStandingsAction } from "@/lib/actions/fan-actions";
+
 export const useGroupLogic = (
   group: GroupDataReal,
   lang: string,
   initialPredictions: any[],
 ) => {
-  // 1. ESTADO DE LOS PARTIDOS (Inicializado con props para evitar parpadeo)
+  // 1. ESTADO DE LOS PARTIDOS
   const [matches, setMatches] = useState<MatchReal[]>(() => {
     return group.matches.map((match) => {
       const pred = initialPredictions.find((p) => p.match_id === match.id);
@@ -37,6 +40,13 @@ export const useGroupLogic = (
   const [isReady, setIsReady] = useState(false);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const standingsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 🛡️ REF PARA EVITAR RESETS POR RE-RENDERS DEL PADRE
+  const hasInitializedRef = useRef(false);
+
+  // 🛡️ NUEVO REF: Evita guardar en DB si la tabla no ha cambiado
+  const lastSavedStandingsRef = useRef<string>("");
 
   // 3. EFECTO: CARGAR SESIÓN
   useEffect(() => {
@@ -49,7 +59,26 @@ export const useGroupLogic = (
     setIsReady(true);
   }, []);
 
-  // 4. EFECTO: REALTIME (Suscripción a cambios)
+  // 🛡️ EFECTO EXTRA: Sincronizar solo una vez si cambian las initialPredictions
+  useEffect(() => {
+    if (
+      isReady &&
+      !hasInitializedRef.current &&
+      initialPredictions.length > 0
+    ) {
+      setMatches((prev) =>
+        prev.map((m) => {
+          const pred = initialPredictions.find((p) => p.match_id === m.id);
+          return pred
+            ? { ...m, home_score: pred.pred_home, away_score: pred.pred_away }
+            : m;
+        }),
+      );
+      hasInitializedRef.current = true;
+    }
+  }, [initialPredictions, isReady]);
+
+  // 4. EFECTO: REALTIME (Con filtro de seguridad)
   useEffect(() => {
     if (!adminUserId) return;
 
@@ -57,16 +86,25 @@ export const useGroupLogic = (
       group.id,
       adminUserId,
       (newPrediction) => {
+        if (!newPrediction || newPrediction.match_id === undefined) return;
+
         setMatches((prev) =>
-          prev.map((m) =>
-            m.id === newPrediction.match_id
-              ? {
+          prev.map((m) => {
+            if (m.id === newPrediction.match_id) {
+              const hasChanged =
+                m.home_score !== newPrediction.pred_home ||
+                m.away_score !== newPrediction.pred_away;
+
+              if (hasChanged) {
+                return {
                   ...m,
                   home_score: newPrediction.pred_home,
                   away_score: newPrediction.pred_away,
-                }
-              : m,
-          ),
+                };
+              }
+            }
+            return m;
+          }),
         );
       },
     );
@@ -76,12 +114,37 @@ export const useGroupLogic = (
     };
   }, [adminUserId, group.id]);
 
-  // 5. EFECTO: CALCULAR TABLA
+  // 5. EFECTO: CALCULAR TABLA Y AUTO-GUARDADO (Optimizado con huella digital)
   useEffect(() => {
-    setTableData(calculateStandings(matches, lang));
-  }, [matches, lang]);
+    // 1. Siempre calculamos para que el usuario vea la tabla actualizada
+    const newStandings = calculateStandings(matches, lang);
+    setTableData(newStandings);
 
-  // 6. HANDLER: GUARDAR EN BD
+    if (adminUserId && isReady) {
+      // 2. Creamos la "huella" de la tabla actual
+      const currentStandingsStr = JSON.stringify(newStandings);
+
+      // 3. Comparamos con la última guardada
+      if (currentStandingsStr !== lastSavedStandingsRef.current) {
+        if (standingsTimeoutRef.current)
+          clearTimeout(standingsTimeoutRef.current);
+
+        standingsTimeoutRef.current = setTimeout(async () => {
+          // Guardamos solo si es diferente
+          await saveGroupStandingsAction(adminUserId, group.id, newStandings);
+          // Actualizamos la referencia
+          lastSavedStandingsRef.current = currentStandingsStr;
+        }, 2000);
+      }
+    }
+
+    return () => {
+      if (standingsTimeoutRef.current)
+        clearTimeout(standingsTimeoutRef.current);
+    };
+  }, [matches, lang, adminUserId, isReady, group.id]);
+
+  // 6. HANDLER: CAMBIO DE MARCADORES
   const handleScoreChange = (
     matchId: number,
     type: "home" | "away",
@@ -89,7 +152,6 @@ export const useGroupLogic = (
   ) => {
     const newVal = value === "" ? null : parseInt(value);
 
-    // Actualización Optimista (Visual inmediata)
     const updatedMatches = matches.map((m) => {
       if (m.id === matchId) {
         return type === "home"
@@ -100,7 +162,6 @@ export const useGroupLogic = (
     });
     setMatches(updatedMatches);
 
-    // Guardado con Debounce (Espera a que deje de escribir)
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
     const matchToSave = updatedMatches.find((m) => m.id === matchId);
@@ -123,7 +184,16 @@ export const useGroupLogic = (
     }
   };
 
-  // Retornamos todo lo que la vista necesita
+  // 7. HANDLER: GUARDAR DESEMPATE MANUAL
+  const handleManualSort = async (updatedTable: TableStats[]) => {
+    setTableData(updatedTable);
+    if (adminUserId && isReady) {
+      await saveGroupStandingsAction(adminUserId, group.id, updatedTable);
+      // Actualizamos la referencia para que el efecto no intente guardar de nuevo lo mismo
+      lastSavedStandingsRef.current = JSON.stringify(updatedTable);
+    }
+  };
+
   return {
     matches,
     tableData,
@@ -131,5 +201,6 @@ export const useGroupLogic = (
     userRole,
     isReady,
     handleScoreChange,
+    handleManualSort,
   };
 };

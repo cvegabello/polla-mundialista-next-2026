@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 
 export const getFullGroupsData = async () => {
   try {
-    // 1. TU CONSULTA ORIGINAL (Exacta)
+    // 1. CONSULTA CORREGIDA: Agregamos el 'id' en los select de los equipos
     const { data: groups, error } = await supabase
       .from("groups")
       .select(
@@ -17,8 +17,10 @@ export const getFullGroupsData = async () => {
           city,
           home_score,
           away_score,
-          home_team:teams!home_team_id (name_es, flag_code, name_en),
-          away_team:teams!away_team_id (name_es, flag_code, name_en)
+          home_team_id,
+          away_team_id,
+          home_team:teams!home_team_id (id, name_es, flag_code, name_en),
+          away_team:teams!away_team_id (id, name_es, flag_code, name_en)
         )
       `,
       )
@@ -29,7 +31,7 @@ export const getFullGroupsData = async () => {
       return [];
     }
 
-    // 2. TU LÓGICA DE ORDENAMIENTO ORIGINAL
+    // 2. LÓGICA DE ORDENAMIENTO
     const groupsSorted = groups?.map((group) => ({
       ...group,
       matches: group.matches.sort(

@@ -26,7 +26,7 @@ export const GroupCard = ({
 }: GroupCardProps) => {
   const t = DICTIONARY[lang];
 
-  // 👇 AQUÍ OCURRE LA MAGIA: Una línea para controlarlos a todos
+  // 👇 AQUÍ OCURRE LA MAGIA: Extraemos también handleManualSort
   const {
     matches,
     tableData,
@@ -34,6 +34,7 @@ export const GroupCard = ({
     userRole,
     isReady,
     handleScoreChange,
+    handleManualSort, // 👈 NUEVO: El encargado de guardar el desempate manual
   } = useGroupLogic(group, lang, initialPredictions);
 
   // Revisamos si en los partidos de este grupo juega USA
@@ -91,15 +92,13 @@ export const GroupCard = ({
                       : "."}
               </span>
             </div>
-            {/* 👇 AQUÍ ESTÁ EL CAMBIO DEL LABEL */}
+
             <span className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider font-bold">
-              {
-                group.id === "K"
-                  ? t.colombiaGroup
-                  : hasUSA
-                    ? t.usaGroup // 👈 Si es USA, mostramos el cariño
-                    : t.phase // Si no, Fase 1 normal
-              }
+              {group.id === "K"
+                ? t.colombiaGroup
+                : hasUSA
+                  ? t.usaGroup
+                  : t.phase}
             </span>
           </div>
 
@@ -118,7 +117,11 @@ export const GroupCard = ({
           </div>
 
           {/* TABLA DE POSICIONES */}
-          <GroupTable tableData={tableData} lang={lang} />
+          <GroupTable
+            tableData={tableData}
+            lang={lang}
+            onTableChange={handleManualSort} // 👈 CONECTAMOS EL DESEMPATE MANUAL
+          />
         </div>
       </div>
     </div>

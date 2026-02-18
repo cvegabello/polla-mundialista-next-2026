@@ -5,73 +5,117 @@ export const calculateStandings = (
   matches: MatchReal[],
   lang: string = "es",
 ): TableStats[] => {
-  const stats: Record<string, { pts: 0; gf: 0; gc: 0 }> = {};
+  const stats: Record<string, any> = {};
 
-  // Helper interno para obtener nombre
-  const getName = (team: Team) =>
+  const getName = (team: any) =>
     lang === "en" ? team.name_en || team.name_es : team.name_es;
 
+  // 🧪 PUNTO DE CONTROL 1: Ver si el primer partido trae los IDs
+  if (matches.length > 0) {
+    console.log("🔍 DEBUG 1 - Objeto Match:", {
+      matchId: matches[0].id,
+      homeTeamId: matches[0].home_team_id,
+      homeTeamObject: matches[0].home_team,
+    });
+  }
+
   // 1. Inicializar estadísticas
-  matches.forEach((m) => {
-    const hName = getName(m.home_team);
-    const aName = getName(m.away_team);
-    if (!stats[hName]) stats[hName] = { pts: 0, gf: 0, gc: 0 };
-    if (!stats[aName]) stats[aName] = { pts: 0, gf: 0, gc: 0 };
+  matches.forEach((m: any) => {
+    // Buscamos el ID en todas las ubicaciones posibles
+    const hId = m.home_team_id || m.home_team?.id;
+    const aId = m.away_team_id || m.away_team?.id;
+
+    if (hId && !stats[hId]) {
+      stats[hId] = {
+        teamId: hId,
+        name: getName(m.home_team),
+        pts: 0,
+        gf: 0,
+        gc: 0,
+        played: 0,
+        won: 0,
+        tied: 0,
+        lost: 0,
+      };
+    }
+    if (aId && !stats[aId]) {
+      stats[aId] = {
+        teamId: aId,
+        name: getName(m.away_team),
+        pts: 0,
+        gf: 0,
+        gc: 0,
+        played: 0,
+        won: 0,
+        tied: 0,
+        lost: 0,
+      };
+    }
   });
 
-  // 2. Calcular puntos y goles
-  matches.forEach((m) => {
-    if (m.home_score != null && m.away_score != null) {
+  // 2. Calcular rendimiento
+  matches.forEach((m: any) => {
+    const hId = m.home_team_id || m.home_team?.id;
+    const aId = m.away_team_id || m.away_team?.id;
+
+    if (hId && aId && m.home_score != null && m.away_score != null) {
       const h = Number(m.home_score);
       const a = Number(m.away_score);
-      const hName = getName(m.home_team);
-      const aName = getName(m.away_team);
 
-      stats[hName].gf += h;
-      stats[hName].gc += a;
-      stats[aName].gf += a;
-      stats[aName].gc += h;
+      stats[hId].played += 1;
+      stats[aId].played += 1;
+      stats[hId].gf += h;
+      stats[hId].gc += a;
+      stats[aId].gf += a;
+      stats[aId].gc += h;
 
-      if (h > a) stats[hName].pts += 3;
-      else if (a > h) stats[aName].pts += 3;
-      else {
-        stats[hName].pts += 1;
-        stats[aName].pts += 1;
+      if (h > a) {
+        stats[hId].pts += 3;
+        stats[hId].won += 1;
+        stats[aId].lost += 1;
+      } else if (a > h) {
+        stats[aId].pts += 3;
+        stats[aId].won += 1;
+        stats[hId].lost += 1;
+      } else {
+        stats[hId].pts += 1;
+        stats[aId].pts += 1;
+        stats[hId].tied += 1;
+        stats[aId].tied += 1;
       }
     }
   });
 
-  // 3. Convertir a Array y Ordenar
-  let sortedTeams = Object.entries(stats).map(([team, data]) => ({
-    team,
-    pts: data.pts,
-    gf: data.gf,
-    gc: data.gc,
-    dg: data.gf - data.gc,
+  // 3. Convertir a Array con el ID garantizado
+  let sortedTeams = Object.values(stats).map((s: any) => ({
+    teamId: s.teamId, // 👈 Esto DEBE ser el UUID
+    team: s.name,
+    pts: s.pts,
+    gf: s.gf,
+    gc: s.gc,
+    played: s.played,
+    won: s.won,
+    tied: s.tied,
+    lost: s.lost,
+    dg: s.gf - s.gc,
     pos: 0,
     isTied: false,
   }));
 
-  // Criterios de desempate: Puntos > Diferencia Gol > Goles a Favor
-  sortedTeams.sort((a, b) => {
-    if (b.pts !== a.pts) return b.pts - a.pts;
-    if (b.dg !== a.dg) return b.dg - a.dg;
-    return b.gf - a.gf;
-  });
+  // 🧪 PUNTO DE CONTROL 2: Ver si el array final tiene el teamId
+  console.log("🔍 DEBUG 2 - Array generado:", sortedTeams[0]);
 
-  // 4. Asignar Posiciones y detectar Empates
-  const finalData = sortedTeams.map((item, index, array) => {
-    let isTied = false;
-    // Miramos si el anterior tiene exactamente los mismos números
-    if (index > 0) {
-      const prev = array[index - 1];
-      if (prev.pts === item.pts && prev.dg === item.dg && prev.gf === item.gf) {
-        isTied = true;
-        prev.isTied = true; // Marcamos también al anterior
-      }
-    }
+  sortedTeams.sort((a, b) => b.pts - a.pts || b.dg - a.dg || b.gf - a.gf);
+
+  const finalData = sortedTeams.map((item, index, arr) => {
+    const isTied =
+      index > 0 &&
+      arr[index - 1].pts === item.pts &&
+      arr[index - 1].dg === item.dg &&
+      arr[index - 1].gf === item.gf;
+    if (isTied) arr[index - 1].isTied = true;
     return { ...item, pos: index + 1, isTied: isTied || item.isTied };
-  });
+  }) as TableStats[];
 
   return finalData;
 };
