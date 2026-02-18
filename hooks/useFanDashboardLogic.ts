@@ -148,7 +148,8 @@ export const useFanDashboardLogic = (
           });
         }, 300);
       } else {
-        alert("Hubo un problema: " + result.error);
+        const errorMsg = (result as any).error || "Error desconocido";
+        alert("Hubo un problema: " + errorMsg);
       }
     } catch (err) {
       console.error(err);

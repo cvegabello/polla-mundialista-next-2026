@@ -225,7 +225,7 @@ export const MatchRow = ({
       <div className="flex items-center justify-between p-2 relative h-16">
         {/* NOMBRE LOCAL (CORREGIDO) */}
         <div className="flex-1 flex items-center justify-end pr-3">
-          <span className="text-sm font-medium text-gray-300 dark:text-slate-700 text-right leading-tight block break-words">
+          <span className="text-sm font-medium text-gray-300 dark:text-slate-700 text-right leading-tight block wrap-break-words">
             {getName(match.home_team)}
           </span>
         </div>
@@ -296,7 +296,7 @@ export const MatchRow = ({
 
         {/* NOMBRE VISITANTE (CORREGIDO) */}
         <div className="flex-1 flex items-center justify-start pl-3">
-          <span className="text-sm font-medium text-gray-300 dark:text-slate-700 text-left leading-tight block break-words">
+          <span className="text-sm font-medium text-gray-300 dark:text-slate-700 text-left leading-tight block wrap-break-word">
             {getName(match.away_team)}
           </span>
         </div>
