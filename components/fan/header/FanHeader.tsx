@@ -61,6 +61,7 @@ export const FanHeader = ({
       {/* 2. PANEL DE USUARIO */}
       <UserStats
         username={userSession?.username}
+        pollaName={userSession?.polla_name}
         points={1000}
         submissionDate={userSession?.submission_date}
         lang={lang}

@@ -87,11 +87,13 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
           );
         }
 
+        const selectedPool = poolOptions.find((p) => p.value === group);
         const sessionData = {
           id: result.user.id,
           username: result.user.username,
           role: result.user.role,
           polla_id: result.user.polla_id,
+          polla_name: selectedPool?.label ?? "",
         };
 
         // 👇 LA "SERVILLETA" (CREACIÓN DE COOKIE MANUAL)

@@ -5,6 +5,7 @@ import { DICTIONARY, Language } from "@/components/constants/dictionary";
 
 interface UserStatsProps {
   username: string;
+  pollaName?: string;
   points: number;
   submissionDate: string | null;
   lang: Language;
@@ -12,6 +13,7 @@ interface UserStatsProps {
 
 export const UserStats = ({
   username,
+  pollaName,
   points,
   submissionDate,
   lang,
@@ -28,9 +30,17 @@ export const UserStats = ({
         <span className="text-cyan-400 text-lg md:text-xl font-bold tracking-wider uppercase drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]">
           {username}
         </span>
-        <span className="text-[10px] text-gray-300 font-medium opacity-80">
-          Fases: 0/6
-        </span>
+        {pollaName && (
+          <span className="flex items-center gap-1 text-xs font-semibold tracking-wide mt-0.5">
+            <span className="text-orange-400">🏆</span>
+            <span
+              className="text-orange-400 uppercase tracking-wider truncate max-w-[160px]"
+              style={{ textShadow: "0 0 12px rgba(251,146,60,0.5)" }}
+            >
+              {pollaName}
+            </span>
+          </span>
+        )}
       </div>
 
       {/* CENTRO: SEMÁFORO */}
