@@ -6,6 +6,7 @@ interface BracketMatchRowProps {
   score: string;
   isWinner: boolean;
   seedColor?: string;
+  isTie?: boolean;
   onScoreChange: (val: string) => void;
   onWinnerChange: () => void;
 }
@@ -16,17 +17,40 @@ export const BracketMatchRow: React.FC<BracketMatchRowProps> = ({
   score,
   isWinner,
   seedColor = "text-amber-400",
+  isTie = false,
   onScoreChange,
   onWinnerChange,
 }) => {
-  // Función de validación interna: Solo números y máximo 2 dígitos
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-
-    // Regla: Solo dígitos (\d*) y máximo 2 caracteres
     if (/^\d*$/.test(value) && value.length <= 2) {
       onScoreChange(value);
     }
+  };
+
+  // 🪄 MAGIA 1: Detectar la tecla "Enter" para saltar a la siguiente cajita
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault(); // Evitamos que haga saltos de línea raros
+
+      // Buscamos todas las cajitas de marcador en la pantalla usando la clase 'score-input'
+      const inputs = Array.from(
+        document.querySelectorAll(".score-input"),
+      ) as HTMLInputElement[];
+
+      // Encontramos en cuál estamos parados ahora mismo
+      const currentIndex = inputs.indexOf(e.currentTarget);
+
+      // Si hay una siguiente cajita, ¡pum! le pasamos el foco
+      if (currentIndex > -1 && currentIndex < inputs.length - 1) {
+        inputs[currentIndex + 1].focus();
+      }
+    }
+  };
+
+  // 🪄 MAGIA 2: Seleccionar (subrayar) todo el texto apenas entra a la cajita
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
   };
 
   return (
@@ -47,17 +71,22 @@ export const BracketMatchRow: React.FC<BracketMatchRowProps> = ({
           type="checkbox"
           checked={isWinner}
           onChange={onWinnerChange}
-          className="w-4 h-4 rounded border-white/20 bg-slate-800 checked:bg-cyan-500 transition-all cursor-pointer"
+          className={`w-4 h-4 rounded border-white/20 bg-slate-800 checked:bg-cyan-500 transition-all cursor-pointer ${
+            isTie ? "visible" : "invisible pointer-events-none"
+          }`}
         />
 
-        {/* INPUT BLINDADO */}
+        {/* INPUT REPOTENCIADO */}
         <input
           type="text"
-          inputMode="numeric" // Optimiza el teclado en celulares
+          inputMode="numeric"
           value={score}
           onChange={handleChange}
-          placeholder="0"
-          className="w-[42px] h-8 bg-white text-black text-center font-black rounded-md border-none shadow-inner focus:ring-2 focus:ring-cyan-500 outline-none transition-all text-sm"
+          onKeyDown={handleKeyDown} // 👈 Atrapamos el Enter
+          onFocus={handleFocus} // 👈 Subrayamos el texto al entrar
+          placeholder="-"
+          // 🪄 Le agregamos la clase 'score-input' para poder encontrarla con el Enter
+          className="score-input w-[42px] h-8 bg-white text-black text-center font-black rounded-md border-none shadow-inner focus:ring-2 focus:ring-cyan-500 outline-none transition-all text-sm"
         />
       </div>
     </div>

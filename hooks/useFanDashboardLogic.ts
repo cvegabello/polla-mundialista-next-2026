@@ -27,9 +27,15 @@ export const useFanDashboardLogic = (
   // 3. ESTADO PARA LA BARRA FLOTANTE (Scroll)
   const [showFloating, setShowFloating] = useState(false);
 
-  // 🚀 4. ESTADO PARA EL BRACKET (Finales)
+  // 🚀 4. ESTADOS PARA EL BRACKET (Finales)
   const [bracketMatches, setBracketMatches] = useState<any[]>([]);
   const [isLoadingBracket, setIsLoadingBracket] = useState(false);
+
+  // 🪄 5. NUEVO: ESTADO PARA EL EFECTO DOMINÓ (Memoria de Ganadores)
+  // Guardará algo como: { '73': { name: 'Colombia', flag: 'co' }, '74': { ... } }
+  const [knockoutWinners, setKnockoutWinners] = useState<Record<string, any>>(
+    {},
+  );
 
   // --- EFECTO 1: Cargar predicciones iniciales (Progreso) ---
   useEffect(() => {
@@ -53,18 +59,26 @@ export const useFanDashboardLogic = (
   // --- EFECTO 2: Detectar Scroll ---
   useEffect(() => {
     let ticking = false;
-    const handleScroll = () => {
+
+    const handleScroll = (e: Event) => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          const shouldShow = window.scrollY > 400;
+          const target = e.target as HTMLElement | Document;
+          const scrollTop =
+            target === document
+              ? window.scrollY
+              : (target as HTMLElement).scrollTop;
+
+          const shouldShow = scrollTop > 150;
           setShowFloating((prev) => (prev !== shouldShow ? shouldShow : prev));
           ticking = false;
         });
         ticking = true;
       }
     };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+
+    window.addEventListener("scroll", handleScroll, true);
+    return () => window.removeEventListener("scroll", handleScroll, true);
   }, []);
 
   // 🚀 --- EFECTO 3: CARGAR Y RESOLVER BRACKET AL CAMBIAR VISTA ---
@@ -73,13 +87,8 @@ export const useFanDashboardLogic = (
       if (currentView === "pred_finals" && userId) {
         setIsLoadingBracket(true);
         try {
-          // A. Traemos las posiciones guardadas en 'user_group_standings'
           const standings = await getUserStandingsAction(userId);
-
-          // B. Resolvemos quién juega contra quién (Traductor A1, B2, etc.)
-          // Pasamos "es" como default, luego puede hacerlo dinámico
-          const resolved = resolveBracketMatches(standings, "es");
-
+          const resolved = resolveBracketMatches(standings);
           setBracketMatches(resolved);
         } catch (error) {
           console.error("Error cargando el bracket:", error);
@@ -107,6 +116,20 @@ export const useFanDashboardLogic = (
           newSet.delete(matchId);
         }
         return newSet;
+      });
+    },
+    [],
+  );
+
+  // 🪄 NUEVO HANDLER: Avanzar un equipo a la siguiente ronda (Efecto Dominó)
+  const handleAdvanceTeam = useCallback(
+    (matchId: number | string, winnerData: any) => {
+      setKnockoutWinners((prev) => {
+        // Guardamos al equipo ganador usando el ID del partido como llave
+        return {
+          ...prev,
+          [matchId.toString()]: winnerData,
+        };
       });
     },
     [],
@@ -159,7 +182,6 @@ export const useFanDashboardLogic = (
     }
   };
 
-  // VALORES COMPUTADOS
   const totalMatches = 72;
   const progress = completedMatches.size;
   const isComplete = progress >= totalMatches;
@@ -176,8 +198,10 @@ export const useFanDashboardLogic = (
     handleSubmit,
     isSubmitting,
     hasSubmitted,
-    // 🚀 EXPORTAMOS LOS NUEVOS ESTADOS DEL BRACKET
     bracketMatches,
     isLoadingBracket,
+    // 🚀 EXPORTAMOS LAS NUEVAS ARMAS
+    knockoutWinners,
+    handleAdvanceTeam,
   };
 };

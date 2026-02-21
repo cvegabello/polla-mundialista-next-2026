@@ -27,7 +27,7 @@ export async function saveGroupStandingsAction(
     }));
 
     // Verificación rápida en su consola de servidor
-    console.log("💾 Intentando guardar team_id:", rowsToUpsert[0]?.team_id);
+    // console.log("💾 Intentando guardar team_id:", rowsToUpsert[0]?.team_id);
 
     const { error } = await supabase
       .from("user_group_standings")

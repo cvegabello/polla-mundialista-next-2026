@@ -1,10 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react"; // Añadimos useState
 import { StarBackground } from "@/components/shared/StarBackground";
 import { CloudsBackground } from "@/components/shared/CloudsBackground";
 import { GroupCard } from "@/components/groups/GroupCard";
 import { DICTIONARY, Language } from "@/components/constants/dictionary";
+import confetti from "canvas-confetti"; // ✨ IMPORTANTE: Instalar con npm install canvas-confetti
 
 // Componentes del Header y Navegación
 import { FanHeader } from "@/components/fan/header/FanHeader";
@@ -18,6 +19,16 @@ import { BracketMatchCard } from "@/components/bracket/BracketMatchCard";
 // Hook de Lógica
 import { useFanDashboardLogic } from "@/hooks/useFanDashboardLogic";
 
+import { FloatingPhase } from "@/components/fan/FloatingPhase";
+
+// Agréguelo por aquí, debajo de los otros imports de componentes
+import {
+  R16_MATCHUPS,
+  QF_MATCHUPS,
+  SF_MATCHUPS,
+  F_MATCHUPS,
+} from "@/components/constants/matchups";
+
 interface FanDashboardProps {
   userSession: any;
   groupsData: any[];
@@ -25,6 +36,58 @@ interface FanDashboardProps {
   loadingData: boolean;
   lang: Language;
 }
+
+// Convierte código FIFA de 3 letras → URL de flagcdn.com (igual que MatchRow)
+const getFlagUrl = (code3: string | null | undefined): string | null => {
+  if (!code3) return null;
+  const map: Record<string, string> = {
+    col: "co",
+    mex: "mx",
+    usa: "us",
+    bra: "br",
+    arg: "ar",
+    por: "pt",
+    esp: "es",
+    fra: "fr",
+    ger: "de",
+    eng: "gb",
+    uru: "uy",
+    ecu: "ec",
+    can: "ca",
+    kor: "kr",
+    jpn: "jp",
+    sen: "sn",
+    ned: "nl",
+    bel: "be",
+    cro: "hr",
+    mar: "ma",
+    sui: "ch",
+    crc: "cr",
+    irn: "ir",
+    ksa: "sa",
+    aus: "au",
+    tun: "tn",
+    pol: "pl",
+    cmr: "cm",
+    gha: "gh",
+    hai: "ht",
+    civ: "ci",
+    alg: "dz",
+    egy: "eg",
+    qat: "qa",
+    par: "py",
+    nzl: "nz",
+    cpv: "cv",
+    nor: "no",
+    aut: "at",
+    jor: "jo",
+    uzb: "uz",
+    pan: "pa",
+  };
+  if (code3.includes("_rep_")) return null;
+  const code2 = map[code3.toLowerCase()] || code3.slice(0, 2).toLowerCase();
+  return `https://flagcdn.com/w80/${code2}.png`;
+};
 
 export const FanDashboard = ({
   userSession,
@@ -35,6 +98,10 @@ export const FanDashboard = ({
 }: FanDashboardProps) => {
   const t = DICTIONARY[lang];
 
+  // 🪄 ESTADOS PARA EL CAPRICHO DE FINA COQUETERIA
+  const [winnerTeam, setWinnerTeam] = useState<any>(null);
+  const [showWinnerModal, setShowWinnerModal] = useState(false);
+
   const {
     currentView,
     setCurrentView,
@@ -44,9 +111,74 @@ export const FanDashboard = ({
     handleSubmit,
     hasSubmitted,
     handlePredictionChange,
-    bracketMatches, // 👈 TRAEMOS LOS MATCHES DEL HOOK
-    isLoadingBracket, // 👈 TRAEMOS EL ESTADO DE CARGA
+    bracketMatches,
+    isLoadingBracket,
+    handleAdvanceTeam,
+    knockoutWinners,
   } = useFanDashboardLogic(userPredictions, userSession?.id);
+
+  // 🏆 FUNCIÓN PARA DISPARAR EL CONFETTI Y EL MODAL (EFECTO PRO)
+  const handleFinalAdvance = (
+    matchId: string | number,
+    winner: any,
+    isFinalMatch: boolean,
+  ) => {
+    handleAdvanceTeam(matchId, winner);
+
+    if (isFinalMatch && winner) {
+      setWinnerTeam(winner);
+
+      // --- PASO 1: Ráfaga inicial desde ambos lados (t=0ms) ---
+      const fireInitialBurst = () => {
+        // Cañón izquierdo 🎉
+        confetti({
+          particleCount: 120,
+          angle: 60,
+          spread: 70,
+          origin: { x: 0, y: 0.65 },
+          colors: ["#fbbf24", "#f59e0b", "#fff", "#fb923c", "#a78bfa"],
+          zIndex: 200,
+          startVelocity: 55,
+        });
+        // Cañón derecho 🎉
+        confetti({
+          particleCount: 120,
+          angle: 120,
+          spread: 70,
+          origin: { x: 1, y: 0.65 },
+          colors: ["#fbbf24", "#f59e0b", "#fff", "#fb923c", "#a78bfa"],
+          zIndex: 200,
+          startVelocity: 55,
+        });
+      };
+
+      // --- PASO 2: El modal aparece suavemente 600ms después ---
+      fireInitialBurst();
+      setTimeout(() => {
+        setShowWinnerModal(true);
+      }, 600);
+
+      // --- PASO 3: Lluvia de confetti continua por 4s (por encima del modal) ---
+      const duration = 4000;
+      const animationEnd = Date.now() + duration;
+
+      const interval: any = setInterval(() => {
+        const timeLeft = animationEnd - Date.now();
+        if (timeLeft <= 0) return clearInterval(interval);
+
+        const particleCount = 40 * (timeLeft / duration);
+        confetti({
+          particleCount,
+          startVelocity: 20,
+          spread: 360,
+          ticks: 80,
+          origin: { x: Math.random(), y: Math.random() * 0.4 },
+          colors: ["#fbbf24", "#ffffff", "#fb923c", "#a78bfa", "#34d399"],
+          zIndex: 200, // 👆 Por encima del modal (z-[150])
+        });
+      }, 300);
+    }
+  };
 
   const isLocked = !!userSession?.submission_date || hasSubmitted;
 
@@ -66,7 +198,7 @@ export const FanDashboard = ({
   };
 
   return (
-    <main className="min-h-screen transition-colors duration-300 bg-transparent dark:bg-transparent relative pb-20 overflow-hidden">
+    <main className="min-h-screen transition-colors duration-300 bg-transparent dark:bg-transparent relative pb-20 overflow-x-hidden">
       {/* ☁️ ESTRELLAS Y NUBES */}
       <StarBackground />
       <CloudsBackground />
@@ -113,64 +245,298 @@ export const FanDashboard = ({
               <div className="max-w-[1600px] mx-auto mt-4">
                 {isLoadingBracket ? (
                   <div className="flex justify-center items-center h-64 text-cyan-400 font-bold animate-pulse tracking-widest text-lg">
-                    CALCULANDO LLAVES...
+                    {t.bracketLoading}
                   </div>
                 ) : (
-                  <BracketContainer>
+                  <BracketContainer
+                    footer={
+                      <div className="flex flex-row gap-6">
+                        <div className="w-[280px] shrink-0 flex justify-center">
+                          <FloatingPhase
+                            isVisible={showFloating}
+                            title={t.bracketPhaseR32}
+                          />
+                        </div>
+                        <div className="w-[280px] shrink-0 flex justify-center">
+                          <FloatingPhase
+                            isVisible={showFloating}
+                            title={t.bracketPhaseR16}
+                          />
+                        </div>
+                        <div className="w-[280px] shrink-0 flex justify-center">
+                          <FloatingPhase
+                            isVisible={showFloating}
+                            title={t.bracketPhaseQF}
+                          />
+                        </div>
+                        <div className="w-[280px] shrink-0 flex justify-center">
+                          <FloatingPhase
+                            isVisible={showFloating}
+                            title={t.bracketPhaseSF}
+                          />
+                        </div>
+                        <div className="w-[280px] shrink-0 flex justify-center">
+                          <FloatingPhase
+                            isVisible={showFloating}
+                            title={t.bracketPhaseF}
+                          />
+                        </div>
+                      </div>
+                    }
+                  >
                     {/* --- COLUMNA 16AVOS --- */}
                     <PhaseColumn
-                      title={lang === "es" ? "16avos de Final" : "Round of 32"}
+                      title={t.bracketPhaseR32Full}
                       isActive={currentView === "pred_finals"}
+                      lang={lang}
+                      showFloating={showFloating}
                     >
-                      {/* 🚀 MAPEO DINÁMICO DE LOS PARTIDOS CALCULADOS */}
                       {bracketMatches.length > 0 ? (
                         bracketMatches.map((match, idx) => (
                           <BracketMatchCard
                             key={match.id}
+                            matchId={match.id}
                             matchCode={`M${match.id}`}
-                            // Aplicamos márgenes alternados para dar efecto de "llave"
+                            lang={lang}
+                            onAdvanceTeam={handleAdvanceTeam}
                             style={
                               idx % 2 !== 0
                                 ? { marginTop: "-8px" }
-                                : { marginTop: "30px" }
+                                : { marginTop: "15px" }
                             }
                             homeTeam={{
-                              seed: match.h, // Código original (Ej: A1)
-                              name: match.home.name, // Nombre real (Ej: México)
+                              seed: match.h,
+                              name: match.home.name_es || match.h,
+                              name_es: match.home.name_es,
+                              name_en: match.home.name_en,
+                              flag: match.home.flag,
+                              group: match.home.group,
                             }}
                             awayTeam={{
                               seed: match.a,
-                              name: match.away.name,
+                              name: match.away.name_es || match.a,
+                              name_es: match.away.name_es,
+                              name_en: match.away.name_en,
+                              flag: match.away.flag,
+                              group: match.away.group,
                             }}
                           />
                         ))
                       ) : (
                         <div className="text-white/50 text-xs p-4 bg-slate-900/50 rounded-lg text-center border border-white/10">
-                          {lang === "es"
-                            ? "Completa la fase de grupos para ver las llaves."
-                            : "Complete group stage to see matchups."}
+                          {t.bracketCompleteGroups}
                         </div>
                       )}
                     </PhaseColumn>
 
-                    {/* --- COLUMNAS FUTURAS (OCTAVOS, CUARTOS...) --- */}
-                    {/* Aquí irán apareciendo las siguientes fases cuando conectemos la lógica de ganadores */}
+                    {/* --- COLUMNA OCTAVOS DE FINAL --- */}
                     <PhaseColumn
-                      title={lang === "es" ? "Octavos" : "Round of 16"}
+                      title={t.bracketPhaseR16Full}
                       isActive={false}
-                    />
+                      lang={lang}
+                      showFloating={showFloating}
+                    >
+                      {R16_MATCHUPS.map((match, idx) => {
+                        const homeId = match.h.replace("W", "");
+                        const awayId = match.a.replace("W", "");
+                        const homeWinner = knockoutWinners[homeId];
+                        const awayWinner = knockoutWinners[awayId];
+
+                        return (
+                          <BracketMatchCard
+                            key={match.id}
+                            matchId={match.id}
+                            matchCode={`M${match.id}`}
+                            lang={lang}
+                            onAdvanceTeam={handleAdvanceTeam}
+                            style={
+                              idx % 10 !== 0
+                                ? { marginTop: "180px" }
+                                : { marginTop: "70px" }
+                            }
+                            homeTeam={{
+                              seed: match.h,
+                              name: homeWinner
+                                ? homeWinner.name_es || homeWinner.name
+                                : t.bracketTBD,
+                              name_es: homeWinner?.name_es,
+                              name_en: homeWinner?.name_en,
+                              flag: homeWinner ? homeWinner.flag : null,
+                              group: homeWinner ? homeWinner.group : null,
+                            }}
+                            awayTeam={{
+                              seed: match.a,
+                              name: awayWinner
+                                ? awayWinner.name_es || awayWinner.name
+                                : t.bracketTBD,
+                              name_es: awayWinner?.name_es,
+                              name_en: awayWinner?.name_en,
+                              flag: awayWinner ? awayWinner.flag : null,
+                              group: awayWinner ? awayWinner.group : null,
+                            }}
+                          />
+                        );
+                      })}
+                    </PhaseColumn>
+
+                    {/* --- COLUMNA CUARTOS DE FINAL --- */}
                     <PhaseColumn
-                      title={lang === "es" ? "Cuartos" : "Quarter Finals"}
+                      title={t.bracketPhaseQFFull}
                       isActive={false}
-                    />
+                      lang={lang}
+                      showFloating={showFloating}
+                    >
+                      {QF_MATCHUPS.map((match, idx) => {
+                        const homeId = match.h.replace("W", "");
+                        const awayId = match.a.replace("W", "");
+                        const homeWinner = knockoutWinners[homeId];
+                        const awayWinner = knockoutWinners[awayId];
+
+                        return (
+                          <BracketMatchCard
+                            key={match.id}
+                            matchId={match.id}
+                            matchCode={`M${match.id}`}
+                            lang={lang}
+                            onAdvanceTeam={handleAdvanceTeam}
+                            style={
+                              idx % 10 !== 0
+                                ? { marginTop: "530px" }
+                                : { marginTop: "250px" }
+                            }
+                            homeTeam={{
+                              seed: match.h,
+                              name: homeWinner
+                                ? homeWinner.name_es || homeWinner.name
+                                : t.bracketTBD,
+                              name_es: homeWinner?.name_es,
+                              name_en: homeWinner?.name_en,
+                              flag: homeWinner ? homeWinner.flag : null,
+                            }}
+                            awayTeam={{
+                              seed: match.a,
+                              name: awayWinner
+                                ? awayWinner.name_es || awayWinner.name
+                                : t.bracketTBD,
+                              name_es: awayWinner?.name_es,
+                              name_en: awayWinner?.name_en,
+                              flag: awayWinner ? awayWinner.flag : null,
+                            }}
+                          />
+                        );
+                      })}
+                    </PhaseColumn>
+
+                    {/* --- COLUMNA SEMIFINALES --- */}
                     <PhaseColumn
-                      title={lang === "es" ? "Semifinal" : "Semi Finals"}
+                      title={t.bracketPhaseSFFull}
                       isActive={false}
-                    />
+                      lang={lang}
+                      showFloating={showFloating}
+                    >
+                      {SF_MATCHUPS.map((match, idx) => {
+                        const homeId = match.h.replace("W", "");
+                        const awayId = match.a.replace("W", "");
+                        const homeWinner = knockoutWinners[homeId];
+                        const awayWinner = knockoutWinners[awayId];
+
+                        return (
+                          <BracketMatchCard
+                            key={match.id}
+                            matchId={match.id}
+                            matchCode={`M${match.id}`}
+                            lang={lang}
+                            onAdvanceTeam={handleAdvanceTeam}
+                            style={
+                              idx % 10 !== 0
+                                ? { marginTop: "1200px" }
+                                : { marginTop: "600px" }
+                            }
+                            homeTeam={{
+                              seed: match.h,
+                              name: homeWinner
+                                ? homeWinner.name_es || homeWinner.name
+                                : t.bracketTBD,
+                              name_es: homeWinner?.name_es,
+                              name_en: homeWinner?.name_en,
+                              flag: homeWinner ? homeWinner.flag : null,
+                            }}
+                            awayTeam={{
+                              seed: match.a,
+                              name: awayWinner
+                                ? awayWinner.name_es || awayWinner.name
+                                : t.bracketTBD,
+                              name_es: awayWinner?.name_es,
+                              name_en: awayWinner?.name_en,
+                              flag: awayWinner ? awayWinner.flag : null,
+                            }}
+                          />
+                        );
+                      })}
+                    </PhaseColumn>
+
+                    {/* --- COLUMNA GRAN FINAL --- */}
                     <PhaseColumn
-                      title={lang === "es" ? "Gran Final" : "World Cup Final"}
+                      title={t.bracketPhaseFTitle}
                       isActive={false}
-                    />
+                      lang={lang}
+                      showFloating={showFloating}
+                    >
+                      {F_MATCHUPS.map((match, idx) => {
+                        const isLoserMatch = match.h.startsWith("L");
+                        const homeId = match.h
+                          .replace("W", "")
+                          .replace("L", "");
+                        const awayId = match.a
+                          .replace("W", "")
+                          .replace("L", "");
+
+                        const homeWinner = isLoserMatch
+                          ? null
+                          : knockoutWinners[homeId];
+                        const awayWinner = isLoserMatch
+                          ? null
+                          : knockoutWinners[awayId];
+
+                        const isFinal = idx === 0;
+
+                        return (
+                          <BracketMatchCard
+                            key={match.id}
+                            matchId={match.id}
+                            matchCode={`M${match.id}`}
+                            lang={lang}
+                            onAdvanceTeam={(id, w) =>
+                              handleFinalAdvance(id, w, isFinal)
+                            }
+                            isFinal={isFinal}
+                            style={
+                              idx % 2 !== 0
+                                ? { marginTop: "60px" }
+                                : { marginTop: "15px" }
+                            }
+                            homeTeam={{
+                              seed: match.h,
+                              name: homeWinner
+                                ? homeWinner.name_es || homeWinner.name
+                                : t.bracketTBD,
+                              name_es: homeWinner?.name_es,
+                              name_en: homeWinner?.name_en,
+                              flag: homeWinner ? homeWinner.flag : null,
+                            }}
+                            awayTeam={{
+                              seed: match.a,
+                              name: awayWinner
+                                ? awayWinner.name_es || awayWinner.name
+                                : t.bracketTBD,
+                              name_es: awayWinner?.name_es,
+                              name_en: awayWinner?.name_en,
+                              flag: awayWinner ? awayWinner.flag : null,
+                            }}
+                          />
+                        );
+                      })}
+                    </PhaseColumn>
                   </BracketContainer>
                 )}
               </div>
@@ -180,11 +546,9 @@ export const FanDashboard = ({
             {currentView === "res_groups" && (
               <div className="flex flex-col items-center justify-center min-h-[300px] text-white/50 bg-slate-900/40 backdrop-blur-md mx-auto max-w-2xl rounded-xl border border-white/10 p-8 shadow-2xl">
                 <p className="text-xl mb-2 text-cyan-400 font-bold uppercase tracking-tighter">
-                  Resultados FIFA
+                  {t.resGroupsTitle}
                 </p>
-                <p className="text-sm">
-                  Aquí se cargarán los resultados reales de los grupos.
-                </p>
+                <p className="text-sm">{t.resGroupsBody}</p>
               </div>
             )}
           </div>
@@ -199,6 +563,44 @@ export const FanDashboard = ({
           isVisible={showFloating}
           lang={lang}
         />
+      )}
+
+      {/* 🏆 MODAL DEL CAMPEÓN (Fina Coquetería) */}
+      {showWinnerModal && winnerTeam && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="relative bg-slate-900 border-2 border-amber-400/50 rounded-3xl p-8 max-w-sm w-full text-center shadow-[0_0_50px_rgba(251,191,36,0.4)] animate-in zoom-in-95 duration-300">
+            <button
+              onClick={() => setShowWinnerModal(false)}
+              className="absolute top-4 right-4 text-white/50 hover:text-white"
+            >
+              ✕
+            </button>
+            <div className="text-6xl mb-4 drop-shadow-lg">🏆</div>
+            <h2 className="text-amber-400 font-black text-2xl tracking-tighter mb-2 italic">
+              {t.bracketChampionTitle}
+            </h2>
+            <div className="bg-white/5 rounded-2xl py-6 border border-white/10 mb-6 flex flex-col items-center gap-3">
+              {getFlagUrl(winnerTeam.flag) && (
+                <img
+                  src={getFlagUrl(winnerTeam.flag)!}
+                  alt={winnerTeam.name}
+                  className="w-24 h-16 object-cover rounded-lg shadow-lg border border-white/20"
+                />
+              )}
+              <p className="text-white text-3xl font-bold uppercase tracking-widest">
+                {lang === "en"
+                  ? winnerTeam.name_en || winnerTeam.name_es || winnerTeam.name
+                  : winnerTeam.name_es || winnerTeam.name}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowWinnerModal(false)}
+              className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold py-3 rounded-xl shadow-lg hover:scale-105 transition-transform"
+            >
+              {t.bracketChampionBtn}
+            </button>
+          </div>
+        </div>
       )}
     </main>
   );
