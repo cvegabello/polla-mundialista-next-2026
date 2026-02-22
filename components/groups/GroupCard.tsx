@@ -39,7 +39,7 @@ export const GroupCard = ({
 
   // Revisamos si en los partidos de este grupo juega USA
   const hasUSA = matches.some(
-    (m) => m.home_team.flag_code === "usa" || m.away_team.flag_code === "usa",
+    (m) => m.home_team?.flag_code === "usa" || m.away_team?.flag_code === "usa",
   );
 
   // --- RENDERIZADO ---

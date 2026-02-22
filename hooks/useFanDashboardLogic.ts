@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import confetti from "canvas-confetti";
+import { saveKnockoutPredictionAction } from "@/lib/actions/fan-actions";
 
 // 👇 IMPORTAMOS LAS ACCIONES Y EL RESOLVER
 import {
   submitPredictionsAction,
   getUserStandingsAction,
+  saveKnockoutTeamsAction,
 } from "@/lib/actions/fan-actions";
 import { resolveBracketMatches } from "@/utils/bracket-resolver";
 
@@ -87,9 +89,17 @@ export const useFanDashboardLogic = (
       if (currentView === "pred_finals" && userId) {
         setIsLoadingBracket(true);
         try {
+          // 1. Calculamos las posiciones actuales
           const standings = await getUserStandingsAction(userId);
+
+          // 2. El algoritmo cruza los 1ros y 2dos y nos devuelve los partidos
           const resolved = resolveBracketMatches(standings);
           setBracketMatches(resolved);
+
+          // 🪄 3. NUEVO: Auto-guardado silencioso de los equipos en la base de datos
+          if (resolved.length > 0) {
+            await saveKnockoutTeamsAction(userId, resolved);
+          }
         } catch (error) {
           console.error("Error cargando el bracket:", error);
         } finally {
@@ -186,6 +196,39 @@ export const useFanDashboardLogic = (
   const progress = completedMatches.size;
   const isComplete = progress >= totalMatches;
 
+  const handleSaveKnockoutPrediction = useCallback(
+    async (
+      matchId: string | number,
+      hScore: number,
+      aScore: number,
+      winnerId: string,
+    ) => {
+      // 🕵️‍♂️ RASTREADOR 1: Verificamos qué sale de la tarjeta
+      console.log("🔥 1. FRONTEND ENVIANDO:", {
+        matchId,
+        hScore,
+        aScore,
+        winnerId,
+        userId,
+      });
+
+      if (userId) {
+        const result = await saveKnockoutPredictionAction(
+          userId,
+          matchId,
+          hScore,
+          aScore,
+          winnerId,
+        );
+        // 🕵️‍♂️ RASTREADOR 2: Verificamos qué respondió el servidor
+        console.log("✅ 2. RESPUESTA DEL BACKEND:", result);
+      } else {
+        console.warn("❌ ALERTA: No hay userId, por eso no guarda.");
+      }
+    },
+    [userId],
+  );
+
   return {
     currentView,
     setCurrentView,
@@ -203,5 +246,6 @@ export const useFanDashboardLogic = (
     // 🚀 EXPORTAMOS LAS NUEVAS ARMAS
     knockoutWinners,
     handleAdvanceTeam,
+    handleSaveKnockoutPrediction,
   };
 };

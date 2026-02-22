@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { BracketMatchRow } from "@/components/bracket/BracketMatchRow";
 
 export interface TeamProps {
@@ -21,6 +21,13 @@ interface BracketMatchCardProps {
   lang?: "es" | "en";
   isFinal?: boolean;
   onAdvanceTeam?: (matchId: string | number, winner: TeamProps | null) => void;
+  prediction?: any;
+  onSavePrediction?: (
+    matchId: string | number,
+    hScore: number,
+    aScore: number,
+    winnerId: string,
+  ) => void;
 }
 
 export const BracketMatchCard = ({
@@ -32,15 +39,24 @@ export const BracketMatchCard = ({
   lang = "es",
   isFinal = false,
   onAdvanceTeam,
+  prediction,
+  onSavePrediction,
 }: BracketMatchCardProps) => {
   const getName = (team: TeamProps) => {
     if (lang === "en") return team.name_en || team.name_es || team.name;
     return team.name_es || team.name;
   };
-  const [homeScore, setHomeScore] = useState("");
-  const [awayScore, setAwayScore] = useState("");
+
+  const [homeScore, setHomeScore] = useState(
+    prediction?.pred_home != null ? String(prediction.pred_home) : "",
+  );
+  const [awayScore, setAwayScore] = useState(
+    prediction?.pred_away != null ? String(prediction.pred_away) : "",
+  );
   const [homeWinner, setHomeWinner] = useState(false);
   const [awayWinner, setAwayWinner] = useState(false);
+
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const hScore = parseInt(homeScore);
   const aScore = parseInt(awayScore);
@@ -48,28 +64,109 @@ export const BracketMatchCard = ({
   const isTie = isComplete && hScore === aScore;
 
   useEffect(() => {
+    if (prediction?.predicted_winner) {
+      if (homeTeam?.id === prediction.predicted_winner) setHomeWinner(true);
+      if (awayTeam?.id === prediction.predicted_winner) setAwayWinner(true);
+    }
+  }, [homeTeam?.id, awayTeam?.id, prediction?.predicted_winner]);
+
+  // EL CEREBRO DE LA TARJETA CON RASTREADORES 🕵️‍♂️
+  useEffect(() => {
+    // 🔵 RASTREADOR 1: Ver si el useEffect arranca cuando escribimos
+    console.log(
+      `\n🔵 [${matchCode}] useEffect disparado. homeScore: "${homeScore}", awayScore: "${awayScore}"`,
+    );
+
     if (!isComplete) {
+      // 🟡 RASTREADOR 2: Ver si se está frenando por falta de datos
+      console.log(
+        `🟡 [${matchCode}] Abortando: isComplete es FALSE (Faltan datos). hScore: ${hScore}, aScore: ${aScore}`,
+      );
+
       setHomeWinner(false);
       setAwayWinner(false);
       if (onAdvanceTeam) onAdvanceTeam(matchId, null);
       return;
     }
 
+    // 🟢 RASTREADOR 3: ¡Pasó la barrera!
+    console.log(`🟢 [${matchCode}] isComplete es TRUE. Calculando ganador...`);
+
+    let currentHomeWinner = homeWinner;
+    let currentAwayWinner = awayWinner;
+
     if (hScore > aScore) {
       setHomeWinner(true);
       setAwayWinner(false);
+      currentHomeWinner = true;
+      currentAwayWinner = false;
       if (onAdvanceTeam) onAdvanceTeam(matchId, homeTeam);
     } else if (aScore > hScore) {
       setHomeWinner(false);
       setAwayWinner(true);
+      currentHomeWinner = false;
+      currentAwayWinner = true;
       if (onAdvanceTeam) onAdvanceTeam(matchId, awayTeam);
     } else {
-      setHomeWinner(false);
-      setAwayWinner(false);
-      if (onAdvanceTeam) onAdvanceTeam(matchId, null);
+      if (homeWinner && onAdvanceTeam) onAdvanceTeam(matchId, homeTeam);
+      else if (awayWinner && onAdvanceTeam) onAdvanceTeam(matchId, awayTeam);
+      else if (onAdvanceTeam) onAdvanceTeam(matchId, null);
     }
+
+    const hasWinner =
+      hScore !== aScore || (isTie && (currentHomeWinner || currentAwayWinner));
+    const winnerId = currentHomeWinner
+      ? homeTeam?.id
+      : currentAwayWinner
+        ? awayTeam?.id
+        : null;
+
+    // 🛠️ RASTREADOR 4: Ver los datos exactos que va a intentar guardar
+    console.log(`🛠️ [${matchCode}] ESTADO PARA GUARDAR:`, {
+      hasWinner,
+      homeTeamId: homeTeam?.id,
+      awayTeamId: awayTeam?.id,
+      winnerId,
+      tieneFuncionOnSave: !!onSavePrediction,
+    });
+
+    if (hasWinner && onSavePrediction) {
+      if (winnerId) {
+        console.log(
+          `⏳ [${matchCode}] Iniciando cuenta regresiva (1 segundo) para guardar...`,
+        );
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+
+        saveTimeoutRef.current = setTimeout(() => {
+          // 🚀 RASTREADOR 5: ¡Se disparó la función!
+          console.log(`🚀 [${matchCode}] ¡Disparando guardado al backend! ->`, {
+            matchId,
+            hScore,
+            aScore,
+            winnerId,
+          });
+          onSavePrediction(matchId, hScore, aScore, winnerId);
+        }, 1000);
+      } else {
+        console.warn(
+          `❌ [${matchCode}] ABORTANDO GUARDADO: El winnerId es null (Seguro no se pasó el ID desde FanDashboard)`,
+        );
+      }
+    } else if (!onSavePrediction) {
+      console.warn(
+        `❌ [${matchCode}] ABORTANDO GUARDADO: La función onSavePrediction no existe (No se pasó la prop)`,
+      );
+    }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [homeScore, awayScore]);
+  }, [
+    homeScore,
+    awayScore,
+    homeWinner,
+    awayWinner,
+    homeTeam?.id,
+    awayTeam?.id,
+  ]);
 
   const getDisplaySeed = (team: TeamProps) => {
     if (!team || !team.seed) return "";
@@ -94,14 +191,13 @@ export const BracketMatchCard = ({
     if (onAdvanceTeam) onAdvanceTeam(matchId, awayTeam);
   };
 
-  // 🪄 ESTILOS CONDICIONALES: Definimos cómo se ve una tarjeta normal vs la de la Final
   const containerClasses = isFinal
-    ? "border-amber-400/90 shadow-[0_0_50px_rgba(251,191,36,0.6)] hover:border-amber-300 hover:shadow-[0_0_55px_rgba(251,191,36,0.9)] scale-[1.05] z-10" // 🏆 Dorado neón sobrio y un poquitico más grande
-    : "border-white/80 shadow-2xl hover:border-orange-500/80 hover:shadow-[0_0_25px_rgba(249,115,22,0.80)]"; // ⚽ Normal
+    ? "border-amber-400/90 shadow-[0_0_50px_rgba(251,191,36,0.6)] hover:border-amber-300 hover:shadow-[0_0_55px_rgba(251,191,36,0.9)] scale-[1.05] z-10"
+    : "border-white/80 shadow-2xl hover:border-orange-500/80 hover:shadow-[0_0_25px_rgba(249,115,22,0.80)]";
 
   const accentLineClasses = isFinal
-    ? "bg-gradient-to-b from-amber-200 via-yellow-500 to-orange-500" // 🏆 Línea dorada
-    : "bg-gradient-to-b from-cyan-400 via-purple-500 to-pink-500"; // ⚽ Línea colorida normal
+    ? "bg-gradient-to-b from-amber-200 via-yellow-500 to-orange-500"
+    : "bg-gradient-to-b from-cyan-400 via-purple-500 to-pink-500";
 
   return (
     <div

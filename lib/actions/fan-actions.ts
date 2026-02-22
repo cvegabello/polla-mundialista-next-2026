@@ -78,3 +78,91 @@ export async function getUserStandingsAction(userId: string) {
   }
   return data;
 }
+
+// 👇 NUEVA FUNCIÓN: Guarda los equipos clasificados en la tabla predictions
+export async function saveKnockoutTeamsAction(
+  userId: string,
+  resolvedMatches: any[],
+) {
+  const supabase = await createClient();
+
+  try {
+    // 1. Mapeamos los partidos resueltos al formato de la tabla predictions
+    const upsertData = resolvedMatches.map((match) => ({
+      user_id: userId,
+      match_id: match.id, // Ej: "73", "74", "75"...
+      predicted_home_team: match.home?.id || null, // El ID del equipo local que calculó el algoritmo
+      predicted_away_team: match.away?.id || null, // El ID del equipo visitante que calculó el algoritmo
+    }));
+
+    // 2. Filtramos para no intentar guardar partidos donde falten IDs de equipos
+    // (Por si el usuario no ha terminado los grupos completos)
+    const validData = upsertData.filter(
+      (m) => m.predicted_home_team !== null && m.predicted_away_team !== null,
+    );
+
+    if (validData.length === 0) {
+      return {
+        success: true,
+        message: "No hay llaves completas para guardar.",
+      };
+    }
+
+    // 3. Upsert en la base de datos:
+    // Si ya existía el pronóstico para ese partido (ej. 73), le actualiza los equipos.
+    // Si no existía, crea la fila.
+    const { error } = await supabase
+      .from("predictions")
+      .upsert(validData, { onConflict: "user_id, match_id" });
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("❌ Error guardando los equipos del bracket:", error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+// 👇 NUEVA FUNCIÓN: Guarda los goles y el ganador del bracket
+export async function saveKnockoutPredictionAction(
+  userId: string,
+  matchId: string | number,
+  homeScore: number,
+  awayScore: number,
+  winnerId: string,
+) {
+  // 🕵️‍♂️ RASTREADOR 3: Verificamos qué llega al servidor
+  console.log("🛠️ 3. SERVIDOR RECIBIÓ:", {
+    userId,
+    matchId,
+    homeScore,
+    awayScore,
+    winnerId,
+  });
+
+  const supabase = await createClient();
+  try {
+    const { error } = await supabase.from("predictions").upsert(
+      {
+        user_id: userId,
+        match_id: parseInt(matchId.toString()),
+        pred_home: homeScore,
+        pred_away: awayScore,
+        predicted_winner: winnerId,
+      },
+      { onConflict: "user_id, match_id" },
+    );
+
+    if (error) {
+      // 🕵️‍♂️ RASTREADOR 4: El error exacto de la base de datos
+      console.error("❌ 4. ERROR SUPABASE:", error);
+      throw error;
+    }
+
+    console.log("💾 5. GUARDADO EXITOSO EN BD");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}

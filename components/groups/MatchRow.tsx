@@ -43,14 +43,17 @@ export const MatchRow = ({
   onPredictionChange,
 }: MatchRowProps) => {
   // --- HELPER PARA OBTENER NOMBRE SEGÚN IDIOMA ---
-  const getName = (team: Team) => {
+  const getName = (team: Team | null) => {
+    // 🪂 PARACAÍDAS: Si el equipo es null, devolvemos un texto vacío o "TBD"
+    if (!team) return "Por definir";
+
     if (lang === "en") {
       return team.name_en || team.name_es;
     }
     return team.name_es;
   };
 
-  const getFlagUrl = (code3: string) => {
+  const getFlagUrl = (code3?: string) => {
     const map: Record<string, string> = {
       col: "co",
       mex: "mx",
@@ -95,7 +98,11 @@ export const MatchRow = ({
       uzb: "uz",
       pan: "pa",
     };
+    if (!code3) return null;
+
+    // 👇 Esta es la línea que le estaba fallando
     if (code3.includes("_rep_")) return null;
+
     const code2 = map[code3.toLowerCase()] || code3.slice(0, 2).toLowerCase();
     return `https://flagcdn.com/w80/${code2}.png`;
   };
@@ -233,9 +240,9 @@ export const MatchRow = ({
         <div className="flex items-end justify-center gap-2">
           {/* BANDERA LOCAL */}
           <div className="flex flex-col items-center gap-1">
-            <div className="w-6 h-4 rounded shadow-sm overflow-hidden border border-white/20 dark:border-slate-300 relative bg-gray-800">
+            <div className="w-6 h-4 rounded shadow-sm overflow-hidden border border-white/20 dark:border-slate-300 relative">
               <TeamFlag
-                code={match.home_team.flag_code}
+                code={match.home_team?.flag_code}
                 name={getName(match.home_team)}
               />
             </div>
@@ -268,7 +275,7 @@ export const MatchRow = ({
           <div className="flex flex-col items-center gap-1">
             <div className="w-6 h-4 rounded shadow-sm overflow-hidden border border-white/20 dark:border-slate-300 relative bg-gray-800">
               <TeamFlag
-                code={match.away_team.flag_code}
+                code={match.away_team?.flag_code}
                 name={getName(match.away_team)}
               />
             </div>
