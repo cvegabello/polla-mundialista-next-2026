@@ -19,6 +19,7 @@ import { BracketMatchCard } from "@/components/bracket/BracketMatchCard";
 // Hook de Lógica
 import { useFanDashboardLogic } from "@/hooks/useFanDashboardLogic";
 import { FloatingPhase } from "@/components/fan/FloatingPhase";
+import { SystemAlerts } from "@/components/shared/SystemAlerts";
 
 import {
   R16_MATCHUPS,
@@ -111,6 +112,15 @@ export const FanDashboard = ({
     handleAdvanceTeam,
     knockoutWinners,
     handleSaveKnockoutPrediction,
+    hasUnsavedChanges,
+    handleManualSave,
+    handleRefresh,
+    handleGroupDataChange,
+    systemModal,
+    closeSystemModal,
+    confirmRefresh,
+    proceedWithLogout,
+    handleLogoutAttempt,
   } = useFanDashboardLogic(userPredictions, userSession?.id);
 
   const handleFinalAdvance = (
@@ -190,12 +200,15 @@ export const FanDashboard = ({
       <FanHeader
         userSession={headerSession}
         lang={lang}
-        onLogout={handleInternalLogout}
+        onLogout={() => handleLogoutAttempt(handleInternalLogout)}
         currentView={currentView}
         onViewChange={setCurrentView}
         totalPredictions={progress}
         totalMatches={totalMatches}
         onSubmitPredictions={handleSubmit}
+        hasUnsavedChanges={hasUnsavedChanges}
+        onManualSave={handleManualSave}
+        onRefresh={handleRefresh}
       />
 
       <div className="relative z-10 px-4">
@@ -218,6 +231,7 @@ export const FanDashboard = ({
                     initialPredictions={userPredictions}
                     onPredictionChange={handlePredictionChange}
                     isLocked={isLocked}
+                    onGroupDirty={handleGroupDataChange}
                   />
                 ))}
             </div>
@@ -595,6 +609,14 @@ export const FanDashboard = ({
           </div>
         </div>
       )}
+      {/* 👇 NUESTROS MODALES DEL SISTEMA (SIEMPRE AL FINAL, ANTES DE CERRAR EL MAIN) 👇 */}
+      <SystemAlerts
+        modalType={systemModal}
+        closeModal={closeSystemModal}
+        confirmRefresh={confirmRefresh}
+        proceedWithLogout={proceedWithLogout}
+        lang={lang}
+      />
     </main>
   );
 };

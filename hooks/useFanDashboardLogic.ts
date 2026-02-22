@@ -1,12 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import confetti from "canvas-confetti";
-import { saveKnockoutPredictionAction } from "@/lib/actions/fan-actions";
-
-// 👇 IMPORTAMOS LAS ACCIONES Y EL RESOLVER
 import {
+  saveKnockoutPredictionAction,
   submitPredictionsAction,
   getUserStandingsAction,
-  saveKnockoutTeamsAction,
+  saveGroupStandingsAction,
+  saveGroupBulkPredictionsAction,
 } from "@/lib/actions/fan-actions";
 import { resolveBracketMatches } from "@/utils/bracket-resolver";
 
@@ -14,32 +13,29 @@ export const useFanDashboardLogic = (
   initialPredictions: any[],
   userId: string,
 ) => {
-  // 1. ESTADO DE LA VISTA (Grupos vs Finales)
   const [currentView, setCurrentView] = useState("pred_groups");
-
-  // 👇 ESTADOS DE ENVÍO
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
-
-  // 2. ESTADO DEL CONTADOR EN VIVO (Para barra de progreso)
   const [completedMatches, setCompletedMatches] = useState<Set<string>>(
     new Set(),
   );
-
-  // 3. ESTADO PARA LA BARRA FLOTANTE (Scroll)
   const [showFloating, setShowFloating] = useState(false);
 
-  // 🚀 4. ESTADOS PARA EL BRACKET (Finales)
   const [bracketMatches, setBracketMatches] = useState<any[]>([]);
   const [isLoadingBracket, setIsLoadingBracket] = useState(false);
-
-  // 🪄 5. NUEVO: ESTADO PARA EL EFECTO DOMINÓ (Memoria de Ganadores)
-  // Guardará algo como: { '73': { name: 'Colombia', flag: 'co' }, '74': { ... } }
   const [knockoutWinners, setKnockoutWinners] = useState<Record<string, any>>(
     {},
   );
 
-  // --- EFECTO 1: Cargar predicciones iniciales (Progreso) ---
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const unsavedPredictions = useRef<Record<string, any>>({});
+
+  // 🚀 ACTUALIZADO: NUEVOS ESTADOS DE UI
+  const [systemModal, setSystemModal] = useState<
+    "none" | "refresh" | "logout" | "success" | "autosaving" | "autosaved"
+  >("none");
+  const logoutActionRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
     if (initialPredictions && initialPredictions.length > 0) {
       const validIds = new Set<string>();
@@ -49,19 +45,14 @@ export const useFanDashboardLogic = (
           p.home_score !== undefined &&
           p.away_score !== null &&
           p.away_score !== undefined;
-
-        if (isComplete) {
-          validIds.add(p.match_id.toString());
-        }
+        if (isComplete) validIds.add(p.match_id.toString());
       });
       setCompletedMatches(validIds);
     }
   }, [initialPredictions]);
 
-  // --- EFECTO 2: Detectar Scroll ---
   useEffect(() => {
     let ticking = false;
-
     const handleScroll = (e: Event) => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
@@ -70,7 +61,6 @@ export const useFanDashboardLogic = (
             target === document
               ? window.scrollY
               : (target as HTMLElement).scrollTop;
-
           const shouldShow = scrollTop > 150;
           setShowFloating((prev) => (prev !== shouldShow ? shouldShow : prev));
           ticking = false;
@@ -78,28 +68,18 @@ export const useFanDashboardLogic = (
         ticking = true;
       }
     };
-
     window.addEventListener("scroll", handleScroll, true);
     return () => window.removeEventListener("scroll", handleScroll, true);
   }, []);
 
-  // 🚀 --- EFECTO 3: CARGAR Y RESOLVER BRACKET AL CAMBIAR VISTA ---
   useEffect(() => {
     const loadBracket = async () => {
       if (currentView === "pred_finals" && userId) {
         setIsLoadingBracket(true);
         try {
-          // 1. Calculamos las posiciones actuales
           const standings = await getUserStandingsAction(userId);
-
-          // 2. El algoritmo cruza los 1ros y 2dos y nos devuelve los partidos
-          const resolved = resolveBracketMatches(standings);
+          const resolved = resolveBracketMatches(standings, initialPredictions);
           setBracketMatches(resolved);
-
-          // 🪄 3. NUEVO: Auto-guardado silencioso de los equipos en la base de datos
-          if (resolved.length > 0) {
-            await saveKnockoutTeamsAction(userId, resolved);
-          }
         } catch (error) {
           console.error("Error cargando el bracket:", error);
         } finally {
@@ -107,57 +87,132 @@ export const useFanDashboardLogic = (
         }
       }
     };
-
     loadBracket();
   }, [currentView, userId]);
 
-  // --- HANDLER: Cambio de marcadores (Para el contador) ---
   const handlePredictionChange = useCallback(
     (matchId: string, isComplete: boolean) => {
+      setHasUnsavedChanges(true);
       setCompletedMatches((prev) => {
         const hasMatch = prev.has(matchId);
         if (isComplete && hasMatch) return prev;
         if (!isComplete && !hasMatch) return prev;
-
         const newSet = new Set(prev);
-        if (isComplete) {
-          newSet.add(matchId);
-        } else {
-          newSet.delete(matchId);
-        }
+        if (isComplete) newSet.add(matchId);
+        else newSet.delete(matchId);
         return newSet;
       });
     },
     [],
   );
 
-  // 🪄 NUEVO HANDLER: Avanzar un equipo a la siguiente ronda (Efecto Dominó)
   const handleAdvanceTeam = useCallback(
     (matchId: number | string, winnerData: any) => {
-      setKnockoutWinners((prev) => {
-        // Guardamos al equipo ganador usando el ID del partido como llave
-        return {
-          ...prev,
-          [matchId.toString()]: winnerData,
-        };
-      });
+      setHasUnsavedChanges(true);
+      setKnockoutWinners((prev) => ({
+        ...prev,
+        [matchId.toString()]: winnerData,
+      }));
     },
     [],
   );
 
-  // --- LÓGICA DE ENVÍO FINAL ---
+  // 🚀 MAGIA PURA: SABE SI ES MANUAL O AUTOMÁTICO
+  const handleManualSave = async (isAutoSave: boolean = false) => {
+    if (!hasUnsavedChanges || !userId) return;
+
+    // Si es automático, mostramos el UI de "Guardando automáticamente..."
+    if (isAutoSave) {
+      setSystemModal("autosaving");
+    }
+
+    try {
+      for (const key in unsavedPredictions.current) {
+        const data = unsavedPredictions.current[key];
+        if (data.isKnockout) {
+          await saveKnockoutPredictionAction(
+            userId,
+            key,
+            data.hScore,
+            data.aScore,
+            data.winnerId,
+          );
+        } else {
+          if (data.matches) {
+            const bulkData = data.matches.map((m: any) => ({
+              matchId: m.id,
+              hScore: m.home_score ?? null,
+              aScore: m.away_score ?? null,
+            }));
+            await saveGroupBulkPredictionsAction(userId, bulkData);
+          }
+          if (data.tableData) {
+            await saveGroupStandingsAction(userId, key, data.tableData);
+          }
+        }
+      }
+
+      unsavedPredictions.current = {};
+      setHasUnsavedChanges(false);
+
+      // Decidimos cuál mensajito de éxito mostrar
+      setSystemModal(isAutoSave ? "autosaved" : "success");
+      setTimeout(() => setSystemModal("none"), 3000);
+    } catch (error) {
+      console.error("Error al guardar:", error);
+      if (isAutoSave) setSystemModal("none"); // Ocultamos el spinner si falla
+    }
+  };
+
+  const handleRefresh = () => {
+    if (hasUnsavedChanges) {
+      setSystemModal("refresh");
+    } else {
+      window.location.reload();
+    }
+  };
+
+  const handleLogoutAttempt = (executeLogout: () => void) => {
+    if (hasUnsavedChanges) {
+      logoutActionRef.current = executeLogout;
+      setSystemModal("logout");
+    } else {
+      executeLogout();
+    }
+  };
+
+  const confirmRefresh = () => window.location.reload();
+  const closeSystemModal = () => setSystemModal("none");
+  const proceedWithLogout = async (saveFirst: boolean) => {
+    if (saveFirst) {
+      await handleManualSave();
+    }
+    if (logoutActionRef.current) {
+      logoutActionRef.current();
+    }
+  };
+
+  // ⏱️ TEMPORIZADOR INTELIGENTE DE 5 MINUTOS (Le pasa true a la función)
+  useEffect(() => {
+    const autoSaveInterval = setInterval(() => {
+      if (hasUnsavedChanges) {
+        handleManualSave(true); // 👈 Dispara como autoguardado
+      }
+    }, 300000); // 5 minutos
+
+    return () => clearInterval(autoSaveInterval);
+  }, [hasUnsavedChanges]);
+
   const handleSubmit = async () => {
     if (isSubmitting || hasSubmitted) return;
-    if (!userId) {
-      alert("Error: No se identifica el usuario.");
-      return;
-    }
+    if (!userId) return alert("Error: No se identifica el usuario.");
 
     setIsSubmitting(true);
     try {
       const result = await submitPredictionsAction(userId);
       if (result.success) {
         setHasSubmitted(true);
+        setHasUnsavedChanges(false);
         window.scrollTo({ top: 0, behavior: "smooth" });
         confetti({
           particleCount: 150,
@@ -166,27 +221,11 @@ export const useFanDashboardLogic = (
           colors: ["#22c55e", "#eab308", "#ffffff"],
           zIndex: 9999,
         });
-        setTimeout(() => {
-          confetti({
-            particleCount: 50,
-            angle: 60,
-            spread: 55,
-            origin: { x: 0 },
-          });
-          confetti({
-            particleCount: 50,
-            angle: 120,
-            spread: 55,
-            origin: { x: 1 },
-          });
-        }, 300);
       } else {
-        const errorMsg = (result as any).error || "Error desconocido";
-        alert("Hubo un problema: " + errorMsg);
+        alert("Hubo un problema: " + (result as any).error);
       }
     } catch (err) {
       console.error(err);
-      alert("Error de conexión. Intenta de nuevo.");
     } finally {
       setIsSubmitting(false);
     }
@@ -203,30 +242,23 @@ export const useFanDashboardLogic = (
       aScore: number,
       winnerId: string,
     ) => {
-      // 🕵️‍♂️ RASTREADOR 1: Verificamos qué sale de la tarjeta
-      console.log("🔥 1. FRONTEND ENVIANDO:", {
-        matchId,
+      setHasUnsavedChanges(true);
+      unsavedPredictions.current[matchId] = {
+        isKnockout: true,
         hScore,
         aScore,
         winnerId,
-        userId,
-      });
-
-      if (userId) {
-        const result = await saveKnockoutPredictionAction(
-          userId,
-          matchId,
-          hScore,
-          aScore,
-          winnerId,
-        );
-        // 🕵️‍♂️ RASTREADOR 2: Verificamos qué respondió el servidor
-        console.log("✅ 2. RESPUESTA DEL BACKEND:", result);
-      } else {
-        console.warn("❌ ALERTA: No hay userId, por eso no guarda.");
-      }
+      };
     },
-    [userId],
+    [],
+  );
+
+  const handleGroupDataChange = useCallback(
+    (groupId: string, matches: any[], tableData: any[]) => {
+      setHasUnsavedChanges(true);
+      unsavedPredictions.current[groupId] = { matches, tableData };
+    },
+    [],
   );
 
   return {
@@ -243,9 +275,19 @@ export const useFanDashboardLogic = (
     hasSubmitted,
     bracketMatches,
     isLoadingBracket,
-    // 🚀 EXPORTAMOS LAS NUEVAS ARMAS
     knockoutWinners,
     handleAdvanceTeam,
     handleSaveKnockoutPrediction,
+    hasUnsavedChanges,
+    handleManualSave,
+    handleRefresh,
+    handleGroupDataChange,
+
+    // UI Modales
+    systemModal,
+    closeSystemModal,
+    confirmRefresh,
+    proceedWithLogout,
+    handleLogoutAttempt,
   };
 };

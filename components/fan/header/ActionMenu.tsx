@@ -1,43 +1,69 @@
 import React from "react";
 import { DICTIONARY, Language } from "@/components/constants/dictionary";
-import { LogOut, Trophy, Medal } from "lucide-react";
+import { LogOut, Save, RefreshCw } from "lucide-react";
 
 interface ActionMenuProps {
   lang: Language;
   onLogout: () => void;
+  hasUnsavedChanges: boolean;
+  onManualSave: () => void;
+  onRefresh: () => void;
 }
 
-export const ActionMenu = ({ lang, onLogout }: ActionMenuProps) => {
+export const ActionMenu = ({
+  lang,
+  onLogout,
+  hasUnsavedChanges,
+  onManualSave,
+  onRefresh,
+}: ActionMenuProps) => {
   const t = DICTIONARY[lang];
 
-  // CAMBIO: border-gray-700 (Más visible, igual al panel de stats)
   const btnBaseClass =
     "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 border border-gray-700 bg-[#1a1b26] cursor-pointer relative group shadow-sm";
 
   return (
-    <div className="flex justify-center mb-4 relative z-20">
-      {/* CONTENEDOR GENERAL */}
-      <div className="inline-flex flex-wrap items-center justify-center gap-3 p-3 rounded-2xl bg-[#0f1016] border border-gray-700 shadow-2xl">
-        {/* 🏆 BOTÓN 1: POSICIONES */}
+    <div className="flex justify-center relative z-20">
+      <div className="inline-flex flex-wrap items-center justify-center gap-3 p-3 rounded-2xl bg-[#0f1016] border border-gray-700 shadow-xl">
+        {/* 🔄 BOTÓN 1: REFRESCAR */}
         <button
-          className={`${btnBaseClass} text-gray-300 hover:text-white hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.4)]`}
+          onClick={onRefresh}
+          className={`${btnBaseClass} text-cyan-400 hover:text-white hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.4)]`}
         >
-          <Trophy
+          <RefreshCw
             size={16}
-            className="text-yellow-400 group-hover:scale-110 transition-transform duration-300"
+            className="group-hover:rotate-180 transition-transform duration-500"
           />
-          <span>{t.menuPositions}</span>
+          <span>{lang === "en" ? "Refresh" : "Refrescar"}</span>
         </button>
 
-        {/* 🥉 BOTÓN 2: 3ROS */}
+        {/* 💾 BOTÓN 2: GUARDAR (Dinámico) */}
         <button
-          className={`${btnBaseClass} text-gray-300 hover:text-white hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.4)]`}
+          onClick={onManualSave}
+          disabled={!hasUnsavedChanges}
+          className={`${btnBaseClass} ${
+            hasUnsavedChanges
+              ? "text-amber-400 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)] animate-pulse hover:bg-amber-500/10"
+              : "text-gray-500 border-gray-700 cursor-not-allowed"
+          }`}
         >
-          <Medal
+          <Save
             size={16}
-            className="text-orange-400 group-hover:scale-110 transition-transform duration-300"
+            className={
+              hasUnsavedChanges
+                ? "group-hover:scale-110 transition-transform duration-300"
+                : ""
+            }
           />
-          <span>{t.menuThirds}</span>
+          <span>
+            {hasUnsavedChanges
+              ? lang === "en"
+                ? "Save Changes"
+                : "Guardar Cambios"
+              : lang === "en"
+                ? "Saved"
+                : "Guardado"}
+          </span>
         </button>
 
         {/* 🚪 BOTÓN 3: SALIR */}

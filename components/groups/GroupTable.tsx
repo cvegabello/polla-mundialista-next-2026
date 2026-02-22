@@ -3,32 +3,32 @@
 import React, { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { DICTIONARY, Language } from "@/components/constants/dictionary";
-import { TableStats } from "@/types"; // Importamos el tipo global para evitar conflictos
+import { TableStats } from "@/types";
 
 interface GroupTableProps {
   tableData: TableStats[];
   lang?: Language;
-  onTableChange?: (data: TableStats[]) => void; // 👈 El "peaje" que faltaba
+  onTableChange?: (data: TableStats[]) => void;
+  variant?: "compact" | "large";
 }
 
 export const GroupTable = ({
   tableData,
   lang = "es",
   onTableChange,
+  variant = "compact",
 }: GroupTableProps) => {
   const t = DICTIONARY[lang];
   const [displayTeams, setDisplayTeams] = useState<TableStats[]>([]);
+  const isLarge = variant === "large";
 
-  // Sincronizamos la tabla visual cuando cambian los goles
   useEffect(() => {
     setDisplayTeams(tableData);
   }, [tableData]);
 
-  // 🚀 Lógica de intercambio de posición (Combobox de Desempate)
   const handlePositionChange = (currentTeamName: string, newPosStr: string) => {
     const newPos = parseInt(newPosStr);
     if (isNaN(newPos)) return;
-
     const updatedTeams = [...displayTeams];
     const currentTeamIndex = updatedTeams.findIndex(
       (t) => t.team === currentTeamName,
@@ -36,111 +36,116 @@ export const GroupTable = ({
     const targetTeamIndex = updatedTeams.findIndex((t) => t.pos === newPos);
 
     if (currentTeamIndex !== -1 && targetTeamIndex !== -1) {
-      // Intercambiamos posiciones manuales
       const tempPos = updatedTeams[currentTeamIndex].pos;
       updatedTeams[currentTeamIndex].pos = updatedTeams[targetTeamIndex].pos;
       updatedTeams[targetTeamIndex].pos = tempPos;
-
-      // Ordenamos para que la UI se refresque correctamente
       const finalSorted = [...updatedTeams].sort((a, b) => a.pos - b.pos);
-
       setDisplayTeams(finalSorted);
-
-      // 🔥 ¡BINGO! Le avisamos al hook para que guarde el cambio en Supabase
-      if (onTableChange) {
-        onTableChange(finalSorted);
-      }
+      if (onTableChange) onTableChange(finalSorted);
     }
   };
 
+  // 🎨 DISEÑO PARA EL MODAL (Optimizado para no generar scroll)
+  if (isLarge) {
+    return (
+      <div className="mt-4 bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-4 shadow-xl max-w-4xl mx-auto backdrop-blur-md">
+        <table className="w-full text-center border-collapse">
+          <thead>
+            <tr className="text-cyan-400 font-bold text-[10px] uppercase tracking-widest border-b border-white/10">
+              <th className="pb-2">Pos</th>
+              <th className="text-left pb-2 pl-2">{t.team}</th>
+              <th className="pb-2 text-yellow-500">{t.pts}</th>
+              <th className="pb-2 text-slate-400 px-1">PJ</th>
+              <th className="pb-2 text-slate-400 px-1">G</th>
+              <th className="pb-2 text-slate-400 px-1">E</th>
+              <th className="pb-2 text-slate-400 px-1">P</th>
+              <th className="pb-2 text-cyan-500/60 px-1">GF</th>
+              <th className="pb-2 text-cyan-500/60 px-1">GC</th>
+              <th className="pb-2 text-cyan-500/60 px-1">DG</th>
+            </tr>
+          </thead>
+          <tbody>
+            {displayTeams.map((row) => {
+              const isTop2 = row.pos <= 2;
+              return (
+                <tr
+                  key={row.teamId}
+                  className={`transition-colors border-b border-white/5 last:border-0 ${isTop2 ? "bg-cyan-500/5" : ""}`}
+                >
+                  <td className="py-2 text-sm font-black italic text-slate-500">
+                    {row.pos}
+                  </td>
+                  <td className="text-left pl-2 py-2">
+                    <span
+                      className={`text-sm font-bold ${isTop2 ? "text-white" : "text-slate-300"}`}
+                    >
+                      {row.team}
+                    </span>
+                  </td>
+                  <td className="text-base font-black text-yellow-500 py-2">
+                    {row.pts}
+                  </td>
+                  <td className="text-slate-400 text-xs">{row.played}</td>
+                  <td className="text-slate-400 text-xs">{row.won}</td>
+                  <td className="text-slate-400 text-xs">{row.tied}</td>
+                  <td className="text-slate-400 text-xs">{row.lost}</td>
+                  <td className="text-slate-300 text-xs">{row.gf}</td>
+                  <td className="text-slate-300 text-xs">{row.gc}</td>
+                  <td
+                    className={`text-xs font-bold ${row.dg > 0 ? "text-emerald-400" : row.dg < 0 ? "text-rose-500" : "text-slate-500"}`}
+                  >
+                    {row.dg > 0 ? `+${row.dg}` : row.dg}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  // 🏠 TABLA ORIGINAL DE LA TARJETA (INTACTA)
   return (
-    <div className="mt-2 bg-slate-200/90 border-slate-300 dark:bg-slate-50/80 dark:border-slate-200/60 rounded-lg p-3 text-xs border shadow-sm overflow-hidden transition-all">
+    <div className="mt-2 bg-slate-200/90 border-slate-300 dark:bg-slate-50/80 dark:border-slate-200/60 rounded-lg p-3 text-xs border shadow-sm overflow-hidden">
       <table className="w-full text-center border-collapse">
         <thead>
-          <tr className="text-cyan-600 dark:text-cyan-500 font-bold border-b border-slate-300/50 dark:border-slate-300/50 text-[10px] uppercase tracking-tighter">
-            <th className="py-2 w-8">#</th>
+          <tr className="py-2 text-cyan-600 dark:text-cyan-500 font-bold border-b border-slate-300/50 text-[10px] uppercase tracking-tighter">
+            <th className="w-8">#</th>
             <th className="text-left pl-2">{t.team}</th>
-            <th className="w-8 text-yellow-600 dark:text-yellow-500 font-extrabold">
-              {t.pts}
-            </th>
-            {/* 📊 NUEVAS COLUMNAS DE RENDIMIENTO */}
+            <th className="w-8 text-yellow-500 font-extrabold">{t.pts}</th>
             <th className="w-6 text-slate-500">J</th>
             <th className="w-6 text-slate-500">G</th>
             <th className="w-6 text-slate-500">E</th>
             <th className="w-6 text-slate-500">P</th>
-            <th className="w-7 text-cyan-600/70 dark:text-cyan-500/70">
-              {t.gf}
-            </th>
-            <th className="w-7 text-cyan-600/70 dark:text-cyan-500/70">
-              {t.gc}
-            </th>
-            <th className="w-7 text-cyan-600/70 dark:text-cyan-500/70">
-              {t.dg}
-            </th>
+            <th className="w-7 text-cyan-500/70">{t.gf}</th>
+            <th className="w-7 text-cyan-500/70">{t.gc}</th>
+            <th className="w-7 text-cyan-500/70">{t.dg}</th>
           </tr>
         </thead>
-        <tbody className="relative">
+        <tbody>
           {displayTeams.map((row) => {
             const isTop2 = row.pos <= 2;
             return (
               <tr
-                key={row.teamId} // Usamos teamId para mayor seguridad
-                className={`border-b border-slate-300/50 dark:border-slate-300/50 last:border-0 transition-all duration-500 ease-in-out ${
-                  isTop2
-                    ? "bg-emerald-100/60 dark:bg-emerald-500/10"
-                    : "hover:bg-white/40 dark:hover:bg-white/20"
-                }`}
+                key={row.teamId}
+                className={`border-b border-slate-300/20 last:border-0 ${isTop2 ? "bg-emerald-500/10" : ""}`}
               >
-                <td className="py-1.5 px-0.5 relative">
-                  {row.isTied ? (
-                    <div className="relative w-9 h-6 bg-slate-900 border border-slate-600 rounded flex items-center justify-center mx-auto overflow-hidden shadow-sm animate-pulse">
-                      <select
-                        className="appearance-none cursor-pointer w-full h-full bg-transparent text-center font-bold text-xs text-amber-400 focus:outline-none z-10 relative pl-0.5"
-                        value={row.pos}
-                        onChange={(e) =>
-                          handlePositionChange(row.team, e.target.value)
-                        }
-                      >
-                        {[1, 2, 3, 4].map((num) => (
-                          <option
-                            key={num}
-                            className="bg-slate-900 text-amber-400"
-                            value={num}
-                          >
-                            {num}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-0.5 w-3 h-3 text-amber-400 pointer-events-none z-0" />
-                    </div>
-                  ) : (
-                    <span
-                      className={`font-bold text-sm ${isTop2 ? "text-emerald-700 dark:text-emerald-400" : "text-slate-500"}`}
-                    >
-                      {row.pos}
-                    </span>
-                  )}
+                <td className="py-1.5 px-0.5 font-bold text-sm text-slate-500">
+                  {row.pos}
                 </td>
-                <td
-                  className={`text-left pl-2 font-bold truncate max-w-[85px] text-[11px] ${isTop2 ? "text-emerald-800 dark:text-emerald-400" : "text-slate-700 dark:text-slate-800"}`}
-                >
+                <td className="text-left pl-2 font-bold truncate max-w-[85px] text-[11px] text-slate-700">
                   {row.team}
                 </td>
-                <td className="font-extrabold text-yellow-600 dark:text-yellow-500 text-sm">
+                <td className="font-extrabold text-yellow-600 text-sm">
                   {row.pts}
                 </td>
-                {/* 🔢 VALORES DE LAS NUEVAS COLUMNAS */}
                 <td className="text-slate-500 font-medium">{row.played}</td>
                 <td className="text-slate-500 font-medium">{row.won}</td>
                 <td className="text-slate-500 font-medium">{row.tied}</td>
                 <td className="text-slate-500 font-medium">{row.lost}</td>
-
-                <td className="text-slate-600 dark:text-slate-700 font-medium">
-                  {row.gf}
-                </td>
-                <td className="text-slate-600 dark:text-slate-700 font-medium">
-                  {row.gc}
-                </td>
+                <td className="text-slate-600 font-medium">{row.gf}</td>
+                <td className="text-slate-600 font-medium">{row.gc}</td>
                 <td
                   className={`font-bold ${row.dg > 0 ? "text-green-600" : row.dg < 0 ? "text-red-600" : "text-slate-500"}`}
                 >

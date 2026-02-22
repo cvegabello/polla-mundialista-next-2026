@@ -4,7 +4,8 @@ import { UserStats } from "./UserStats";
 import { ActionMenu } from "./ActionMenu";
 import { NavigationBox } from "./NavigationBox";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
-import { SubmitZone } from "./SubmitZone"; // 👇 Importar la nueva zona
+import { SubmitZone } from "./SubmitZone";
+import { ReportsMenu } from "./ReportsMenu";
 
 interface FanHeaderProps {
   userSession: any;
@@ -15,6 +16,10 @@ interface FanHeaderProps {
   totalPredictions: number;
   totalMatches: number;
   onSubmitPredictions?: () => void;
+  // 👇 NUEVAS PROPS PARA LOS BOTONES DE PODER 👇
+  hasUnsavedChanges?: boolean;
+  onManualSave?: () => void;
+  onRefresh?: () => void;
 }
 
 export const FanHeader = ({
@@ -26,6 +31,9 @@ export const FanHeader = ({
   totalPredictions,
   totalMatches,
   onSubmitPredictions,
+  hasUnsavedChanges = false,
+  onManualSave,
+  onRefresh,
 }: FanHeaderProps) => {
   const t = DICTIONARY[lang];
   const isSubmitted = !!userSession?.submission_date;
@@ -54,7 +62,7 @@ export const FanHeader = ({
       </div>
 
       {/* 1. TÍTULO PRINCIPAL */}
-      <h1 className="text-3xl md:text-5xl font-black text-center mb-2 mt-2 text-transparent bg-clip-text bg-linear-to-b from-gray-900 to-orange-600 dark:from-white dark:to-cyan-200 drop-shadow-sm dark:drop-shadow-[0_0_10px_rgba(34,211,238,0.5)] tracking-tighter transition-all duration-300">
+      <h1 className="text-3xl md:text-5xl font-black text-center mb-2 mt-2 text-transparent bg-clip-text bg-gradient-to-b from-gray-900 to-orange-600 dark:from-white dark:to-cyan-200 drop-shadow-sm dark:drop-shadow-[0_0_10px_rgba(34,211,238,0.5)] tracking-tighter transition-all duration-300">
         {t.worldCupTitle}
       </h1>
 
@@ -67,8 +75,20 @@ export const FanHeader = ({
         lang={lang}
       />
 
-      {/* 3. MENÚ DE ACCIONES */}
-      <ActionMenu lang={lang} onLogout={onLogout} />
+      {/* 3. PANELES DE CONTROL (NUEVO DISEÑO DIVIDIDO) */}
+      <div className="flex flex-col md:flex-row gap-4 mt-4 mb-4 justify-center items-center w-full">
+        {/* PANEL IZQUIERDO: REPORTES */}
+        <ReportsMenu lang={lang} />
+
+        {/* PANEL DERECHO: ACCIONES DE SISTEMA */}
+        <ActionMenu
+          lang={lang}
+          onLogout={onLogout}
+          hasUnsavedChanges={hasUnsavedChanges}
+          onManualSave={onManualSave!}
+          onRefresh={onRefresh!}
+        />
+      </div>
 
       {/* 4. CAJAS DE NAVEGACIÓN */}
       <NavigationBox
@@ -79,19 +99,19 @@ export const FanHeader = ({
 
       {/* 5. TÍTULO DE LA VISTA ACTUAL */}
       <div className="mb-3 text-center">
-        <h2 className="text-xl md:text-2xl font-bold text-transparent bg-clip-text bg-linear-to-r from-cyan-600 to-purple-600 dark:from-cyan-400 dark:to-purple-400">
+        <h2 className="text-xl md:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-purple-600 dark:from-cyan-400 dark:to-purple-400">
           {getTitle()}
         </h2>
-        <div className="h-1 w-24 mx-auto bg-linear-to-r from-cyan-500 to-purple-500 rounded-full mt-2 opacity-60"></div>
+        <div className="h-1 w-24 mx-auto bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full mt-2 opacity-60"></div>
       </div>
 
-      {/* 6. ZONA DE ENVÍO (Solo visible en 'Mis Pronósticos - Fase de Grupos') */}
+      {/* 6. ZONA DE ENVÍO */}
       {currentView === "pred_groups" && (
         <SubmitZone
           lang={lang}
           isSubmitted={isSubmitted}
           isComplete={isComplete}
-          progress={totalPredictions} // OJO: Acuérdese de quitar el 48 quemado si ya terminó de probar
+          progress={totalPredictions}
           total={totalMatches}
           onSubmit={onSubmitPredictions || (() => {})}
         />

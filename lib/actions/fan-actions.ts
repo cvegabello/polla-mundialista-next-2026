@@ -166,3 +166,36 @@ export async function saveKnockoutPredictionAction(
     return { success: false, error: error.message };
   }
 }
+
+// 👇 NUEVA FUNCIÓN: Guardado Masivo de Grupo (Server Action)
+export async function saveGroupBulkPredictionsAction(
+  userId: string,
+  matchesData: {
+    matchId: number;
+    hScore: number | null;
+    aScore: number | null;
+  }[],
+) {
+  const supabase = await createClient();
+  try {
+    // 1. Mapeamos los datos al formato exacto de tu tabla en Supabase
+    const rowsToUpsert = matchesData.map((match) => ({
+      user_id: userId,
+      match_id: match.matchId,
+      pred_home: match.hScore,
+      pred_away: match.aScore,
+    }));
+
+    // 2. Le pasamos todo el Array a Supabase. ¡Él hace el guardado masivo en 1 milisegundo!
+    const { error } = await supabase
+      .from("predictions")
+      .upsert(rowsToUpsert, { onConflict: "user_id, match_id" });
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("❌ Error en guardado masivo:", error.message);
+    return { success: false, error: error.message };
+  }
+}
