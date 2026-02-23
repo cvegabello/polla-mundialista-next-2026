@@ -58,6 +58,9 @@ export const BracketMatchCard = ({
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // 🚀 LA SOLUCIÓN: Bandera para saber si el cambio vino de las manos del usuario
+  const isUserInteraction = useRef(false);
+
   const hScore = parseInt(homeScore);
   const aScore = parseInt(awayScore);
   const isComplete = !isNaN(hScore) && !isNaN(aScore);
@@ -70,27 +73,14 @@ export const BracketMatchCard = ({
     }
   }, [homeTeam?.id, awayTeam?.id, prediction?.predicted_winner]);
 
-  // EL CEREBRO DE LA TARJETA CON RASTREADORES 🕵️‍♂️
+  // EL CEREBRO DE LA TARJETA
   useEffect(() => {
-    // 🔵 RASTREADOR 1: Ver si el useEffect arranca cuando escribimos
-    console.log(
-      `\n🔵 [${matchCode}] useEffect disparado. homeScore: "${homeScore}", awayScore: "${awayScore}"`,
-    );
-
     if (!isComplete) {
-      // 🟡 RASTREADOR 2: Ver si se está frenando por falta de datos
-      console.log(
-        `🟡 [${matchCode}] Abortando: isComplete es FALSE (Faltan datos). hScore: ${hScore}, aScore: ${aScore}`,
-      );
-
       setHomeWinner(false);
       setAwayWinner(false);
       if (onAdvanceTeam) onAdvanceTeam(matchId, null);
       return;
     }
-
-    // 🟢 RASTREADOR 3: ¡Pasó la barrera!
-    console.log(`🟢 [${matchCode}] isComplete es TRUE. Calculando ganador...`);
 
     let currentHomeWinner = homeWinner;
     let currentAwayWinner = awayWinner;
@@ -121,44 +111,17 @@ export const BracketMatchCard = ({
         ? awayTeam?.id
         : null;
 
-    // 🛠️ RASTREADOR 4: Ver los datos exactos que va a intentar guardar
-    console.log(`🛠️ [${matchCode}] ESTADO PARA GUARDAR:`, {
-      hasWinner,
-      homeTeamId: homeTeam?.id,
-      awayTeamId: awayTeam?.id,
-      winnerId,
-      tieneFuncionOnSave: !!onSavePrediction,
-    });
-
-    if (hasWinner && onSavePrediction) {
+    // 🚀 SOLO GUARDAMOS SI EL USUARIO TOCÓ LA TARJETA (isUserInteraction.current === true)
+    if (hasWinner && onSavePrediction && isUserInteraction.current) {
       if (winnerId) {
-        console.log(
-          `⏳ [${matchCode}] Iniciando cuenta regresiva (1 segundo) para guardar...`,
-        );
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
         saveTimeoutRef.current = setTimeout(() => {
-          // 🚀 RASTREADOR 5: ¡Se disparó la función!
-          console.log(`🚀 [${matchCode}] ¡Disparando guardado al backend! ->`, {
-            matchId,
-            hScore,
-            aScore,
-            winnerId,
-          });
           onSavePrediction(matchId, hScore, aScore, winnerId);
+          isUserInteraction.current = false; // 👈 Apagamos la bandera después de guardar
         }, 1000);
-      } else {
-        console.warn(
-          `❌ [${matchCode}] ABORTANDO GUARDADO: El winnerId es null (Seguro no se pasó el ID desde FanDashboard)`,
-        );
       }
-    } else if (!onSavePrediction) {
-      console.warn(
-        `❌ [${matchCode}] ABORTANDO GUARDADO: La función onSavePrediction no existe (No se pasó la prop)`,
-      );
     }
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     homeScore,
     awayScore,
@@ -177,15 +140,28 @@ export const BracketMatchCard = ({
     return team.seed;
   };
 
-  const handleHomeWin = () => {
+  // 🚀 ENVOLTURAS PARA DETECTAR LA INTERACCIÓN HUMANA
+  const handleUserHomeScore = (val: string) => {
+    isUserInteraction.current = true;
+    setHomeScore(val);
+  };
+
+  const handleUserAwayScore = (val: string) => {
+    isUserInteraction.current = true;
+    setAwayScore(val);
+  };
+
+  const handleUserHomeWin = () => {
     if (!isTie) return;
+    isUserInteraction.current = true;
     setHomeWinner(true);
     setAwayWinner(false);
     if (onAdvanceTeam) onAdvanceTeam(matchId, homeTeam);
   };
 
-  const handleAwayWin = () => {
+  const handleUserAwayWin = () => {
     if (!isTie) return;
+    isUserInteraction.current = true;
     setAwayWinner(true);
     setHomeWinner(false);
     if (onAdvanceTeam) onAdvanceTeam(matchId, awayTeam);
@@ -226,8 +202,8 @@ export const BracketMatchCard = ({
           teamName={getName(homeTeam) || homeTeam.name}
           score={homeScore}
           isWinner={homeWinner}
-          onScoreChange={setHomeScore}
-          onWinnerChange={handleHomeWin}
+          onScoreChange={handleUserHomeScore} // 👈 Pasamos la envoltura
+          onWinnerChange={handleUserHomeWin} // 👈 Pasamos la envoltura
           isTie={isTie}
         />
 
@@ -238,8 +214,8 @@ export const BracketMatchCard = ({
           teamName={getName(awayTeam) || awayTeam.name}
           score={awayScore}
           isWinner={awayWinner}
-          onScoreChange={setAwayScore}
-          onWinnerChange={handleAwayWin}
+          onScoreChange={handleUserAwayScore} // 👈 Pasamos la envoltura
+          onWinnerChange={handleUserAwayWin} // 👈 Pasamos la envoltura
           isTie={isTie}
         />
       </div>

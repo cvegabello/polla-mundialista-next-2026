@@ -15,8 +15,8 @@ interface MatchData {
   match_date: string;
   stadium: string;
   city: string;
-  home_score?: number | null;
-  away_score?: number | null;
+  home_score?: number | null | string;
+  away_score?: number | null | string;
   home_team: Team;
   away_team: Team;
   home_team_id: string; // 👈 AGREGUE ESTA
@@ -188,27 +188,25 @@ export const MatchRow = ({
     );
   };
 
-  // Guardamos el estado anterior para comparar
-  const prevIsCompleteRef = React.useRef<boolean | null>(null);
+  // 🧠 EL EXORCISMO MEJORADO: Asegurar que el string vacío ("") NO cuente como completado
+  const isValidScore = (score: any) =>
+    score !== null && score !== undefined && score !== "";
 
-  // 👇 2. PEGUE ESTE EFECTO JUSTO ANTES DEL RETURN
+  const initialIsComplete =
+    isValidScore(match.home_score) && isValidScore(match.away_score);
+
+  const prevIsCompleteRef = React.useRef<boolean>(initialIsComplete);
+
   React.useEffect(() => {
-    const home = match.home_score;
-    const away = match.away_score;
-
-    // Verificamos SOLO que no sean null ni undefined.
-    // (TypeScript sabe que si existe, es un número, así que el 0 cuenta como válido)
     const isComplete =
-      home !== null &&
-      home !== undefined &&
-      away !== null &&
-      away !== undefined;
+      isValidScore(match.home_score) && isValidScore(match.away_score);
 
+    // 🚀 Solo gritamos si el usuario de verdad cambió de "vacío" a "lleno" (o viceversa)
     if (prevIsCompleteRef.current !== isComplete) {
       if (onPredictionChange) {
         onPredictionChange(match.id.toString(), isComplete);
       }
-      prevIsCompleteRef.current = isComplete; // Actualizamos la referencia
+      prevIsCompleteRef.current = isComplete;
     }
   }, [match.home_score, match.away_score, match.id, onPredictionChange]);
 

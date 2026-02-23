@@ -48,7 +48,7 @@ export const DICTIONARY = {
     // ZONA DE ENVÍO
     submitButton: "ENVIAR OFICIALMENTE",
     submittedLabel: "PRONÓSTICOS ENVIADOS",
-    submitWarning: "Completa los 48 partidos de grupos para enviar.",
+    submitWarning: "Completa los 72 partidos de grupos para enviar.",
 
     // TÍTULOS DE SECCIÓN
     viewPredGroups: "Mis Pronósticos - Fase de Grupos",
@@ -127,7 +127,7 @@ export const DICTIONARY = {
     // ZONA DE ENVÍO
     submitButton: "SUBMIT OFFICIALLY",
     submittedLabel: "PREDICTIONS SUBMITTED",
-    submitWarning: "Complete all 48 group matches to submit.",
+    submitWarning: "Complete all 72 group matches to submit.",
 
     // TÍTULOS DE SECCIÓN
     viewPredGroups: "My Predictions - Group Stage",

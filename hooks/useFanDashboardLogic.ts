@@ -12,6 +12,7 @@ import { resolveBracketMatches } from "@/utils/bracket-resolver";
 export const useFanDashboardLogic = (
   initialPredictions: any[],
   userId: string,
+  groupsData: any[] = [],
 ) => {
   const [currentView, setCurrentView] = useState("pred_groups");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,36 +21,55 @@ export const useFanDashboardLogic = (
     new Set(),
   );
   const [showFloating, setShowFloating] = useState(false);
-
+  const [totalGroupMatches, setTotalGroupMatches] = useState(72);
   const [bracketMatches, setBracketMatches] = useState<any[]>([]);
   const [isLoadingBracket, setIsLoadingBracket] = useState(false);
   const [knockoutWinners, setKnockoutWinners] = useState<Record<string, any>>(
     {},
   );
-
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const unsavedPredictions = useRef<Record<string, any>>({});
 
-  // 🚀 ACTUALIZADO: NUEVOS ESTADOS DE UI
   const [systemModal, setSystemModal] = useState<
     "none" | "refresh" | "logout" | "success" | "autosaving" | "autosaved"
   >("none");
   const logoutActionRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
+    const groupMatchIds = new Set<string>();
+    let count = 0;
+    if (groupsData && groupsData.length > 0) {
+      groupsData.forEach((group) => {
+        if (group.id !== "FI" && group.matches) {
+          group.matches.forEach((m: any) => {
+            groupMatchIds.add(m.id.toString());
+            count++;
+          });
+        }
+      });
+      if (count > 0) setTotalGroupMatches(count);
+    }
+
     if (initialPredictions && initialPredictions.length > 0) {
       const validIds = new Set<string>();
       initialPredictions.forEach((p) => {
+        const isValidScore = (val: any) =>
+          val !== null &&
+          val !== undefined &&
+          val !== "" &&
+          (typeof val !== "string" || val.trim() !== "");
         const isComplete =
-          p.home_score !== null &&
-          p.home_score !== undefined &&
-          p.away_score !== null &&
-          p.away_score !== undefined;
-        if (isComplete) validIds.add(p.match_id.toString());
+          isValidScore(p.pred_home) && isValidScore(p.pred_away);
+        if (isComplete) {
+          const matchIdStr = p.match_id.toString();
+          if (groupMatchIds.size === 0 || groupMatchIds.has(matchIdStr)) {
+            validIds.add(matchIdStr);
+          }
+        }
       });
       setCompletedMatches(validIds);
     }
-  }, [initialPredictions]);
+  }, [initialPredictions, groupsData]);
 
   useEffect(() => {
     let ticking = false;
@@ -92,7 +112,8 @@ export const useFanDashboardLogic = (
 
   const handlePredictionChange = useCallback(
     (matchId: string, isComplete: boolean) => {
-      setHasUnsavedChanges(true);
+      console.log("DEBUG: Activado desde handlePredictionChange");
+      // setHasUnsavedChanges(true);
       setCompletedMatches((prev) => {
         const hasMatch = prev.has(matchId);
         if (isComplete && hasMatch) return prev;
@@ -108,7 +129,6 @@ export const useFanDashboardLogic = (
 
   const handleAdvanceTeam = useCallback(
     (matchId: number | string, winnerData: any) => {
-      setHasUnsavedChanges(true);
       setKnockoutWinners((prev) => ({
         ...prev,
         [matchId.toString()]: winnerData,
@@ -117,14 +137,20 @@ export const useFanDashboardLogic = (
     [],
   );
 
-  // 🚀 MAGIA PURA: SABE SI ES MANUAL O AUTOMÁTICO
-  const handleManualSave = async (isAutoSave: boolean = false) => {
-    if (!hasUnsavedChanges || !userId) return;
-
-    // Si es automático, mostramos el UI de "Guardando automáticamente..."
-    if (isAutoSave) {
-      setSystemModal("autosaving");
+  // 🛠️ FUNCIÓN ACTUALIZADA: Agregamos forceClean para resetear el botón sin guardar de nuevo
+  const handleManualSave = async (
+    isAutoSave: boolean = false,
+    forceClean: boolean = false,
+  ) => {
+    // Si forceClean es true, vaciamos las referencias y apagamos el flag de cambios
+    if (forceClean) {
+      unsavedPredictions.current = {};
+      setHasUnsavedChanges(false);
+      return;
     }
+
+    if (!hasUnsavedChanges || !userId) return;
+    if (isAutoSave) setSystemModal("autosaving");
 
     try {
       for (const key in unsavedPredictions.current) {
@@ -154,59 +180,43 @@ export const useFanDashboardLogic = (
 
       unsavedPredictions.current = {};
       setHasUnsavedChanges(false);
-
-      // Decidimos cuál mensajito de éxito mostrar
       setSystemModal(isAutoSave ? "autosaved" : "success");
       setTimeout(() => setSystemModal("none"), 3000);
     } catch (error) {
       console.error("Error al guardar:", error);
-      if (isAutoSave) setSystemModal("none"); // Ocultamos el spinner si falla
+      if (isAutoSave) setSystemModal("none");
     }
   };
 
   const handleRefresh = () => {
-    if (hasUnsavedChanges) {
-      setSystemModal("refresh");
-    } else {
-      window.location.reload();
-    }
+    if (hasUnsavedChanges) setSystemModal("refresh");
+    else window.location.reload();
   };
 
   const handleLogoutAttempt = (executeLogout: () => void) => {
     if (hasUnsavedChanges) {
       logoutActionRef.current = executeLogout;
       setSystemModal("logout");
-    } else {
-      executeLogout();
-    }
+    } else executeLogout();
   };
 
   const confirmRefresh = () => window.location.reload();
   const closeSystemModal = () => setSystemModal("none");
   const proceedWithLogout = async (saveFirst: boolean) => {
-    if (saveFirst) {
-      await handleManualSave();
-    }
-    if (logoutActionRef.current) {
-      logoutActionRef.current();
-    }
+    if (saveFirst) await handleManualSave();
+    if (logoutActionRef.current) logoutActionRef.current();
   };
 
-  // ⏱️ TEMPORIZADOR INTELIGENTE DE 5 MINUTOS (Le pasa true a la función)
   useEffect(() => {
     const autoSaveInterval = setInterval(() => {
-      if (hasUnsavedChanges) {
-        handleManualSave(true); // 👈 Dispara como autoguardado
-      }
-    }, 300000); // 5 minutos
-
+      if (hasUnsavedChanges) handleManualSave(true);
+    }, 300000);
     return () => clearInterval(autoSaveInterval);
   }, [hasUnsavedChanges]);
 
   const handleSubmit = async () => {
     if (isSubmitting || hasSubmitted) return;
     if (!userId) return alert("Error: No se identifica el usuario.");
-
     setIsSubmitting(true);
     try {
       const result = await submitPredictionsAction(userId);
@@ -221,19 +231,13 @@ export const useFanDashboardLogic = (
           colors: ["#22c55e", "#eab308", "#ffffff"],
           zIndex: 9999,
         });
-      } else {
-        alert("Hubo un problema: " + (result as any).error);
-      }
+      } else alert("Hubo un problema: " + (result as any).error);
     } catch (err) {
       console.error(err);
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  const totalMatches = 72;
-  const progress = completedMatches.size;
-  const isComplete = progress >= totalMatches;
 
   const handleSaveKnockoutPrediction = useCallback(
     async (
@@ -242,6 +246,7 @@ export const useFanDashboardLogic = (
       aScore: number,
       winnerId: string,
     ) => {
+      console.log("DEBUG: Activado desde handleSaveKnockoutPrediction");
       setHasUnsavedChanges(true);
       unsavedPredictions.current[matchId] = {
         isKnockout: true,
@@ -255,6 +260,14 @@ export const useFanDashboardLogic = (
 
   const handleGroupDataChange = useCallback(
     (groupId: string, matches: any[], tableData: any[]) => {
+      console.log("--- DEBUG NULL DETECTED ---");
+      console.log("Grupo editado:", groupId);
+      matches.forEach((m) => {
+        console.log(
+          `Partido ${m.id}: Home=${m.home_score} (Tipo: ${typeof m.home_score}), Away=${m.away_score} (Tipo: ${typeof m.away_score})`,
+        );
+      });
+      console.log("DEBUG: Activado desde handleGroupDataChange");
       setHasUnsavedChanges(true);
       unsavedPredictions.current[groupId] = { matches, tableData };
     },
@@ -265,9 +278,9 @@ export const useFanDashboardLogic = (
     currentView,
     setCurrentView,
     completedMatches,
-    progress,
-    totalMatches,
-    isComplete,
+    progress: completedMatches.size,
+    totalMatches: totalGroupMatches,
+    isComplete: completedMatches.size >= totalGroupMatches,
     showFloating,
     handlePredictionChange,
     handleSubmit,
@@ -282,8 +295,6 @@ export const useFanDashboardLogic = (
     handleManualSave,
     handleRefresh,
     handleGroupDataChange,
-
-    // UI Modales
     systemModal,
     closeSystemModal,
     confirmRefresh,

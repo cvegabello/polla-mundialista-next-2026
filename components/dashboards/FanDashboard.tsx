@@ -121,7 +121,26 @@ export const FanDashboard = ({
     confirmRefresh,
     proceedWithLogout,
     handleLogoutAttempt,
-  } = useFanDashboardLogic(userPredictions, userSession?.id);
+  } = useFanDashboardLogic(userPredictions, userSession?.id, groupsData);
+
+  // 🛠️ MODIFICACIÓN CLAVE: Manejo de persistencia del modal y limpieza de estados null/pendientes
+  const handleInternalModalSave = async (
+    groupId: string,
+    matches: any[],
+    tableData: any[],
+  ) => {
+    // 1. Sincronizamos los datos con el hook (esto internamente pone hasUnsavedChanges en true)
+    handleGroupDataChange(groupId, matches, tableData);
+
+    // 2. ⚡ FORZAMOS EL RESET: Ejecutamos el guardado manual pasando 'false'.
+    // Esto limpia la lista de 'unsavedPredictions' en el hook y pone hasUnsavedChanges en false,
+    // evitando que el botón del Header se active por residuos de valores null.
+    if (typeof handleManualSave === "function") {
+      setTimeout(async () => {
+        await handleManualSave(false);
+      }, 100); // Un pequeño delay asegura que el estado anterior se haya procesado
+    }
+  };
 
   const handleFinalAdvance = (
     matchId: string | number,
@@ -231,7 +250,7 @@ export const FanDashboard = ({
                     initialPredictions={userPredictions}
                     onPredictionChange={handlePredictionChange}
                     isLocked={isLocked}
-                    onGroupDirty={handleGroupDataChange}
+                    onGroupDirty={handleInternalModalSave}
                   />
                 ))}
             </div>
@@ -247,36 +266,23 @@ export const FanDashboard = ({
                 <BracketContainer
                   footer={
                     <div className="flex flex-row gap-6">
-                      <div className="w-[280px] shrink-0 flex justify-center">
-                        <FloatingPhase
-                          isVisible={showFloating}
-                          title={t.bracketPhaseR32}
-                        />
-                      </div>
-                      <div className="w-[280px] shrink-0 flex justify-center">
-                        <FloatingPhase
-                          isVisible={showFloating}
-                          title={t.bracketPhaseR16}
-                        />
-                      </div>
-                      <div className="w-[280px] shrink-0 flex justify-center">
-                        <FloatingPhase
-                          isVisible={showFloating}
-                          title={t.bracketPhaseQF}
-                        />
-                      </div>
-                      <div className="w-[280px] shrink-0 flex justify-center">
-                        <FloatingPhase
-                          isVisible={showFloating}
-                          title={t.bracketPhaseSF}
-                        />
-                      </div>
-                      <div className="w-[280px] shrink-0 flex justify-center">
-                        <FloatingPhase
-                          isVisible={showFloating}
-                          title={t.bracketPhaseF}
-                        />
-                      </div>
+                      {[
+                        t.bracketPhaseR32,
+                        t.bracketPhaseR16,
+                        t.bracketPhaseQF,
+                        t.bracketPhaseSF,
+                        t.bracketPhaseF,
+                      ].map((phase, i) => (
+                        <div
+                          key={i}
+                          className="w-[280px] shrink-0 flex justify-center"
+                        >
+                          <FloatingPhase
+                            isVisible={showFloating}
+                            title={phase}
+                          />
+                        </div>
+                      ))}
                     </div>
                   }
                 >
@@ -300,7 +306,7 @@ export const FanDashboard = ({
                               : { marginTop: "15px" }
                           }
                           homeTeam={{
-                            id: match.home.id, // 👈 ID Agregado
+                            id: match.home.id,
                             seed: match.h,
                             name: match.home.name_es || match.h,
                             name_es: match.home.name_es,
@@ -309,7 +315,7 @@ export const FanDashboard = ({
                             group: match.home.group,
                           }}
                           awayTeam={{
-                            id: match.away.id, // 👈 ID Agregado
+                            id: match.away.id,
                             seed: match.a,
                             name: match.away.name_es || match.a,
                             name_es: match.away.name_es,
@@ -331,6 +337,7 @@ export const FanDashboard = ({
                     )}
                   </PhaseColumn>
 
+                  {/* Columnas de R16, QF, SF, F */}
                   <PhaseColumn
                     title={t.bracketPhaseR16Full}
                     isActive={false}
@@ -355,7 +362,7 @@ export const FanDashboard = ({
                               : { marginTop: "70px" }
                           }
                           homeTeam={{
-                            id: homeWinner?.id, // 👈 ID Agregado
+                            id: homeWinner?.id,
                             seed: match.h,
                             name: homeWinner
                               ? homeWinner.name_es || homeWinner.name
@@ -365,7 +372,7 @@ export const FanDashboard = ({
                             flag: homeWinner ? homeWinner.flag : null,
                           }}
                           awayTeam={{
-                            id: awayWinner?.id, // 👈 ID Agregado
+                            id: awayWinner?.id,
                             seed: match.a,
                             name: awayWinner
                               ? awayWinner.name_es || awayWinner.name
@@ -597,7 +604,7 @@ export const FanDashboard = ({
               <p className="text-white text-3xl font-bold uppercase tracking-widest">
                 {lang === "en"
                   ? winnerTeam.name_en || winnerTeam.name_es || winnerTeam.name
-                  : winnerTeam.name_es || winnerTeam.name}
+                  : winnerTeam.name_es}
               </p>
             </div>
             <button
@@ -609,7 +616,7 @@ export const FanDashboard = ({
           </div>
         </div>
       )}
-      {/* 👇 NUESTROS MODALES DEL SISTEMA (SIEMPRE AL FINAL, ANTES DE CERRAR EL MAIN) 👇 */}
+
       <SystemAlerts
         modalType={systemModal}
         closeModal={closeSystemModal}
