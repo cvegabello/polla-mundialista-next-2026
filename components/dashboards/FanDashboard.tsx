@@ -250,7 +250,7 @@ export const FanDashboard = ({
                     initialPredictions={userPredictions}
                     onPredictionChange={handlePredictionChange}
                     isLocked={isLocked}
-                    onGroupDirty={handleInternalModalSave}
+                    onGroupDirty={handleGroupDataChange}
                   />
                 ))}
             </div>

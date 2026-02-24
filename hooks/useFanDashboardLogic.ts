@@ -14,7 +14,14 @@ export const useFanDashboardLogic = (
   userId: string,
   groupsData: any[] = [],
 ) => {
-  const [currentView, setCurrentView] = useState("pred_groups");
+  // 💾 MEJORA: Leemos la última pestaña visitada desde la memoria del navegador
+  const [currentView, setCurrentView] = useState(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("fanDashboardView") || "pred_groups";
+    }
+    return "pred_groups";
+  });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [completedMatches, setCompletedMatches] = useState<Set<string>>(
@@ -112,12 +119,12 @@ export const useFanDashboardLogic = (
 
   const handlePredictionChange = useCallback(
     (matchId: string, isComplete: boolean) => {
-      console.log("DEBUG: Activado desde handlePredictionChange");
-      // setHasUnsavedChanges(true);
       setCompletedMatches((prev) => {
         const hasMatch = prev.has(matchId);
-        if (isComplete && hasMatch) return prev;
-        if (!isComplete && !hasMatch) return prev;
+        if (isComplete === hasMatch) return prev; // Ignorar si no hay cambio real
+
+        setHasUnsavedChanges(true); // Activar botón solo si hubo cambio
+
         const newSet = new Set(prev);
         if (isComplete) newSet.add(matchId);
         else newSet.delete(matchId);
@@ -137,12 +144,12 @@ export const useFanDashboardLogic = (
     [],
   );
 
-  // 🛠️ FUNCIÓN ACTUALIZADA: Agregamos forceClean para resetear el botón sin guardar de nuevo
   const handleManualSave = async (
-    isAutoSave: boolean = false,
+    isAutoSave: any = false,
     forceClean: boolean = false,
   ) => {
-    // Si forceClean es true, vaciamos las referencias y apagamos el flag de cambios
+    const isReallyAutoSave = isAutoSave === true;
+
     if (forceClean) {
       unsavedPredictions.current = {};
       setHasUnsavedChanges(false);
@@ -150,9 +157,10 @@ export const useFanDashboardLogic = (
     }
 
     if (!hasUnsavedChanges || !userId) return;
-    if (isAutoSave) setSystemModal("autosaving");
+    if (isReallyAutoSave) setSystemModal("autosaving");
 
     try {
+      // 1. Guardar en Base de Datos
       for (const key in unsavedPredictions.current) {
         const data = unsavedPredictions.current[key];
         if (data.isKnockout) {
@@ -178,13 +186,66 @@ export const useFanDashboardLogic = (
         }
       }
 
+      // 2. 🥷 Sincronizar memoria para que el bracket no lea datos viejos
+      for (const key in unsavedPredictions.current) {
+        const data = unsavedPredictions.current[key];
+        if (data.isKnockout) {
+          const existing = initialPredictions.find(
+            (p: any) => p.match_id.toString() === key.toString(),
+          );
+          if (existing) {
+            existing.pred_home = data.hScore;
+            existing.pred_away = data.aScore;
+            existing.winner_id = data.winnerId;
+          } else {
+            initialPredictions.push({
+              match_id: key,
+              pred_home: data.hScore,
+              pred_away: data.aScore,
+              winner_id: data.winnerId,
+            });
+          }
+        } else if (data.matches) {
+          data.matches.forEach((m: any) => {
+            const existing = initialPredictions.find(
+              (p: any) => p.match_id.toString() === m.id.toString(),
+            );
+            if (existing) {
+              existing.pred_home = m.home_score;
+              existing.pred_away = m.away_score;
+            } else {
+              initialPredictions.push({
+                match_id: m.id,
+                pred_home: m.home_score,
+                pred_away: m.away_score,
+              });
+            }
+          });
+        }
+      }
+
       unsavedPredictions.current = {};
       setHasUnsavedChanges(false);
-      setSystemModal(isAutoSave ? "autosaved" : "success");
+
+      setSystemModal(isReallyAutoSave ? "autosaved" : "success");
       setTimeout(() => setSystemModal("none"), 3000);
     } catch (error) {
       console.error("Error al guardar:", error);
-      if (isAutoSave) setSystemModal("none");
+      if (isReallyAutoSave) setSystemModal("none");
+    }
+  };
+
+  // 🥷 EL CAMBIO NINJA: Interceptamos el cambio de pestaña para guardar automáticamente
+  // y memorizamos la pestaña en el navegador para que el Refresco no la borre.
+  const handleViewChange = async (newView: string) => {
+    if (newView !== currentView) {
+      if (hasUnsavedChanges) {
+        await handleManualSave(true);
+      }
+      setCurrentView(newView);
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("fanDashboardView", newView);
+      }
     }
   };
 
@@ -246,7 +307,6 @@ export const useFanDashboardLogic = (
       aScore: number,
       winnerId: string,
     ) => {
-      console.log("DEBUG: Activado desde handleSaveKnockoutPrediction");
       setHasUnsavedChanges(true);
       unsavedPredictions.current[matchId] = {
         isKnockout: true,
@@ -260,14 +320,6 @@ export const useFanDashboardLogic = (
 
   const handleGroupDataChange = useCallback(
     (groupId: string, matches: any[], tableData: any[]) => {
-      console.log("--- DEBUG NULL DETECTED ---");
-      console.log("Grupo editado:", groupId);
-      matches.forEach((m) => {
-        console.log(
-          `Partido ${m.id}: Home=${m.home_score} (Tipo: ${typeof m.home_score}), Away=${m.away_score} (Tipo: ${typeof m.away_score})`,
-        );
-      });
-      console.log("DEBUG: Activado desde handleGroupDataChange");
       setHasUnsavedChanges(true);
       unsavedPredictions.current[groupId] = { matches, tableData };
     },
@@ -276,7 +328,7 @@ export const useFanDashboardLogic = (
 
   return {
     currentView,
-    setCurrentView,
+    setCurrentView: handleViewChange, // 👈 Se reemplaza para interceptar clics
     completedMatches,
     progress: completedMatches.size,
     totalMatches: totalGroupMatches,

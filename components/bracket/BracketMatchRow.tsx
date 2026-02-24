@@ -78,14 +78,13 @@ export const BracketMatchRow: React.FC<BracketMatchRowProps> = ({
 
         {/* INPUT REPOTENCIADO */}
         <input
-          type="text"
-          inputMode="numeric"
+          type="number"
+          enterKeyHint="next" // 👈 ¡EL TRUCO! Esto pone la flechita "Siguiente" en el teclado del celular
           value={score}
           onChange={handleChange}
-          onKeyDown={handleKeyDown} // 👈 Atrapamos el Enter
-          onFocus={handleFocus} // 👈 Subrayamos el texto al entrar
+          onKeyDown={handleKeyDown}
+          onFocus={handleFocus}
           placeholder="-"
-          // 🪄 Le agregamos la clase 'score-input' para poder encontrarla con el Enter
           className="score-input w-[42px] h-8 bg-white text-black text-center font-black rounded-md border-none shadow-inner focus:ring-2 focus:ring-cyan-500 outline-none transition-all text-sm"
         />
       </div>
