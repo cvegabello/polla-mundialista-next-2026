@@ -6,7 +6,7 @@ export const getUserPredictions = async (userId: string) => {
   try {
     const { data, error } = await supabase
       .from("predictions")
-      .select("match_id, pred_home, pred_away")
+      .select("match_id, pred_home, pred_away, predicted_winner")
       .eq("user_id", userId);
 
     if (error) throw error;
@@ -23,12 +23,14 @@ export const savePrediction = async (
   matchId: number,
   homeScore: number | null,
   awayScore: number | null,
+  predictedWinner: string | null = null, // 👈 Lo dejamos como string y opcional por defecto
 ) => {
   const payload = {
     user_id: userId,
     match_id: matchId,
     pred_home: homeScore,
     pred_away: awayScore,
+    predicted_winner: predictedWinner, // 👈 Excelente deducción
   };
 
   const { error } = await supabase

@@ -53,12 +53,19 @@ export const BracketMatchCard = ({
   const [awayScore, setAwayScore] = useState(
     prediction?.pred_away != null ? String(prediction.pred_away) : "",
   );
-  const [homeWinner, setHomeWinner] = useState(false);
-  const [awayWinner, setAwayWinner] = useState(false);
+
+  // 🚀 ARREGLO 1: Leemos el ganador apenas nace el componente para evitar que arranque en falso
+  const initialWinner = prediction?.predicted_winner;
+  const [homeWinner, setHomeWinner] = useState(
+    !!initialWinner && initialWinner === homeTeam?.id,
+  );
+  const [awayWinner, setAwayWinner] = useState(
+    !!initialWinner && initialWinner === awayTeam?.id,
+  );
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 🚀 LA SOLUCIÓN: Bandera para saber si el cambio vino de las manos del usuario
+  // Bandera para saber si el cambio vino de las manos del usuario
   const isUserInteraction = useRef(false);
 
   const hScore = parseInt(homeScore);
@@ -66,10 +73,12 @@ export const BracketMatchCard = ({
   const isComplete = !isNaN(hScore) && !isNaN(aScore);
   const isTie = isComplete && hScore === aScore;
 
+  // 🚀 ARREGLO 2: Mantenemos sincronizado si llegan datos frescos sin parpadeos extraños
   useEffect(() => {
-    if (prediction?.predicted_winner) {
-      if (homeTeam?.id === prediction.predicted_winner) setHomeWinner(true);
-      if (awayTeam?.id === prediction.predicted_winner) setAwayWinner(true);
+    const winner = prediction?.predicted_winner;
+    if (winner) {
+      setHomeWinner(homeTeam?.id === winner);
+      setAwayWinner(awayTeam?.id === winner);
     }
   }, [homeTeam?.id, awayTeam?.id, prediction?.predicted_winner]);
 
@@ -111,14 +120,14 @@ export const BracketMatchCard = ({
         ? awayTeam?.id
         : null;
 
-    // 🚀 SOLO GUARDAMOS SI EL USUARIO TOCÓ LA TARJETA (isUserInteraction.current === true)
+    // SOLO GUARDAMOS SI EL USUARIO TOCÓ LA TARJETA (isUserInteraction.current === true)
     if (hasWinner && onSavePrediction && isUserInteraction.current) {
       if (winnerId) {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
         saveTimeoutRef.current = setTimeout(() => {
           onSavePrediction(matchId, hScore, aScore, winnerId);
-          isUserInteraction.current = false; // 👈 Apagamos la bandera después de guardar
+          isUserInteraction.current = false; // Apagamos la bandera después de guardar
         }, 1000);
       }
     }
@@ -140,7 +149,7 @@ export const BracketMatchCard = ({
     return team.seed;
   };
 
-  // 🚀 ENVOLTURAS PARA DETECTAR LA INTERACCIÓN HUMANA
+  // ENVOLTURAS PARA DETECTAR LA INTERACCIÓN HUMANA
   const handleUserHomeScore = (val: string) => {
     isUserInteraction.current = true;
     setHomeScore(val);
@@ -202,8 +211,8 @@ export const BracketMatchCard = ({
           teamName={getName(homeTeam) || homeTeam.name}
           score={homeScore}
           isWinner={homeWinner}
-          onScoreChange={handleUserHomeScore} // 👈 Pasamos la envoltura
-          onWinnerChange={handleUserHomeWin} // 👈 Pasamos la envoltura
+          onScoreChange={handleUserHomeScore}
+          onWinnerChange={handleUserHomeWin}
           isTie={isTie}
         />
 
@@ -214,8 +223,8 @@ export const BracketMatchCard = ({
           teamName={getName(awayTeam) || awayTeam.name}
           score={awayScore}
           isWinner={awayWinner}
-          onScoreChange={handleUserAwayScore} // 👈 Pasamos la envoltura
-          onWinnerChange={handleUserAwayWin} // 👈 Pasamos la envoltura
+          onScoreChange={handleUserAwayScore}
+          onWinnerChange={handleUserAwayWin}
           isTie={isTie}
         />
       </div>

@@ -196,13 +196,13 @@ export const useFanDashboardLogic = (
           if (existing) {
             existing.pred_home = data.hScore;
             existing.pred_away = data.aScore;
-            existing.winner_id = data.winnerId;
+            existing.predicted_winner = data.winnerId;
           } else {
             initialPredictions.push({
               match_id: key,
               pred_home: data.hScore,
               pred_away: data.aScore,
-              winner_id: data.winnerId,
+              predicted_winner: data.winnerId,
             });
           }
         } else if (data.matches) {
