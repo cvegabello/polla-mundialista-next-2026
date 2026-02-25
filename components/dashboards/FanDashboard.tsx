@@ -6,6 +6,7 @@ import { CloudsBackground } from "@/components/shared/CloudsBackground";
 import { GroupCard } from "@/components/groups/GroupCard";
 import { DICTIONARY, Language } from "@/components/constants/dictionary";
 import confetti from "canvas-confetti";
+import { resolveBracketMatches } from "@/utils/bracket-resolver";
 
 // Componentes del Header y Navegación
 import { FanHeader } from "@/components/fan/header/FanHeader";
@@ -503,14 +504,11 @@ export const FanDashboard = ({
                     lang={lang}
                     showFloating={showFloating}
                   >
-                    {F_MATCHUPS.map((match, idx) => {
-                      const isLoserMatch = match.h.startsWith("L");
-                      const homeWinner = isLoserMatch
-                        ? null
-                        : knockoutWinners[match.h.replace("W", "")];
-                      const awayWinner = isLoserMatch
-                        ? null
-                        : knockoutWinners[match.a.replace("W", "")];
+                    {resolveBracketMatches(
+                      groupsData,
+                      knockoutWinners,
+                      F_MATCHUPS,
+                    ).map((match, idx) => {
                       const isFinal = idx === 0;
                       return (
                         <BracketMatchCard
@@ -524,28 +522,26 @@ export const FanDashboard = ({
                           isFinal={isFinal}
                           style={
                             idx % 2 !== 0
-                              ? { marginTop: "60px" }
-                              : { marginTop: "15px" }
+                              ? { marginTop: "60px" } // Tercer Puesto
+                              : { marginTop: "15px" } // Final
                           }
                           homeTeam={{
-                            id: homeWinner?.id,
+                            ...match.home,
                             seed: match.h,
-                            name: homeWinner
-                              ? homeWinner.name_es || homeWinner.name
+                            name: match.home.id
+                              ? lang === "en"
+                                ? match.home.name_en || match.home.name_es
+                                : match.home.name_es
                               : t.bracketTBD,
-                            name_es: homeWinner?.name_es,
-                            name_en: homeWinner?.name_en,
-                            flag: homeWinner ? homeWinner.flag : null,
                           }}
                           awayTeam={{
-                            id: awayWinner?.id,
+                            ...match.away,
                             seed: match.a,
-                            name: awayWinner
-                              ? awayWinner.name_es || awayWinner.name
+                            name: match.away.id
+                              ? lang === "en"
+                                ? match.away.name_en || match.away.name_es
+                                : match.away.name_es
                               : t.bracketTBD,
-                            name_es: awayWinner?.name_es,
-                            name_en: awayWinner?.name_en,
-                            flag: awayWinner ? awayWinner.flag : null,
                           }}
                           prediction={userPredictions?.find(
                             (p) =>
