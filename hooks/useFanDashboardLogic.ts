@@ -164,19 +164,35 @@ export const useFanDashboardLogic = (
       for (const key in unsavedPredictions.current) {
         const data = unsavedPredictions.current[key];
         if (data.isKnockout) {
+          // AJUSTE AQUÍ: Aseguramos que si es undefined o vacío, mande null
+          const hScore =
+            data.hScore === "" || data.hScore === undefined
+              ? null
+              : data.hScore;
+          const aScore =
+            data.aScore === "" || data.aScore === undefined
+              ? null
+              : data.aScore;
+
           await saveKnockoutPredictionAction(
             userId,
             key,
-            data.hScore,
-            data.aScore,
-            data.winnerId,
+            hScore,
+            aScore,
+            data.winnerId || null,
           );
         } else {
           if (data.matches) {
             const bulkData = data.matches.map((m: any) => ({
               matchId: m.id,
-              hScore: m.home_score ?? null,
-              aScore: m.away_score ?? null,
+              hScore:
+                m.home_score === "" || m.home_score === undefined
+                  ? null
+                  : m.home_score,
+              aScore:
+                m.away_score === "" || m.away_score === undefined
+                  ? null
+                  : m.away_score,
             }));
             await saveGroupBulkPredictionsAction(userId, bulkData);
           }
@@ -186,22 +202,32 @@ export const useFanDashboardLogic = (
         }
       }
 
-      // 2. 🥷 Sincronizar memoria para que el bracket no lea datos viejos
+      // 2. 🥷 Sincronizar memoria (Tu lógica original intacta)
       for (const key in unsavedPredictions.current) {
         const data = unsavedPredictions.current[key];
         if (data.isKnockout) {
           const existing = initialPredictions.find(
             (p: any) => p.match_id.toString() === key.toString(),
           );
+          // Usamos la misma lógica de normalización para la memoria local
+          const hScore =
+            data.hScore === "" || data.hScore === undefined
+              ? null
+              : data.hScore;
+          const aScore =
+            data.aScore === "" || data.aScore === undefined
+              ? null
+              : data.aScore;
+
           if (existing) {
-            existing.pred_home = data.hScore;
-            existing.pred_away = data.aScore;
+            existing.pred_home = hScore;
+            existing.pred_away = aScore;
             existing.predicted_winner = data.winnerId;
           } else {
             initialPredictions.push({
               match_id: key,
-              pred_home: data.hScore,
-              pred_away: data.aScore,
+              pred_home: hScore,
+              pred_away: aScore,
               predicted_winner: data.winnerId,
             });
           }
@@ -210,14 +236,23 @@ export const useFanDashboardLogic = (
             const existing = initialPredictions.find(
               (p: any) => p.match_id.toString() === m.id.toString(),
             );
+            const mhScore =
+              m.home_score === "" || m.home_score === undefined
+                ? null
+                : m.home_score;
+            const maScore =
+              m.away_score === "" || m.away_score === undefined
+                ? null
+                : m.away_score;
+
             if (existing) {
-              existing.pred_home = m.home_score;
-              existing.pred_away = m.away_score;
+              existing.pred_home = mhScore;
+              existing.pred_away = maScore;
             } else {
               initialPredictions.push({
                 match_id: m.id,
-                pred_home: m.home_score,
-                pred_away: m.away_score,
+                pred_home: mhScore,
+                pred_away: maScore,
               });
             }
           });
@@ -300,20 +335,40 @@ export const useFanDashboardLogic = (
     }
   };
 
+  // Busca esta función al final de useFanDashboardLogic.ts
   const handleSaveKnockoutPrediction = useCallback(
     async (
       matchId: string | number,
-      hScore: number,
-      aScore: number,
-      winnerId: string,
+      hScore: any, // Aceptamos cualquier cosa para limpiar
+      aScore: any,
+      winnerId: string | null,
     ) => {
-      setHasUnsavedChanges(true);
-      unsavedPredictions.current[matchId] = {
-        isKnockout: true,
+      // ✅ Esto asegura que el botón de salvar se active SIEMPRE
+      console.log("DEBUGCarlitos: Datos recibidos en el Hook:", {
+        matchId,
         hScore,
         aScore,
         winnerId,
+      });
+      setHasUnsavedChanges(true);
+
+      // ✅ Normalizamos: si borran el input (""), guardamos null
+      unsavedPredictions.current[matchId] = {
+        isKnockout: true,
+        hScore:
+          hScore === "" || hScore === undefined || hScore === null
+            ? null
+            : hScore,
+        aScore:
+          aScore === "" || aScore === undefined || aScore === null
+            ? null
+            : aScore,
+        winnerId: winnerId,
       };
+      console.log(
+        "DEBUG_CV: Cambios pendientes actuales:",
+        unsavedPredictions.current,
+      );
     },
     [],
   );

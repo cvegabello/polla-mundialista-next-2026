@@ -147,10 +147,11 @@ export const FanDashboard = ({
     matchId: string | number,
     winner: any,
     isFinalMatch: boolean,
+    isManualAction: boolean = false, // 👈 Recibimos el chisme aquí
   ) => {
     handleAdvanceTeam(matchId, winner);
 
-    if (isFinalMatch && winner) {
+    if (isFinalMatch && winner && isManualAction) {
       setWinnerTeam(winner);
       const fireInitialBurst = () => {
         confetti({
@@ -516,8 +517,8 @@ export const FanDashboard = ({
                           matchId={match.id}
                           matchCode={`M${match.id}`}
                           lang={lang}
-                          onAdvanceTeam={(id, w) =>
-                            handleFinalAdvance(id, w, isFinal)
+                          onAdvanceTeam={(id, w, isManual) =>
+                            handleFinalAdvance(id, w, isFinal, isManual)
                           }
                           isFinal={isFinal}
                           style={

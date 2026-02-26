@@ -20,7 +20,11 @@ interface BracketMatchCardProps {
   style?: React.CSSProperties;
   lang?: "es" | "en";
   isFinal?: boolean;
-  onAdvanceTeam?: (matchId: string | number, winner: TeamProps | null) => void;
+  onAdvanceTeam?: (
+    matchId: string | number,
+    winner: TeamProps | null,
+    isManual?: boolean,
+  ) => void;
   prediction?: any;
   onSavePrediction?: (
     matchId: string | number,
@@ -87,7 +91,21 @@ export const BracketMatchCard = ({
     if (!isComplete) {
       setHomeWinner(false);
       setAwayWinner(false);
-      if (onAdvanceTeam) onAdvanceTeam(matchId, null);
+      if (onAdvanceTeam)
+        onAdvanceTeam(matchId, null, isUserInteraction.current);
+      // 🚀 CIRUGÍA LÁSER: Si no está completo pero fue el usuario quien borró, avisamos al Hook
+      if (onSavePrediction && isUserInteraction.current) {
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+
+        saveTimeoutRef.current = setTimeout(() => {
+          // Mandamos null si está vacío, o el número si hay algo
+          const valH = homeScore === "" ? null : parseInt(homeScore);
+          const valA = awayScore === "" ? null : parseInt(awayScore);
+
+          onSavePrediction(matchId, valH as any, valA as any, "" as any);
+          isUserInteraction.current = false;
+        }, 1000);
+      }
       return;
     }
 
@@ -99,17 +117,22 @@ export const BracketMatchCard = ({
       setAwayWinner(false);
       currentHomeWinner = true;
       currentAwayWinner = false;
-      if (onAdvanceTeam) onAdvanceTeam(matchId, homeTeam);
+      if (onAdvanceTeam)
+        onAdvanceTeam(matchId, homeTeam, isUserInteraction.current);
     } else if (aScore > hScore) {
       setHomeWinner(false);
       setAwayWinner(true);
       currentHomeWinner = false;
       currentAwayWinner = true;
-      if (onAdvanceTeam) onAdvanceTeam(matchId, awayTeam);
+      if (onAdvanceTeam)
+        onAdvanceTeam(matchId, awayTeam, isUserInteraction.current);
     } else {
-      if (homeWinner && onAdvanceTeam) onAdvanceTeam(matchId, homeTeam);
-      else if (awayWinner && onAdvanceTeam) onAdvanceTeam(matchId, awayTeam);
-      else if (onAdvanceTeam) onAdvanceTeam(matchId, null);
+      if (homeWinner && onAdvanceTeam)
+        onAdvanceTeam(matchId, homeTeam, isUserInteraction.current);
+      else if (awayWinner && onAdvanceTeam)
+        onAdvanceTeam(matchId, awayTeam, isUserInteraction.current);
+      else if (onAdvanceTeam)
+        onAdvanceTeam(matchId, null, isUserInteraction.current);
     }
 
     const hasWinner =
