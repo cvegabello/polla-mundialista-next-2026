@@ -7,6 +7,7 @@ interface BracketMatchRowProps {
   isWinner: boolean;
   seedColor?: string;
   isTie?: boolean;
+  isLocked?: boolean;
   onScoreChange: (val: string) => void;
   onWinnerChange: () => void;
 }
@@ -18,6 +19,7 @@ export const BracketMatchRow: React.FC<BracketMatchRowProps> = ({
   isWinner,
   seedColor = "text-amber-400",
   isTie = false,
+  isLocked,
   onScoreChange,
   onWinnerChange,
 }) => {
@@ -69,6 +71,7 @@ export const BracketMatchRow: React.FC<BracketMatchRowProps> = ({
       <div className="flex items-center gap-2">
         <input
           type="checkbox"
+          disabled={isLocked}
           checked={isWinner}
           onChange={onWinnerChange}
           className={`w-4 h-4 rounded border-white/20 bg-slate-800 checked:bg-cyan-500 transition-all cursor-pointer ${
@@ -79,6 +82,7 @@ export const BracketMatchRow: React.FC<BracketMatchRowProps> = ({
         {/* INPUT REPOTENCIADO */}
         <input
           type="number"
+          disabled={isLocked}
           enterKeyHint="next" // 👈 ¡EL TRUCO! Esto pone la flechita "Siguiente" en el teclado del celular
           value={score}
           onChange={handleChange}

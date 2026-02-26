@@ -17,6 +17,7 @@ interface BracketMatchCardProps {
   matchCode: string;
   homeTeam: TeamProps;
   awayTeam: TeamProps;
+  isLocked?: boolean;
   style?: React.CSSProperties;
   lang?: "es" | "en";
   isFinal?: boolean;
@@ -39,6 +40,7 @@ export const BracketMatchCard = ({
   matchCode,
   homeTeam,
   awayTeam,
+  isLocked,
   style,
   lang = "es",
   isFinal = false,
@@ -234,6 +236,7 @@ export const BracketMatchCard = ({
           teamName={getName(homeTeam) || homeTeam.name}
           score={homeScore}
           isWinner={homeWinner}
+          isLocked={isLocked}
           onScoreChange={handleUserHomeScore}
           onWinnerChange={handleUserHomeWin}
           isTie={isTie}
@@ -246,6 +249,7 @@ export const BracketMatchCard = ({
           teamName={getName(awayTeam) || awayTeam.name}
           score={awayScore}
           isWinner={awayWinner}
+          isLocked={isLocked}
           onScoreChange={handleUserAwayScore}
           onWinnerChange={handleUserAwayWin}
           isTie={isTie}

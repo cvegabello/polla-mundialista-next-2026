@@ -21,6 +21,8 @@ import { BracketMatchCard } from "@/components/bracket/BracketMatchCard";
 import { useFanDashboardLogic } from "@/hooks/useFanDashboardLogic";
 import { FloatingPhase } from "@/components/fan/FloatingPhase";
 import { SystemAlerts } from "@/components/shared/SystemAlerts";
+import { OfficialGroupsResults } from "@/components/dashboards/OfficialGroupsResults";
+import { OfficialKnockoutResults } from "@/components/dashboards/OfficialKnockoutResults";
 
 import {
   R16_MATCHUPS,
@@ -258,7 +260,7 @@ export const FanDashboard = ({
             </div>
 
             <div
-              className={`max-w-[1600px] mx-auto mt-4 ${currentView === "pred_finals" || currentView === "res_finals" ? "block" : "hidden"}`}
+              className={`max-w-[1600px] mx-auto mt-4 ${currentView === "pred_finals" ? "block" : "hidden"}`}
             >
               {isLoadingBracket ? (
                 <div className="flex justify-center items-center h-64 text-cyan-400 font-bold animate-pulse tracking-widest text-lg">
@@ -557,12 +559,16 @@ export const FanDashboard = ({
               )}
             </div>
             {currentView === "res_groups" && (
-              <div className="flex flex-col items-center justify-center min-h-[300px] text-white/50 bg-slate-900/40 backdrop-blur-md mx-auto max-w-2xl rounded-xl border border-white/10 p-8 shadow-2xl">
-                <p className="text-xl mb-2 text-cyan-400 font-bold uppercase tracking-tighter">
-                  {t.resGroupsTitle}
-                </p>
-                <p className="text-sm">{t.resGroupsBody}</p>
-              </div>
+              <OfficialGroupsResults groupsData={groupsData} lang={lang} />
+            )}
+            {/* 👇 AQUÍ VA EL NUEVO COMPONENTE DE RESULTADOS OFICIALES 👇 */}
+            {currentView === "res_finals" && (
+              <OfficialKnockoutResults
+                groupsData={groupsData}
+                officialWinners={{}}
+                officialScores={[]}
+                lang={lang}
+              />
             )}
           </div>
         )}
