@@ -11,7 +11,7 @@ export const BracketContainer = ({
 }: BracketContainerProps) => {
   return (
     <div
-      className="w-full h-[calc(100vh-180px)] overflow-auto custom-scrollbar 
+      className="w-full h-[calc(100vh-80px)] overflow-auto custom-scrollbar 
                     bg-slate-900/60 backdrop-blur-xl rounded-3xl 
                     border border-white/10 
                     shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] relative"

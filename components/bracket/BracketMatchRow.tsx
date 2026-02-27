@@ -56,7 +56,7 @@ export const BracketMatchRow: React.FC<BracketMatchRowProps> = ({
   };
 
   return (
-    <div className="flex items-center justify-between gap-3 w-full py-0.5 min-h-[36px]">
+    <div className="flex items-center justify-between gap-2 w-full py-0 min-h-[28px]">
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <span
           className={`text-xs font-black w-7 ${seedColor} drop-shadow-md text-right`}
@@ -89,7 +89,7 @@ export const BracketMatchRow: React.FC<BracketMatchRowProps> = ({
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
           placeholder="-"
-          className="score-input w-[42px] h-8 bg-white text-black text-center font-black rounded-md border-none shadow-inner focus:ring-2 focus:ring-cyan-500 outline-none transition-all text-sm"
+          className="score-input w-9 h-7 bg-white text-black text-center font-black rounded-md border-none shadow-inner focus:ring-2 focus:ring-cyan-500 outline-none transition-all text-sm"
         />
       </div>
     </div>

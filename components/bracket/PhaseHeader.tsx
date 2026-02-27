@@ -1,5 +1,5 @@
 import React from "react";
-import { Trophy, Lock, Send } from "lucide-react";
+import { Trophy, Lock, Send, ShieldCheck } from "lucide-react"; // 👈 Agregamos ShieldCheck para el icono oficial
 import { DICTIONARY, Language } from "@/components/constants/dictionary";
 
 interface PhaseHeaderProps {
@@ -7,6 +7,7 @@ interface PhaseHeaderProps {
   isActive: boolean;
   lang: Language;
   onAction?: () => void;
+  isOfficial?: boolean; // 👈 NUEVO: Bandera para saber qué vista mostrar
 }
 
 export const PhaseHeader = ({
@@ -14,8 +15,29 @@ export const PhaseHeader = ({
   isActive,
   lang,
   onAction,
+  isOfficial = false, // 👈 Por defecto es false para que NO afecte los pronósticos
 }: PhaseHeaderProps) => {
   const t = DICTIONARY[lang];
+
+  // 🏆 1. VISTA DE RESULTADOS OFICIALES (Sin botones, más compacta, letra más grande)
+  if (isOfficial) {
+    return (
+      <div className="flex flex-col items-center justify-center p-3 bg-[#1a1b26]/90 border border-cyan-500/50 rounded-xl backdrop-blur-sm shadow-lg w-full transition-all duration-300">
+        <div className="flex items-center gap-2">
+          <ShieldCheck size={18} className="text-cyan-400" />
+          <span className="text-sm font-black uppercase tracking-[0.15em] text-cyan-400 text-center drop-shadow-md">
+            {title}
+          </span>
+        </div>
+        {/* Le ponemos el subtítulo de "Resultados Oficiales" bien elegante */}
+        <span className="text-[10px] text-amber-500 font-bold tracking-widest uppercase mt-1">
+          {lang === "en" ? "Official Results" : "Resultados Oficiales"}
+        </span>
+      </div>
+    );
+  }
+
+  // 📝 2. VISTA DE PRONÓSTICOS (Su código original, intacto)
   return (
     <div className="flex flex-col gap-4 p-4 bg-black border border-orange-500/80 rounded-2xl backdrop-blur-sm shadow-2xl w-full transition-all duration-300">
       {/* Título */}

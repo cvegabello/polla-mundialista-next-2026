@@ -168,6 +168,7 @@ export const BracketMatchCard = ({
   const getDisplaySeed = (team: TeamProps) => {
     if (!team || !team.seed) return "";
     if (team.seed.startsWith("T_") && team.group) return `3${team.group}`;
+    if (team.seed.startsWith("T_")) return "T_X";
     const standardSeedMatch = team.seed.match(/^([A-L])([1-2])$/);
     if (standardSeedMatch)
       return `${standardSeedMatch[2]}${standardSeedMatch[1]}`;
@@ -218,19 +219,19 @@ export const BracketMatchCard = ({
         className={`absolute left-0 top-0 bottom-0 w-1 ${accentLineClasses}`}
       />
 
-      <div className="flex items-center px-4 py-2 bg-gray-600/20 border-b border-white/20">
+      <div className="flex items-center px-3 py-0.5 bg-gray-600/20 border-b border-white/20">
         <div
-          className={`px-3 py-0.5 rounded-md ${isFinal ? "bg-amber-500/20" : "bg-gray-400"}`}
+          className={`px-1 py-0.1 rounded-md ${isFinal ? "bg-amber-500/20" : "bg-gray-400"}`}
         >
           <span
-            className={`text-[12px] font-bold tracking-[0.20em] ${isFinal ? "text-amber-400 drop-shadow-[0_0_5px_rgba(251,191,36,0.8)]" : "text-fuchsia-800"}`}
+            className={`text-[11px] font-bold tracking-[0.30em] ${isFinal ? "text-amber-200 drop-shadow-[0_0_5px_rgba(251,191,36,0.2)]" : "text-orange-800 drop-shadow-[0_0_5px_rgba(251,191,36,0.8)]"}`}
           >
             {isFinal ? `🏆 ${matchCode}` : matchCode}
           </span>
         </div>
       </div>
 
-      <div className="flex flex-col p-3 gap-0.5">
+      <div className="fflex flex-col px-2 py-1.5 gap-0">
         <BracketMatchRow
           seed={getDisplaySeed(homeTeam) || "1A"}
           teamName={getName(homeTeam) || homeTeam.name}
@@ -242,7 +243,7 @@ export const BracketMatchCard = ({
           isTie={isTie}
         />
 
-        <div className="h-px w-full bg-white/10 my-1" />
+        <div className="h-px w-full bg-white/10 my-0" />
 
         <BracketMatchRow
           seed={getDisplaySeed(awayTeam) || "2B"}
