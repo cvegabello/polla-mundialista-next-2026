@@ -1,4 +1,3 @@
-import React from "react";
 import { DICTIONARY, Language } from "@/components/constants/dictionary";
 import { UserStats } from "./UserStats";
 import { ActionMenu } from "./ActionMenu";
@@ -6,6 +5,7 @@ import { NavigationBox } from "./NavigationBox";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { SubmitZone } from "./SubmitZone";
 import { ReportsMenu } from "./ReportsMenu";
+import React, { useState, useEffect } from "react";
 
 interface FanHeaderProps {
   userSession: any;
@@ -38,6 +38,20 @@ export const FanHeader = ({
   const t = DICTIONARY[lang];
   const isSubmitted = !!userSession?.submission_date;
   const isComplete = totalPredictions >= totalMatches;
+
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // 👇 1. ESTA ES LA VACUNA NUCLEAR (Agréguela justo aquí)
+  if (!isMounted) {
+    // Devolvemos el "cascarón" vacío con la misma altura para que la pantalla no brinque
+    return (
+      <header className="flex flex-col items-center w-full px-4 pt-6 pb-4 relative z-30 min-h-[150px]"></header>
+    );
+  }
 
   const getTitle = () => {
     switch (currentView) {
@@ -100,7 +114,7 @@ export const FanHeader = ({
       {/* 5. TÍTULO DE LA VISTA ACTUAL */}
       <div className="mb-3 text-center">
         <h2 className="text-xl md:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-purple-600 dark:from-cyan-400 dark:to-purple-400">
-          {getTitle()}
+          {isMounted ? getTitle() : "..."}
         </h2>
         <div className="h-1 w-24 mx-auto bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full mt-2 opacity-60"></div>
       </div>

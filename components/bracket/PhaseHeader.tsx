@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Trophy, Lock, Send, ShieldCheck } from "lucide-react"; // 👈 Agregamos ShieldCheck para el icono oficial
 import { DICTIONARY, Language } from "@/components/constants/dictionary";
 
@@ -35,6 +35,18 @@ export const PhaseHeader = ({
         </span>
       </div>
     );
+  }
+
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // 👇 2. PROTECCIÓN NUCLEAR: Si no ha montado en el cliente, devolvemos un cascarón vacío
+  if (!isMounted) {
+    // Un div vacío con un poquito de altura para que la pantalla no salte
+    return <div className="w-full min-h-[60px]"></div>;
   }
 
   // 📝 2. VISTA DE PRONÓSTICOS (Su código original, intacto)

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { StarBackground } from "@/components/shared/StarBackground";
 import { CloudsBackground } from "@/components/shared/CloudsBackground";
 import { GroupCard } from "@/components/groups/GroupCard";
@@ -35,6 +35,8 @@ interface FanDashboardProps {
   userSession: any;
   groupsData: any[];
   userPredictions: any[];
+  officialScores?: any[]; // 👈 NUEVO
+  officialWinners?: Record<string, any>; // 👈 NUEVO
   loadingData: boolean;
   lang: Language;
 }
@@ -94,9 +96,17 @@ export const FanDashboard = ({
   userSession,
   groupsData,
   userPredictions,
+  officialScores,
+  officialWinners,
   loadingData,
   lang,
 }: FanDashboardProps) => {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const t = DICTIONARY[lang];
   const [winnerTeam, setWinnerTeam] = useState<any>(null);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
@@ -215,10 +225,15 @@ export const FanDashboard = ({
     window.location.href = "/login";
   };
 
+  if (!isMounted) {
+    return (
+      <main className="min-h-screen bg-black transition-colors duration-300"></main>
+    );
+  }
+
   return (
     <main className="min-h-screen transition-colors duration-300 bg-transparent dark:bg-transparent relative pb-20 overflow-x-hidden">
       <StarBackground />
-      <CloudsBackground />
 
       <FanHeader
         userSession={headerSession}
@@ -565,8 +580,8 @@ export const FanDashboard = ({
             {currentView === "res_finals" && (
               <OfficialKnockoutResults
                 groupsData={groupsData}
-                officialWinners={{}}
-                officialScores={[]}
+                officialWinners={officialWinners || {}} // 👈 ¡CONECTADO!
+                officialScores={officialScores || []} // 👈 ¡CONECTADO!
                 lang={lang}
               />
             )}

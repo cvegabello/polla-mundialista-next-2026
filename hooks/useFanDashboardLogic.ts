@@ -343,13 +343,6 @@ export const useFanDashboardLogic = (
       aScore: any,
       winnerId: string | null,
     ) => {
-      // ✅ Esto asegura que el botón de salvar se active SIEMPRE
-      console.log("DEBUGCarlitos: Datos recibidos en el Hook:", {
-        matchId,
-        hScore,
-        aScore,
-        winnerId,
-      });
       setHasUnsavedChanges(true);
 
       // ✅ Normalizamos: si borran el input (""), guardamos null
@@ -365,10 +358,6 @@ export const useFanDashboardLogic = (
             : aScore,
         winnerId: winnerId,
       };
-      console.log(
-        "DEBUG_CV: Cambios pendientes actuales:",
-        unsavedPredictions.current,
-      );
     },
     [],
   );

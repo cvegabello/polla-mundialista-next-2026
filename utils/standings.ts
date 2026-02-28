@@ -10,15 +10,6 @@ export const calculateStandings = (
   const getName = (team: any) =>
     lang === "en" ? team.name_en || team.name_es : team.name_es;
 
-  // 🧪 PUNTO DE CONTROL 1: Ver si el primer partido trae los IDs
-  if (matches.length > 0) {
-    console.log("🔍 DEBUG 1 - Objeto Match:", {
-      matchId: matches[0].id,
-      homeTeamId: matches[0].home_team_id,
-      homeTeamObject: matches[0].home_team,
-    });
-  }
-
   // 1. Inicializar estadísticas
   matches.forEach((m: any) => {
     // Buscamos el ID en todas las ubicaciones posibles
@@ -101,9 +92,6 @@ export const calculateStandings = (
     pos: 0,
     isTied: false,
   }));
-
-  // 🧪 PUNTO DE CONTROL 2: Ver si el array final tiene el teamId
-  console.log("🔍 DEBUG 2 - Array generado:", sortedTeams[0]);
 
   sortedTeams.sort((a, b) => b.pts - a.pts || b.dg - a.dg || b.gf - a.gf);
 

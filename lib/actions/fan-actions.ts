@@ -26,9 +26,6 @@ export async function saveGroupStandingsAction(
       updated_at: new Date().toISOString(),
     }));
 
-    // Verificación rápida en su consola de servidor
-    // console.log("💾 Intentando guardar team_id:", rowsToUpsert[0]?.team_id);
-
     const { error } = await supabase
       .from("user_group_standings")
       .upsert(rowsToUpsert, { onConflict: "user_id,team_id" });
@@ -132,15 +129,6 @@ export async function saveKnockoutPredictionAction(
   awayScore: number,
   winnerId: string,
 ) {
-  // 🕵️‍♂️ RASTREADOR 3: Verificamos qué llega al servidor
-  console.log("🛠️ 3. SERVIDOR RECIBIÓ:", {
-    userId,
-    matchId,
-    homeScore,
-    awayScore,
-    winnerId,
-  });
-
   const supabase = await createClient();
   try {
     const { error } = await supabase.from("predictions").upsert(
@@ -160,7 +148,6 @@ export async function saveKnockoutPredictionAction(
       throw error;
     }
 
-    console.log("💾 5. GUARDADO EXITOSO EN BD");
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };

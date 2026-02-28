@@ -1,155 +1,69 @@
-"use client";
-
-import React, { useState, useEffect } from "react";
-import { LoginMockup } from "@/components/auth/LoginMockup";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { FanDashboard } from "@/components/dashboards/FanDashboard";
-import { AdminDashboard } from "@/components/dashboards/AdminDashboard";
 import { getFullGroupsData } from "@/services/groupService";
 import { getUserPredictions } from "@/services/predictionService";
-// 👇 Importamos esto para poder consultar la fecha real en Supabase
-import { createBrowserClient } from "@supabase/ssr";
+// 👇 Nuestro servicio de partidos oficiales
+import { getOfficialMatches } from "@/services/matchService";
 
-// Importamos el tipo Language
-import { Language } from "@/components/constants/dictionary";
+// 👇 Optimizaciones de caché de Next.js
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-export default function Home() {
-  const [view, setView] = useState<"loading" | "login" | "fan" | "admin">(
-    "loading",
-  );
-  const [userSession, setUserSession] = useState<any>(null);
+export default async function HomePage() {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get("polla_session");
 
-  // 👇 ESTADO PARA EL IDIOMA
-  const [currentLang, setCurrentLang] = useState<Language>("es");
+  // Si no hay galleta, el middleware ya debió sacarlo, pero nos curamos en salud
+  if (!sessionCookie) {
+    redirect("/login");
+  }
 
-  const [groupsData, setGroupsData] = useState<any[]>([]);
-  const [userPredictions, setUserPredictions] = useState<any[]>([]);
-  const [loadingData, setLoadingData] = useState(false);
+  // Leemos la galleta que horneó el LoginMockup
+  const userSession = JSON.parse(decodeURIComponent(sessionCookie.value));
 
-  // 1. VALIDAR SESIÓN E IDIOMA
-  useEffect(() => {
-    const checkSession = () => {
-      // A. Recuperar Sesión
-      const storedSession = localStorage.getItem("polla_session");
-      if (storedSession) {
-        const parsedSession = JSON.parse(storedSession);
-        setUserSession(parsedSession);
-        setView(parsedSession.role === "ADMIN_GRUPO" ? "admin" : "fan");
-      } else {
-        setView("login");
-      }
+  // ⚡ LA MAGIA DE SERVER COMPONENTS: Carga todo en paralelo en milisegundos
+  const [groupsData, userPredictions, officialMatchesRaw] = await Promise.all([
+    getFullGroupsData(),
+    getUserPredictions(userSession.id),
+    getOfficialMatches(), // La verdad absoluta de la BD
+  ]);
 
-      // B. Recuperar Idioma
-      const storedLang = localStorage.getItem("polla_lang");
-      if (storedLang === "en" || storedLang === "es") {
-        setCurrentLang(storedLang);
-      }
-    };
-    checkSession();
-  }, []);
+  // 🧠 MASTICAMOS LA DATA OFICIAL EN EL SERVIDOR (Cero carga para el celular)
+  const officialScores: any[] = [];
+  const officialWinners: Record<string, any> = {};
 
-  // 2. CARGA DE DATOS (AQUÍ ESTÁ LA MAGIA NUEVA ✨)
-  useEffect(() => {
-    if ((view === "fan" || view === "admin") && userSession?.id) {
-      const loadData = async () => {
-        setLoadingData(true);
+  if (officialMatchesRaw) {
+    officialMatchesRaw.forEach((m: any) => {
+      officialScores.push({
+        match_id: m.id,
+        home_score: m.home_score,
+        away_score: m.away_score,
+        winner_id: m.winner_id,
+      });
 
-        // Inicializamos Supabase Cliente aquí mismo para no complicarnos
-        const supabase = createBrowserClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        );
-
-        try {
-          // Ejecutamos 3 promesas al tiempo: Grupos, Predicciones y PERFIL ACTUALIZADO
-          const [groups, predictions, profileResponse] = await Promise.all([
-            getFullGroupsData(),
-            getUserPredictions(userSession.id),
-            // 👇 Consultamos si ya envió la polla (submission_date)
-            supabase
-              .from("profiles")
-              .select("submission_date")
-              .eq("id", userSession.id)
-              .single(),
-          ]);
-
-          setGroupsData(groups);
-          setUserPredictions(predictions);
-
-          // 👇 SI ENCONTRAMOS FECHA DE ENVÍO, ACTUALIZAMOS LA SESIÓN LOCAL
-          if (profileResponse.data?.submission_date) {
-            setUserSession((prev: any) => {
-              const updated = {
-                ...prev,
-                submission_date: profileResponse.data.submission_date,
-              };
-              // (Opcional) Actualizamos el localStorage para que la próxima carga sea más rápida
-              localStorage.setItem("polla_session", JSON.stringify(updated));
-              return updated;
-            });
-          }
-        } catch (error) {
-          console.error("Error cargando datos", error);
-        } finally {
-          setLoadingData(false);
+      if (m.winner_id) {
+        const winnerTeam =
+          m.winner_id === m.home_team_id ? m.home_team : m.away_team;
+        if (winnerTeam) {
+          officialWinners[m.id.toString()] = winnerTeam;
         }
-      };
-      loadData();
-    }
-  }, [view, userSession?.id]); // Ojo: dependemos del ID, no de toda la sesión para evitar loops
-
-  const handleLoginSuccess = () => {
-    // Al loguearse, volvemos a leer todo para asegurar sincronía
-    const storedSession = localStorage.getItem("polla_session");
-    const storedLang = localStorage.getItem("polla_lang");
-
-    if (storedSession) {
-      const parsedSession = JSON.parse(storedSession);
-      setUserSession(parsedSession);
-      setView(parsedSession.role === "ADMIN_GRUPO" ? "admin" : "fan");
-    }
-
-    if (storedLang === "en" || storedLang === "es") {
-      setCurrentLang(storedLang);
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("polla_session");
-    // Nota: NO borramos "polla_lang" para recordar la preferencia del usuario
-    setUserSession(null);
-    setView("login");
-    setGroupsData([]);
-    setUserPredictions([]);
-  };
-
-  if (view === "loading") {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white">
-        <div className="animate-pulse">Cargando...</div>
-      </div>
-    );
+      }
+    });
   }
 
-  if (view === "login") {
-    return <LoginMockup onLoginSuccess={handleLoginSuccess} />;
-  }
+  // Opcional: leer el idioma de otra cookie si la tiene, o por defecto 'es'
+  const langCookie = cookieStore.get("polla_lang")?.value || "es";
 
-  if (view === "fan") {
-    return (
-      <FanDashboard
-        userSession={userSession}
-        groupsData={groupsData}
-        userPredictions={userPredictions}
-        loadingData={loadingData}
-        lang={currentLang}
-        onLogout={handleLogout}
-      />
-    );
-  }
-
-  if (view === "admin") {
-    return <AdminDashboard groupsData={groupsData} onLogout={handleLogout} />;
-  }
-
-  return null;
+  return (
+    <FanDashboard
+      userSession={userSession}
+      groupsData={groupsData}
+      userPredictions={userPredictions}
+      officialScores={officialScores}
+      officialWinners={officialWinners}
+      loadingData={false} // 👈 Ya nunca habrá spinner, la data llega instantánea
+      lang={langCookie as "es" | "en"}
+    />
+  );
 }
