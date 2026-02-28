@@ -362,8 +362,8 @@ export const FanDashboard = ({
                           onAdvanceTeam={handleAdvanceTeam}
                           style={
                             idx % 10 !== 0
-                              ? { marginTop: "180px" }
-                              : { marginTop: "70px" }
+                              ? { marginTop: "125px" }
+                              : { marginTop: "65px" }
                           }
                           homeTeam={{
                             id: homeWinner?.id,
@@ -415,8 +415,8 @@ export const FanDashboard = ({
                           onAdvanceTeam={handleAdvanceTeam}
                           style={
                             idx % 10 !== 0
-                              ? { marginTop: "530px" }
-                              : { marginTop: "250px" }
+                              ? { marginTop: "360px" }
+                              : { marginTop: "200px" }
                           }
                           homeTeam={{
                             id: homeWinner?.id,
@@ -468,8 +468,8 @@ export const FanDashboard = ({
                           onAdvanceTeam={handleAdvanceTeam}
                           style={
                             idx % 10 !== 0
-                              ? { marginTop: "1200px" }
-                              : { marginTop: "600px" }
+                              ? { marginTop: "850px" }
+                              : { marginTop: "450px" }
                           }
                           homeTeam={{
                             id: homeWinner?.id,

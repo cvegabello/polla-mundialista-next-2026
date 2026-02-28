@@ -111,7 +111,7 @@ export const OfficialKnockoutResults = ({
           isOfficial={true}
         >
           {renderPhase(R16_MATCHUPS, false, (idx) =>
-            idx % 10 !== 0 ? { marginTop: "180px" } : { marginTop: "70px" },
+            idx % 10 !== 0 ? { marginTop: "125px" } : { marginTop: "65px" },
           )}
         </PhaseColumn>
 
@@ -123,7 +123,7 @@ export const OfficialKnockoutResults = ({
           isOfficial={true}
         >
           {renderPhase(QF_MATCHUPS, false, (idx) =>
-            idx % 10 !== 0 ? { marginTop: "530px" } : { marginTop: "250px" },
+            idx % 10 !== 0 ? { marginTop: "360px" } : { marginTop: "200px" },
           )}
         </PhaseColumn>
 
@@ -135,7 +135,7 @@ export const OfficialKnockoutResults = ({
           isOfficial={true}
         >
           {renderPhase(SF_MATCHUPS, false, (idx) =>
-            idx % 10 !== 0 ? { marginTop: "1200px" } : { marginTop: "600px" },
+            idx % 10 !== 0 ? { marginTop: "850px" } : { marginTop: "450px" },
           )}
         </PhaseColumn>
 
