@@ -1,10 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { BracketMatchCard } from "@/components/bracket/BracketMatchCard";
 import { BracketContainer } from "@/components/bracket/BracketContainer";
 import { PhaseColumn } from "@/components/bracket/PhaseColumn";
-import { resolveBracketMatches } from "@/utils/bracket-resolver";
+// 🗑️ Se fue resolveBracketMatches porque ya no calculamos nada
 import {
   R32_MATCHUPS,
   R16_MATCHUPS,
@@ -29,24 +29,49 @@ export const OfficialKnockoutResults = ({
 }: OfficialKnockoutResultsProps) => {
   const t = DICTIONARY[lang];
 
+  // 🧠 EL TRUCO MAGISTRAL: Un diccionario rápido para saber el grupo de cualquier equipo
+  // Esto mapea { "uuid-de-japon": "E", "uuid-de-colombia": "C" } sin tocar la BD
+  const teamGroupMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    if (groupsData) {
+      groupsData.forEach((g) => {
+        if (g.id === "FI") return; // Ignoramos la fase final
+        // Sacamos solo la letra ("A", "B", etc.)
+        const letter = g.name
+          .replace(/Grupo /i, "")
+          .replace(/Group /i, "")
+          .trim();
+        // Recorremos sus partidos para anotar a todos los equipos
+        g.matches?.forEach((m: any) => {
+          if (m.home_team_id) map[m.home_team_id] = letter;
+          if (m.away_team_id) map[m.away_team_id] = letter;
+        });
+      });
+    }
+    return map;
+  }, [groupsData]);
+
   // Helper maestro para renderizar las fases inyectando la "verdad absoluta" de la DB
   const renderPhase = (
     matchups: any[],
     isFinal = false,
     getStyles: (idx: number) => React.CSSProperties,
   ) => {
-    const resolvedMatches = resolveBracketMatches(
-      groupsData,
-      officialWinners,
-      matchups,
-    );
-
-    return resolvedMatches.map((match, idx) => {
+    // 🧠 AHORA ES "BRUTO": Mapeamos directamente los matchups (R32, R16) sin calcular.
+    // Al mantener el map así, su parámetro 'idx' queda INTACTO y las tarjetas no se mueven ni un milímetro.
+    return matchups.map((match, idx) => {
+      // 1. Buscamos el partido oficial en la BD (Soporta id o match_id por seguridad)
       const officialMatchData = officialScores.find(
-        (m) => m.match_id.toString() === match.id.toString(),
+        (m) =>
+          m.id?.toString() === match.id.toString() ||
+          m.match_id?.toString() === match.id.toString(),
       );
 
-      // Simulamos la predicción con los datos de la DB para que la tarjeta los pinte
+      // 2. Extraemos la verdad absoluta de los equipos que vienen de Supabase
+      const dbHome = officialMatchData?.home_team || {};
+      const dbAway = officialMatchData?.away_team || {};
+
+      // 3. Simulamos la predicción con los datos de la DB para que la tarjeta los pinte
       const simulatedPrediction = officialMatchData
         ? {
             pred_home: officialMatchData.home_score,
@@ -63,24 +88,32 @@ export const OfficialKnockoutResults = ({
           lang={lang}
           isFinal={isFinal && idx === 0}
           isLocked={true} // 🔒 CANDADO PUESTO
-          style={getStyles(idx)} // 📏 MÁRGENES EXACTAS
+          style={getStyles(idx)} // 📏 MÁRGENES EXACTAS (Intactas)
           homeTeam={{
-            ...match.home,
-            seed: match.h,
-            name: match.home.id
+            id: officialMatchData?.home_team_id || null,
+            seed: match.h, // "1A", "W73", etc.
+            group: officialMatchData?.home_team_id
+              ? teamGroupMap[officialMatchData.home_team_id]
+              : null, // 👈 EL TRUCO INYECTADO
+            name: dbHome.name_es
               ? lang === "en"
-                ? match.home.name_en || match.home.name_es
-                : match.home.name_es
+                ? dbHome.name_en || dbHome.name_es
+                : dbHome.name_es
               : t.bracketTBD,
+            flag: dbHome.flag_code || dbHome.flag || null,
           }}
           awayTeam={{
-            ...match.away,
-            seed: match.a,
-            name: match.away.id
+            id: officialMatchData?.away_team_id || null,
+            seed: match.a, // "2B", "L101", etc.
+            group: officialMatchData?.away_team_id
+              ? teamGroupMap[officialMatchData.away_team_id]
+              : null, // 👈 EL TRUCO INYECTADO
+            name: dbAway.name_es
               ? lang === "en"
-                ? match.away.name_en || match.away.name_es
-                : match.away.name_es
+                ? dbAway.name_en || dbAway.name_es
+                : dbAway.name_es
               : t.bracketTBD,
+            flag: dbAway.flag_code || dbAway.flag || null,
           }}
           prediction={simulatedPrediction}
         />

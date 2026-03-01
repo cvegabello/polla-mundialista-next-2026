@@ -3,6 +3,7 @@ import { SuperAdminDashboard } from "@/components/dashboards/SuperAdminDashboard
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Language } from "@/components/constants/dictionary";
+import { getOfficialMatches } from "@/services/matchService";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,19 @@ export default async function SuperAdminPage() {
   }
 
   const lang = (userSession.lang as Language) || "es";
-  const groupsData = await getFullGroupsData();
 
-  return <SuperAdminDashboard groupsData={groupsData} lang={lang} />;
+  // 2. Buscamos las dos cosas al tiempo para que sea rápido
+  const [groupsData, officialMatchesRaw] = await Promise.all([
+    getFullGroupsData(),
+    getOfficialMatches(), // Traemos toda la verdad absoluta
+  ]);
+
+  // 3. Se lo pasamos al Dashboard
+  return (
+    <SuperAdminDashboard
+      groupsData={groupsData}
+      officialMatches={officialMatchesRaw}
+      lang={lang}
+    />
+  );
 }

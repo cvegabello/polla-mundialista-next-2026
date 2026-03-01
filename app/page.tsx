@@ -39,11 +39,10 @@ export default async function HomePage() {
 
   if (officialMatchesRaw) {
     officialMatchesRaw.forEach((m: any) => {
+      // 👇 AHORA SÍ LE MANDAMOS EL PAQUETE COMPLETO
       officialScores.push({
-        match_id: m.id,
-        home_score: m.home_score,
-        away_score: m.away_score,
-        winner_id: m.winner_id,
+        ...m, // 👈 El truco mágico: clonamos TODO lo que trae Supabase (incluyendo home_team y away_team)
+        match_id: m.id, // Mantenemos match_id por compatibilidad con sus otros componentes
       });
 
       if (m.winner_id) {
