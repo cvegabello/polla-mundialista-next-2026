@@ -1,9 +1,15 @@
 // src/services/predictionService.ts
-import { supabase } from "@/lib/supabase";
 
-// 1. LEER TODAS (Ya la teníamos)
+// 👇 1. Importamos el Teléfono Rojo para el Servidor
+import { createClient as createServerClient } from "@/utils/supabase/server";
+// 👇 2. Importamos el Teléfono Celular para el Navegador (Tiempo Real)
+import { createBrowserClient } from "@supabase/ssr";
+
+// 1. LEER TODAS (Se ejecuta en el Servidor ⚡)
 export const getUserPredictions = async (userId: string) => {
   try {
+    const supabase = await createServerClient(); // 🔴 Teléfono Rojo
+
     const { data, error } = await supabase
       .from("predictions")
       .select("match_id, pred_home, pred_away, predicted_winner")
@@ -17,20 +23,22 @@ export const getUserPredictions = async (userId: string) => {
   }
 };
 
-// 2. GUARDAR (UPSERT) - NUEVA 💾
+// 2. GUARDAR (UPSERT) (Se ejecuta en el Servidor ⚡)
 export const savePrediction = async (
   userId: string,
   matchId: number,
   homeScore: number | null,
   awayScore: number | null,
-  predictedWinner: string | null = null, // 👈 Lo dejamos como string y opcional por defecto
+  predictedWinner: string | null = null,
 ) => {
+  const supabase = await createServerClient(); // 🔴 Teléfono Rojo
+
   const payload = {
     user_id: userId,
     match_id: matchId,
     pred_home: homeScore,
     pred_away: awayScore,
-    predicted_winner: predictedWinner, // 👈 Excelente deducción
+    predicted_winner: predictedWinner,
   };
 
   const { error } = await supabase
@@ -41,16 +49,21 @@ export const savePrediction = async (
   return true;
 };
 
-// 3. SUSCRIBIRSE A CAMBIOS (REALTIME) - NUEVA 📡
-// Esta función recibe un "callback" (una función) que se ejecutará cuando llegue un dato nuevo.
+// 3. SUSCRIBIRSE A CAMBIOS (REALTIME) 📡 (Se ejecuta en el Celular del Fan 📱)
 export const subscribeToGroupPredictions = (
   groupId: string,
   userId: string,
   onUpdate: (newPred: any) => void,
 ) => {
+  // 🟢 Creamos un Teléfono Celular exclusivo para el navegador
+  const supabaseBrowser = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
+
   const channelName = `realtime-predictions-${groupId}`;
 
-  const channel = supabase
+  const channel = supabaseBrowser
     .channel(channelName)
     .on(
       "postgres_changes",
@@ -71,6 +84,6 @@ export const subscribeToGroupPredictions = (
 
   // Devolvemos una función de limpieza para que el componente pueda desuscribirse
   return () => {
-    supabase.removeChannel(channel);
+    supabaseBrowser.removeChannel(channel);
   };
 };

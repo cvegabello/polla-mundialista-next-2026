@@ -5,13 +5,15 @@ import { getActivePollas } from "@/services/pollaService";
 import { loginOrRegister } from "@/services/authService";
 import { LoginForm } from "@/components/ui/LoginForm";
 import { LoginImageCard } from "@/components/ui/LoginImageCard";
+// 👇 IMPORTANTE: Para la redirección
+import { useRouter } from "next/navigation";
 
 interface LoginMockupProps {
   onLoginSuccess: () => void;
 }
 
 export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
-  // Estados de interfaz
+  const router = useRouter(); // 👈 Inicializamos el router
   const [language, setLanguage] = useState("es");
   const [group, setGroup] = useState("");
   const [isGroupOpen, setIsGroupOpen] = useState(false);
@@ -19,13 +21,11 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
   const [poolOptions, setPoolOptions] = useState<any[]>([]);
   const [isLoadingPools, setIsLoadingPools] = useState(true);
 
-  // Estados de formulario
   const [username, setUsername] = useState("");
   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // 1. Cargar idioma y última polla seleccionada
   useEffect(() => {
     const savedLang = localStorage.getItem("polla_lang");
     if (savedLang) setLanguage(savedLang);
@@ -42,7 +42,13 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
     const loadPollas = async () => {
       try {
         setIsLoadingPools(true);
-        const pollas = await getActivePollas();
+
+        // 🕵️‍♂️ BUSCAMOS LA LLAVE SECRETA:
+        // Si la URL es: localhost:3000/login?admin=true
+        const params = new URLSearchParams(window.location.search);
+        const isAdminMode = params.get("admin") === "true";
+
+        const pollas = await getActivePollas(isAdminMode); // 👈 Le pasamos la verdad
         setPoolOptions(pollas);
       } catch (err) {
         console.error("Error cargando pollas:", err);
@@ -53,16 +59,13 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
     loadPollas();
   }, []);
 
-  // 2. Persistir polla seleccionada
   useEffect(() => {
     if (group) localStorage.setItem("last_selected_polla", group);
   }, [group]);
 
-  // 3. LÓGICA DE LOGIN SENCILLA (Back to basics 🚀)
   const handleLogin = async () => {
     setErrorMsg("");
 
-    // Validaciones básicas de interfaz
     if (!group) {
       setErrorMsg(language === "es" ? "Selecciona una Polla" : "Select a Pool");
       return;
@@ -75,44 +78,52 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
     setLoading(true);
 
     try {
-      // LLAMADA A TU SERVICIO ORIGINAL (Sin cambios en tu DB)
+      // 1. Buscamos el nombre de la polla que seleccionó
+      const selectedPool = poolOptions.find((p) => p.value === group);
+      const isMantenimiento = selectedPool?.label === "Mantenimiento";
+
+      // 2. Intentamos el ingreso
       const result = await loginOrRegister(username, pin, group);
 
       if (result.success && result.user) {
-        if (result.isNewUser) {
-          alert(
-            language === "es"
-              ? "¡Bienvenido! Usuario creado."
-              : "Welcome! User created.",
+        const userRole = result.user.role;
+
+        // 🛑 EL FILTRO DE SEGURIDAD:
+        // Si la polla es Mantenimiento pero el usuario NO es SUPER-ADMIN...
+        if (isMantenimiento && userRole !== "SUPER-ADMIN") {
+          setErrorMsg(
+            "Acceso denegado: Usted no tiene permisos de SuperAdmin en esta polla.",
           );
+          setLoading(false);
+          return; // ✋ Bloqueamos aquí: No se crean cookies, no hay redirección.
         }
 
-        const selectedPool = poolOptions.find((p) => p.value === group);
+        // --- Si pasó el filtro, seguimos con la sesión normal ---
         const sessionData = {
           id: result.user.id,
           username: result.user.username,
-          role: result.user.role,
+          role: userRole,
           polla_id: result.user.polla_id,
           polla_name: selectedPool?.label ?? "",
         };
 
-        // 👇 LA "SERVILLETA" (CREACIÓN DE COOKIE MANUAL)
-        // Guardamos los datos para que el servidor los pueda leer. Dura 30 días.
         const cookieValue = encodeURIComponent(JSON.stringify(sessionData));
         document.cookie = `polla_session=${cookieValue}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
-
-        // Guardamos en localStorage por si algún componente viejo todavía lo busca
         localStorage.setItem("polla_session", JSON.stringify(sessionData));
 
-        // ¡ÉXITO! Mandamos al usuario a la pista de baile
-        onLoginSuccess();
+        if (userRole === "SUPER-ADMIN") {
+          router.push("/super-admin");
+        } else if (userRole === "ADMIN-GRUPO") {
+          router.push("/admin");
+        } else {
+          onLoginSuccess();
+        }
       } else {
-        // Aquí sale tu mensaje de "PIN incorrecto" o "Usuario ya existe"
         setErrorMsg(result.message || "Error al ingresar");
         setLoading(false);
       }
     } catch (err) {
-      console.error("Error en el proceso de login:", err);
+      console.error("Error en el login:", err);
       setErrorMsg("Error de conexión");
       setLoading(false);
     }

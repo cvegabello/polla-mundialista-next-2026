@@ -1,29 +1,27 @@
-// services/pollaService.ts
-import { supabase } from "@/lib/supabase";
+"use server";
 
-// Función para obtener todas las pollas activas
-export const getActivePollas = async () => {
+import { createClient } from "@/utils/supabase/server";
+
+export const getActivePollas = async (showAll = false) => {
+  // 👈 Agregamos este parámetro
   try {
-    const { data, error } = await supabase
+    const supabase = await createClient();
+    let query = supabase
       .from("pollas")
       .select("id, name")
       .order("name", { ascending: true });
 
-    if (error) {
-      throw error;
+    // 👇 Si NO pedimos mostrar todo, escondemos Mantenimiento
+    if (!showAll) {
+      query = query.neq("name", "MANTENIMIENTO");
     }
 
-    if (data) {
-      // Devolvemos los datos ya formateados para que el componente no tenga que hacer map
-      return data.map((polla) => ({
-        value: polla.id,
-        label: polla.name,
-      }));
-    }
+    const { data, error } = await query;
+    if (error) throw error;
 
-    return [];
+    return data ? data.map((p) => ({ value: p.id, label: p.name })) : [];
   } catch (error) {
     console.error("Error en getActivePollas:", error);
-    throw error; // Lanzamos el error para que el componente decida qué hacer
+    throw error;
   }
 };

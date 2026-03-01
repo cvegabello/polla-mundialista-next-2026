@@ -1,4 +1,6 @@
-import { supabase } from "@/lib/supabase";
+"use server";
+
+import { createClient } from "@/utils/supabase/server";
 
 interface LoginResult {
   success: boolean;
@@ -13,43 +15,66 @@ export const loginOrRegister = async (
   pollaId: string,
 ): Promise<LoginResult> => {
   try {
-    // 1. BUSCAR SI EL USUARIO YA EXISTE
+    const supabase = await createClient();
+
+    // --- 1. IDENTIFICAR LA POLLA ---
+    // Traemos el nombre para saber si es la de Mantenimiento
+    const { data: pollaData } = await supabase
+      .from("pollas")
+      .select("name")
+      .eq("id", pollaId)
+      .single();
+
+    const isMantenimiento = pollaData?.name === "Mantenimiento";
+
+    // --- 2. EL SELECT QUE PEDISTE (BUSCAR AL USUARIO) ---
     const { data: existingUser, error: searchError } = await supabase
       .from("profiles")
       .select("*")
-      // 👇 AQUÍ ESTÁ EL CAMBIO CLAVE:
-      // Usamos .ilike() en vez de .eq() para ignorar mayúsculas/minúsculas
       .ilike("username", username.trim())
       .eq("polla_id", pollaId)
       .maybeSingle();
 
     if (searchError) throw searchError;
 
-    // --- ESCENARIO A: USUARIO YA EXISTE ---
+    // --- ESCENARIO A: EL USUARIO YA EXISTE ---
     if (existingUser) {
-      if (existingUser.pin === pin) {
-        // ÉXITO: Devolvemos el usuario TAL CUAL está en la base de datos
-        // (Así, si se registró como "Carlos", aunque entre como "cARLOS", verá "Carlos")
-        return { success: true, user: existingUser, isNewUser: false };
-      } else {
-        // PIN INCORRECTO
-        // Usamos existingUser.username para mostrar el nombre real en el mensaje
+      // A.1 VALIDAR EL PIN (PASSWORD)
+      if (existingUser.pin !== pin) {
         return {
           success: false,
-          message: `El usuario '${existingUser.username}' ya existe. Si eres tú, corrige el PIN.`,
+          message: "Password inválido", // 👈 Mensaje directo como pediste
         };
       }
+
+      // A.2 SI EL PIN ES CORRECTO, VALIDAR ROL SI ES MANTENIMIENTO
+      if (isMantenimiento && existingUser.role !== "SUPER-ADMIN") {
+        return {
+          success: false,
+          message: "Usted no es un super admin", // 👈 Si el rol no cuadra en Mantenimiento
+        };
+      }
+
+      // ÉXITO: Pasa el PIN y el Rol (si aplica)
+      return { success: true, user: existingUser, isNewUser: false };
     }
 
-    // --- ESCENARIO B: USUARIO NUEVO (REGISTRO) ---
+    // --- ESCENARIO B: EL USUARIO NO EXISTE ---
     else {
-      // Opcional: ¿Quiere guardar siempre en minúsculas o respetar como lo escribió la primera vez?
-      // Por ahora respetamos como lo escribió (username.trim()), pero la búsqueda futura usará ilike.
+      // 🛑 BLOQUEO PARA MANTENIMIENTO
+      if (isMantenimiento) {
+        return {
+          success: false,
+          message: "Usted no es un super admin", // 👈 No existe en la DB = No entra y NO se crea
+        };
+      }
+
+      // ✅ REGISTRO NORMAL PARA FANS (Si no es mantenimiento)
       const { data: newUser, error: createError } = await supabase
         .from("profiles")
         .insert([
           {
-            username: username.trim(), // Se guarda como lo escribió la primera vez (Ej: "Carlos")
+            username: username.trim(),
             pin: pin,
             polla_id: pollaId,
             role: "fan",

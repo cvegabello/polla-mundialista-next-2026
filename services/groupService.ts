@@ -1,9 +1,13 @@
 // src/services/groupService.ts
-import { supabase } from "@/lib/supabase";
+// 👇 1. Cambiamos el import viejo por el Teléfono Rojo
+import { createClient } from "@/utils/supabase/server";
 
 export const getFullGroupsData = async () => {
   try {
-    // 1. CONSULTA CORREGIDA: Agregamos el 'id' en los select de los equipos
+    // 👇 2. Levantamos la conexión segura al principio de la función
+    const supabase = await createClient();
+
+    // 1. CONSULTA CORREGIDA: Agregamos el 'id' en los select de los equipos (INTACTA)
     const { data: groups, error } = await supabase
       .from("groups")
       .select(
@@ -31,7 +35,7 @@ export const getFullGroupsData = async () => {
       return [];
     }
 
-    // 2. LÓGICA DE ORDENAMIENTO
+    // 2. LÓGICA DE ORDENAMIENTO (INTACTA)
     const groupsSorted = groups?.map((group) => ({
       ...group,
       matches: group.matches.sort(
