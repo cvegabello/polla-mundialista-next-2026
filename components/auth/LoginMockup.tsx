@@ -105,6 +105,7 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
           role: userRole,
           polla_id: result.user.polla_id,
           polla_name: selectedPool?.label ?? "",
+          lang: language,
         };
 
         const cookieValue = encodeURIComponent(JSON.stringify(sessionData));

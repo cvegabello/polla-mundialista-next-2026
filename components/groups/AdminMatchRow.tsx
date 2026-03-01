@@ -120,14 +120,11 @@ export const AdminMatchRow = ({
     onScoreChange(match.id, type, val);
   };
 
-  // 👇 1. AGREGAMOS ESTA NUEVA FUNCIÓN PARA SALTAR CON ENTER
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      // Buscamos todos los inputs de tipo número en la pantalla
       const inputs = document.querySelectorAll('input[type="number"]');
       const index = Array.from(inputs).indexOf(e.currentTarget);
-      // Si hay un input siguiente, lo enfocamos
       if (index !== -1 && index < inputs.length - 1) {
         (inputs[index + 1] as HTMLInputElement).focus();
       }
@@ -162,16 +159,20 @@ export const AdminMatchRow = ({
         </div>
       </div>
 
-      <div className="flex items-center justify-between p-2 relative h-16">
-        <div className="flex-1 flex items-center justify-end pr-3">
-          <span className="text-sm font-bold text-gray-300 text-right leading-tight">
+      {/* 👇 AQUÍ ESTÁ LA TÁCTICA DE CSS GRID: 1fr - 120px - 1fr */}
+      <div className="grid grid-cols-[1fr_120px_1fr] items-center p-2 relative min-h-[4.5rem]">
+        {/* EQUIPO LOCAL (Columna Izquierda: Flexible pero con límite) */}
+        <div className="flex items-center justify-end pr-2 overflow-hidden">
+          <span className="text-xs md:text-sm font-bold text-gray-300 text-right leading-tight break-words line-clamp-2">
             {getName(match.home_team)}
           </span>
         </div>
 
-        <div className="flex items-end justify-center gap-2">
-          <div className="flex flex-col items-center gap-1">
-            <div className="w-6 h-4 rounded shadow-sm overflow-hidden border border-white/20 relative">
+        {/* MARCADORES (Centro Estricto: SIEMPRE 120px de ancho) */}
+        <div className="flex items-end justify-center gap-2 w-[120px] mx-auto">
+          {/* Bloque Local */}
+          <div className="flex flex-col items-center gap-1.5">
+            <div className="w-7 h-5 rounded shadow-sm overflow-hidden border border-white/20 relative">
               <TeamFlag
                 code={match.home_team?.flag_code}
                 name={getName(match.home_team)}
@@ -188,14 +189,15 @@ export const AdminMatchRow = ({
               onChange={(e) => handleInputChange(e, "home")}
               onKeyDown={handleKeyDown}
               enterKeyHint="next"
-              className="w-10 h-8 text-center text-lg font-bold bg-red-100 text-red-900 border border-red-500 rounded focus:border-2 focus:border-red-700 focus:outline-none appearance-none transition-all"
+              className="w-10 h-9 text-center text-lg font-black bg-red-100 text-red-950 border border-red-500 rounded focus:border-2 focus:border-red-700 focus:outline-none appearance-none transition-all"
             />
           </div>
 
-          <span className="text-gray-500 font-bold text-xs mb-2">-</span>
+          <span className="text-gray-500 font-bold text-sm mb-2">-</span>
 
-          <div className="flex flex-col items-center gap-1">
-            <div className="w-6 h-4 rounded shadow-sm overflow-hidden border border-white/20 relative bg-gray-800">
+          {/* Bloque Visitante */}
+          <div className="flex flex-col items-center gap-1.5">
+            <div className="w-7 h-5 rounded shadow-sm overflow-hidden border border-white/20 relative bg-gray-800">
               <TeamFlag
                 code={match.away_team?.flag_code}
                 name={getName(match.away_team)}
@@ -212,13 +214,14 @@ export const AdminMatchRow = ({
               onChange={(e) => handleInputChange(e, "away")}
               onKeyDown={handleKeyDown}
               enterKeyHint="next"
-              className="w-10 h-8 text-center text-lg font-bold bg-red-100 text-red-900 border border-red-500 rounded focus:border-2 focus:border-red-700 focus:outline-none appearance-none transition-all"
+              className="w-10 h-9 text-center text-lg font-black bg-red-100 text-red-950 border border-red-500 rounded focus:border-2 focus:border-red-700 focus:outline-none appearance-none transition-all"
             />
           </div>
         </div>
 
-        <div className="flex-1 flex items-center justify-start pl-3">
-          <span className="text-sm font-bold text-gray-300 text-left leading-tight">
+        {/* EQUIPO VISITANTE (Columna Derecha: Flexible pero con límite) */}
+        <div className="flex items-center justify-start pl-2 overflow-hidden">
+          <span className="text-xs md:text-sm font-bold text-gray-300 text-left leading-tight break-words line-clamp-2">
             {getName(match.away_team)}
           </span>
         </div>

@@ -2,70 +2,46 @@
 
 import React, { useState, useEffect } from "react";
 import { AdminGroupCard } from "@/components/groups/AdminGroupCard";
+import { SuperAdminHeader } from "@/components/admin/header/SuperAdminHeader"; // 👈 IMPORTAMOS
+import { DICTIONARY, Language } from "@/components/constants/dictionary";
 
 interface SuperAdminDashboardProps {
   groupsData: any[];
+  lang: Language;
 }
 
 export const SuperAdminDashboard = ({
   groupsData,
+  lang = "es",
 }: SuperAdminDashboardProps) => {
+  const t = DICTIONARY[lang];
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  if (!isMounted) {
-    return <main className="min-h-screen bg-black"></main>;
-  }
+  if (!isMounted) return <main className="min-h-screen bg-black"></main>;
 
   return (
     <main className="min-h-screen bg-[#0a0a0a] text-white pb-20">
-      {/* ENCABEZADO DE SUPER ADMIN */}
-      <header className="w-full bg-gradient-to-r from-red-900 to-black border-b border-red-500/30 p-6 shadow-lg shadow-red-900/20">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-500">
-              PANEL DE SUPER ADMIN 👑
-            </h1>
-            <p className="text-gray-400 text-sm mt-1">
-              Gestor de Marcadores Oficiales (La Verdad Absoluta)
-            </p>
-          </div>
+      {/* NUEVO ENCABEZADO PRO 👑 */}
+      <SuperAdminHeader lang={lang} />
 
-          <div className="flex gap-3">
-            <button className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-bold rounded-lg transition-colors">
-              Bloquear Fase de Grupos 🔒
-            </button>
-            <a
-              href="/"
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-bold rounded-lg border border-gray-600 transition-colors"
-            >
-              Volver al Fan View 🏠
-            </a>
-          </div>
+      {/* GRILLA DE GRUPOS */}
+      <div className="max-w-[1500] mx-auto p-4 md:p-6">
+        <div className="flex items-center gap-3 mb-8 border-l-4 border-red-600 pl-4">
+          <h2 className="text-2xl font-black uppercase tracking-widest text-gray-200">
+            {t.btnGroups} <span className="text-red-500">|</span>{" "}
+            {lang === "en" ? "Official Results" : "Resultados Oficiales"}
+          </h2>
         </div>
-      </header>
 
-      {/* GRILLA DE GRUPOS (MARCADORES OFICIALES) */}
-      <div className="max-w-7xl mx-auto p-4 md:p-6 mt-6">
-        <h2 className="text-xl font-bold mb-6 border-l-4 border-red-500 pl-3">
-          Fase de Grupos - Ingreso de Resultados
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8 max-w-[1600px] mx-auto justify-items-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 max-w-[1600px] mx-auto justify-items-center">
           {groupsData
             .filter((group) => group.id !== "FI")
             .map((group) => (
-              <div
-                key={group.id}
-                className="bg-gray-900 border border-red-900/30 rounded-xl p-4"
-              >
-                <AdminGroupCard group={group} lang="es" />
-
-                {/* <AdminGroupCard group={group} /> */}
-              </div>
+              <AdminGroupCard key={group.id} group={group} lang={lang} />
             ))}
         </div>
       </div>

@@ -53,7 +53,7 @@ export const GroupCard = ({
     <>
       <div className="relative group w-full max-w-[350px] mx-auto transform-gpu">
         <div className="relative bg-slate-900/95 backdrop-blur-md rounded-xl flex flex-col overflow-hidden border border-cyan-500/30 shadow-lg z-10">
-          <div className="h-1.5 w-full bg-gradient-to-r from-[#00c6ff] to-[#ff4b2b]"></div>
+          <div className="h-1.5 w-full bg-linear-to-r from-[#00c6ff] to-[#ff4b2b]"></div>
           <div className="p-4 flex flex-col h-full">
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/10 relative">
               <button

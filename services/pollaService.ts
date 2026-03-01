@@ -12,9 +12,9 @@ export const getActivePollas = async (showAll = false) => {
       .order("name", { ascending: true });
 
     // 👇 Si NO pedimos mostrar todo, escondemos Mantenimiento
-    if (!showAll) {
-      query = query.neq("name", "MANTENIMIENTO");
-    }
+    // if (!showAll) {
+    //   query = query.neq("name", "Mantenimiento");
+    // }
 
     const { data, error } = await query;
     if (error) throw error;

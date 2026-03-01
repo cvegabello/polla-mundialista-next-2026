@@ -2,6 +2,7 @@ import { getFullGroupsData } from "@/services/groupService";
 import { SuperAdminDashboard } from "@/components/dashboards/SuperAdminDashboard";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { Language } from "@/components/constants/dictionary";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,8 @@ export default async function SuperAdminPage() {
     redirect("/"); // Si es un Fan o infiltrado, lo mandamos al inicio
   }
 
+  const lang = (userSession.lang as Language) || "es";
   const groupsData = await getFullGroupsData();
 
-  return <SuperAdminDashboard groupsData={groupsData} />;
+  return <SuperAdminDashboard groupsData={groupsData} lang={lang} />;
 }

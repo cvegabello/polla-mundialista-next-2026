@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { FanDashboard } from "@/components/dashboards/FanDashboard";
 import { getFullGroupsData } from "@/services/groupService";
 import { getUserPredictions } from "@/services/predictionService";
+import { Language } from "@/components/constants/dictionary";
 // 👇 Nuestro servicio de partidos oficiales
 import { getOfficialMatches } from "@/services/matchService";
 
@@ -21,6 +22,9 @@ export default async function HomePage() {
 
   // Leemos la galleta que horneó el LoginMockup
   const userSession = JSON.parse(decodeURIComponent(sessionCookie.value));
+
+  // 🕵️‍♂️ CORRECCIÓN: Leemos el idioma de la sesión que guardamos en el Login
+  const lang = (userSession.lang as Language) || "es";
 
   // ⚡ LA MAGIA DE SERVER COMPONENTS: Carga todo en paralelo en milisegundos
   const [groupsData, userPredictions, officialMatchesRaw] = await Promise.all([
@@ -63,7 +67,7 @@ export default async function HomePage() {
       officialScores={officialScores}
       officialWinners={officialWinners}
       loadingData={false} // 👈 Ya nunca habrá spinner, la data llega instantánea
-      lang={langCookie as "es" | "en"}
+      lang={lang}
     />
   );
 }
