@@ -2,7 +2,7 @@ import React from "react";
 
 interface AdminBracketMatchRowProps {
   seed: string;
-  teamName: string;
+  teamName: string | React.ReactNode;
   score: string;
   isWinner: boolean;
   seedColor?: string;

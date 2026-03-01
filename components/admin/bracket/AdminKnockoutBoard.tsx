@@ -16,7 +16,7 @@ import { resolveBracketMatches } from "@/utils/bracket-resolver";
 import {
   saveOfficialScoreAction,
   syncBracketTeamsAction,
-} from "@/lib/actions/super-admin-actions"; // 👈 IMPORTAMOS LA NUEVA ACCIÓN
+} from "@/lib/actions/super-admin-actions";
 import { calculateStandings } from "@/utils/standings";
 
 interface AdminKnockoutBoardProps {
@@ -25,7 +25,6 @@ interface AdminKnockoutBoardProps {
   lang: Language;
 }
 
-// Unimos todos los partidos para el sincronizador maestro
 const ALL_MATCHUPS = [
   ...R32_MATCHUPS,
   ...R16_MATCHUPS,
@@ -46,7 +45,6 @@ export const AdminKnockoutBoard = ({
     {},
   );
 
-  // 🧠 CEREBRO: Calculamos la tabla de posiciones oficial al vuelo
   const officialStandings = useMemo(() => {
     let all: any[] = [];
     groupsData
@@ -84,9 +82,21 @@ export const AdminKnockoutBoard = ({
     return all;
   }, [groupsData, lang]);
 
-  // 🌍 EL SINCRONIZADOR SILENCIOSO: Escribe el destino en la Base de Datos
+  const availableThirds = useMemo(() => {
+    return officialStandings
+      .filter((team) => team.position === 3)
+      .map((t) => ({
+        id: t.team_id,
+        name: t.team.name_es,
+        name_es: t.team.name_es,
+        name_en: t.team.name_en,
+        flag: t.team.flag_code,
+        group: t.group_id,
+        seed: `3${t.group_id}`,
+      })) as TeamProps[];
+  }, [officialStandings]);
+
   useEffect(() => {
-    // 1. Calculamos cómo DEBERÍA verse todo el bracket según los resultados actuales
     const fullResolvedBracket = resolveBracketMatches(
       officialStandings,
       knockoutWinners,
@@ -94,7 +104,6 @@ export const AdminKnockoutBoard = ({
     );
     const updates: any[] = [];
 
-    // 2. Comparamos con lo que hay actualmente en la base de datos (localMatches)
     fullResolvedBracket.forEach((calcMatch) => {
       const dbMatch = localMatches.find(
         (m) => m.id?.toString() === calcMatch.id?.toString(),
@@ -105,22 +114,25 @@ export const AdminKnockoutBoard = ({
         const calcHome = calcMatch.home?.id || null;
         const calcAway = calcMatch.away?.id || null;
 
-        // Si el Cerebro detecta que un equipo avanzó y la BD no lo sabe, preparamos la actualización
-        if (dbHome !== calcHome || dbAway !== calcAway) {
+        const isHomeThird = calcMatch.h?.startsWith("T_");
+        const isAwayThird = calcMatch.a?.startsWith("T_");
+
+        const finalHome = isHomeThird && dbHome ? dbHome : calcHome;
+        const finalAway = isAwayThird && dbAway ? dbAway : calcAway;
+
+        if (dbHome !== finalHome || dbAway !== finalAway) {
           updates.push({
             matchId: Number(calcMatch.id),
-            homeTeamId: calcHome,
-            awayTeamId: calcAway,
+            homeTeamId: finalHome,
+            awayTeamId: finalAway,
           });
         }
       }
     });
 
-    // 3. Si hay diferencias, disparamos a la base de datos
     if (updates.length > 0) {
       syncBracketTeamsAction(updates)
         .then(() => {
-          // Actualizamos nuestro estado local para evitar ciclos infinitos
           setLocalMatches((prev) =>
             prev.map((m) => {
               const upd = updates.find(
@@ -194,6 +206,70 @@ export const AdminKnockoutBoard = ({
     }
   };
 
+  const handleManualThirdChange = async (
+    matchId: string | number,
+    side: "home" | "away",
+    newTeamId: string,
+  ) => {
+    const currentMatch =
+      localMatches.find((m) => m.id?.toString() === matchId.toString()) || {};
+
+    const newHomeId =
+      side === "home" ? newTeamId || null : currentMatch.home_team_id || null;
+    const newAwayId =
+      side === "away" ? newTeamId || null : currentMatch.away_team_id || null;
+
+    // 👇 MAGIA 1: Si el equipo que acabamos de reemplazar ERA EL QUE IBA GANANDO,
+    // heredamos esa victoria al nuevo equipo automáticamente.
+    let newWinnerId = currentMatch.winner_id;
+    if (
+      currentMatch.winner_id === currentMatch.home_team_id &&
+      side === "home"
+    ) {
+      newWinnerId = newTeamId;
+    } else if (
+      currentMatch.winner_id === currentMatch.away_team_id &&
+      side === "away"
+    ) {
+      newWinnerId = newTeamId;
+    }
+
+    setLocalMatches((prev) =>
+      prev.map((m) =>
+        m.id?.toString() === matchId.toString()
+          ? {
+              ...m,
+              home_team_id: newHomeId,
+              away_team_id: newAwayId,
+              winner_id: newWinnerId,
+            }
+          : m,
+      ),
+    );
+
+    try {
+      await syncBracketTeamsAction([
+        {
+          matchId: Number(matchId),
+          homeTeamId: newHomeId,
+          awayTeamId: newAwayId,
+        },
+      ]);
+
+      // Si el ganador cambió, aseguramos que la base de datos lo sepa para avanzar al equipo correcto
+      if (newWinnerId !== currentMatch.winner_id) {
+        await saveOfficialScoreAction(
+          Number(matchId),
+          currentMatch.home_score,
+          currentMatch.away_score,
+          newWinnerId,
+        );
+      }
+    } catch (error) {
+      console.error("Error guardando el tercero manual:", error);
+    }
+  };
+
   const renderPhase = (title: string, matchups: any[], isFinal = false) => {
     const resolvedMatches = resolveBracketMatches(
       officialStandings,
@@ -208,18 +284,52 @@ export const AdminKnockoutBoard = ({
             (om) => om.id?.toString() === m.id?.toString(),
           );
 
+          const homeTeamData = { ...(m.home as any), seed: m.h };
+          const awayTeamData = { ...(m.away as any), seed: m.a };
+
+          // 👇 MAGIA 2: Si es un tercero modificado manualmente, no solo le pasamos el nombre,
+          // sino que le inyectamos la bandera, el name_es y el GRUPO para que el label (3A, 3F) cambie solo.
+          if (m.h?.startsWith("T_") && matchData?.home_team_id) {
+            const manualTeam = availableThirds.find(
+              (t) => t.id === matchData.home_team_id,
+            );
+            if (manualTeam) {
+              homeTeamData.id = manualTeam.id;
+              homeTeamData.name = manualTeam.name;
+              homeTeamData.name_es = manualTeam.name_es;
+              homeTeamData.name_en = manualTeam.name_en;
+              homeTeamData.flag = manualTeam.flag;
+              homeTeamData.group = manualTeam.group; // Esto cambia el label rojo!
+            }
+          }
+          if (m.a?.startsWith("T_") && matchData?.away_team_id) {
+            const manualTeam = availableThirds.find(
+              (t) => t.id === matchData.away_team_id,
+            );
+            if (manualTeam) {
+              awayTeamData.id = manualTeam.id;
+              awayTeamData.name = manualTeam.name;
+              awayTeamData.name_es = manualTeam.name_es;
+              awayTeamData.name_en = manualTeam.name_en;
+              awayTeamData.flag = manualTeam.flag;
+              awayTeamData.group = manualTeam.group; // Esto cambia el label rojo!
+            }
+          }
+
           return (
             <AdminBracketMatchCard
               key={m.id}
               matchId={m.id}
               matchCode={m.code || `M${m.id}`}
-              homeTeam={{ ...(m.home as any), seed: m.h } as TeamProps}
-              awayTeam={{ ...(m.away as any), seed: m.a } as TeamProps}
+              homeTeam={homeTeamData as TeamProps}
+              awayTeam={awayTeamData as TeamProps}
               lang={lang}
               isFinal={isFinal}
               officialMatch={matchData}
               onSaveOfficial={handleSaveOfficial}
               onAdvanceTeam={handleAdvanceTeam}
+              availableThirds={availableThirds}
+              onManualThirdChange={handleManualThirdChange}
             />
           );
         })}

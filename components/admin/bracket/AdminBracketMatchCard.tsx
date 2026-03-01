@@ -25,13 +25,19 @@ interface AdminBracketMatchCardProps {
     winner: TeamProps | null,
     isManual?: boolean,
   ) => void;
-  // 👇 CAMBIO CLAVE: Usamos datos oficiales en vez de pronósticos
   officialMatch?: any;
   onSaveOfficial?: (
     matchId: string | number,
     hScore: number,
     aScore: number,
     winnerId: string,
+  ) => void;
+  // 👇 NUEVAS PROPIEDADES PARA EL COMBOBOX DE TERCEROS
+  availableThirds?: TeamProps[];
+  onManualThirdChange?: (
+    matchId: string | number,
+    side: "home" | "away",
+    newTeamId: string,
   ) => void;
 }
 
@@ -46,13 +52,14 @@ export const AdminBracketMatchCard = ({
   onAdvanceTeam,
   officialMatch,
   onSaveOfficial,
+  availableThirds = [], // Recibe la lista de los 8 mejores terceros
+  onManualThirdChange, // Avisa al tablero si el admin cambia algo
 }: AdminBracketMatchCardProps) => {
   const getName = (team: TeamProps) => {
     if (lang === "en") return team.name_en || team.name_es || team.name;
     return team.name_es || team.name;
   };
 
-  // Cargamos los scores oficiales en lugar de los pronosticados
   const [homeScore, setHomeScore] = useState(
     officialMatch?.home_score != null ? String(officialMatch.home_score) : "",
   );
@@ -191,7 +198,30 @@ export const AdminBracketMatchCard = ({
     if (onAdvanceTeam) onAdvanceTeam(matchId, awayTeam);
   };
 
-  // 👇 ESTILOS DE SUPER ADMIN (Rojos oscuros y dorados para la final)
+  // 👇 HELPER: Renderiza el nombre O el combobox si es un tercero
+  const renderTeamName = (team: TeamProps, side: "home" | "away") => {
+    const isThirdPlaceSeed = team.seed?.startsWith("T_");
+    const name = getName(team) || team.name;
+
+    if (isThirdPlaceSeed && onManualThirdChange && availableThirds.length > 0) {
+      return (
+        <select
+          value={team.id || ""}
+          onChange={(e) => onManualThirdChange(matchId, side, e.target.value)}
+          className="bg-black/40 border border-gray-700 text-white text-[11px] rounded px-1 py-0.5 w-full outline-none focus:border-red-500 appearance-none cursor-pointer"
+        >
+          <option value="">-- Seleccionar --</option>
+          {availableThirds.map((t) => (
+            <option key={t.id} value={t.id as string}>
+              {`3${t.group} - ${getName(t)}`}
+            </option>
+          ))}
+        </select>
+      );
+    }
+    return name;
+  };
+
   const containerClasses = isFinal
     ? "border-amber-500 shadow-[0_0_30px_rgba(245,158,11,0.4)] hover:shadow-[0_0_40px_rgba(245,158,11,0.6)] scale-[1.05] z-10"
     : "border-red-900/80 shadow-2xl hover:border-red-500 hover:shadow-[0_0_25px_rgba(220,38,38,0.5)]";
@@ -226,9 +256,10 @@ export const AdminBracketMatchCard = ({
       </div>
 
       <div className="flex flex-col px-2 py-1.5 gap-0">
+        {/* Usamos un truquito: le pasamos el renderizado como children o sobreescribimos el teamName en la row */}
         <AdminBracketMatchRow
           seed={getDisplaySeed(homeTeam) || "1A"}
-          teamName={getName(homeTeam) || homeTeam.name}
+          teamName={renderTeamName(homeTeam, "home") as any} // Forzamos tipo any temporalmente para aceptar el <select>
           score={homeScore}
           isWinner={homeWinner}
           onScoreChange={handleUserHomeScore}
@@ -241,7 +272,7 @@ export const AdminBracketMatchCard = ({
 
         <AdminBracketMatchRow
           seed={getDisplaySeed(awayTeam) || "2B"}
-          teamName={getName(awayTeam) || awayTeam.name}
+          teamName={renderTeamName(awayTeam, "away") as any}
           score={awayScore}
           isWinner={awayWinner}
           onScoreChange={handleUserAwayScore}
