@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 
-// 1. ACTUALIZAR INTERFAZ: Agregamos name_en opcional
 interface Team {
   id: string;
   name_es: string;
@@ -19,7 +18,7 @@ interface MatchData {
   away_score?: number | null | string;
   home_team: Team;
   away_team: Team;
-  home_team_id: string; // 👈 AGREGUE ESTA
+  home_team_id: string;
   away_team_id: string;
 }
 
@@ -33,6 +32,10 @@ interface MatchRowProps {
     type: "home" | "away",
     value: string,
   ) => void;
+  // 👇 NUEVAS PROPIEDADES PARA EL MOTOR DE PUNTOS
+  officialHomeScore?: number | null | string;
+  officialAwayScore?: number | null | string;
+  pointsWon?: number | null;
 }
 
 export const MatchRow = ({
@@ -41,15 +44,13 @@ export const MatchRow = ({
   lang = "es",
   onScoreChange,
   onPredictionChange,
+  officialHomeScore, // 👈 Recibimos el oficial
+  officialAwayScore, // 👈 Recibimos el oficial
+  pointsWon, // 👈 Recibimos los puntos
 }: MatchRowProps) => {
-  // --- HELPER PARA OBTENER NOMBRE SEGÚN IDIOMA ---
   const getName = (team: Team | null) => {
-    // 🪂 PARACAÍDAS: Si el equipo es null, devolvemos un texto vacío o "TBD"
     if (!team) return "Por definir";
-
-    if (lang === "en") {
-      return team.name_en || team.name_es;
-    }
+    if (lang === "en") return team.name_en || team.name_es;
     return team.name_es;
   };
 
@@ -99,10 +100,7 @@ export const MatchRow = ({
       pan: "pa",
     };
     if (!code3) return null;
-
-    // 👇 Esta es la línea que le estaba fallando
     if (code3.includes("_rep_")) return null;
-
     const code2 = map[code3.toLowerCase()] || code3.slice(0, 2).toLowerCase();
     return `https://flagcdn.com/w80/${code2}.png`;
   };
@@ -110,9 +108,7 @@ export const MatchRow = ({
   const formatMatchInfo = (dateString: string) => {
     if (!dateString) return { date: "", time: "" };
     const date = new Date(dateString);
-    // Usamos el locale dinámico
     const locale = lang === "en" ? "en-US" : "es-ES";
-
     const dayStr = date.toLocaleDateString(locale, {
       day: "numeric",
       month: "short",
@@ -127,16 +123,13 @@ export const MatchRow = ({
 
   const { dayStr, timeStr } = formatMatchInfo(match.match_date);
 
-  // --- CONTROL DE INPUT ---
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>,
     type: "home" | "away",
   ) => {
     const val = e.target.value;
     if (val.length > 2) return;
-    if (onScoreChange) {
-      onScoreChange(match.id, type, val);
-    }
+    if (onScoreChange) onScoreChange(match.id, type, val);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -159,7 +152,6 @@ export const MatchRow = ({
   const TeamFlag = ({ code, name }: { code: string; name: string }) => {
     const [imgError, setImgError] = useState(false);
     const flagUrl = getFlagUrl(code);
-
     if (!flagUrl || imgError) {
       return (
         <div className="w-full h-full bg-slate-700 flex items-center justify-center">
@@ -188,27 +180,35 @@ export const MatchRow = ({
     );
   };
 
-  // 🧠 EL EXORCISMO MEJORADO: Asegurar que el string vacío ("") NO cuente como completado
   const isValidScore = (score: any) =>
     score !== null && score !== undefined && score !== "";
-
-  const initialIsComplete =
-    isValidScore(match.home_score) && isValidScore(match.away_score);
-
-  const prevIsCompleteRef = React.useRef<boolean>(initialIsComplete);
+  const prevIsCompleteRef = React.useRef<boolean>(
+    isValidScore(match.home_score) && isValidScore(match.away_score),
+  );
 
   React.useEffect(() => {
     const isComplete =
       isValidScore(match.home_score) && isValidScore(match.away_score);
-
-    // 🚀 Solo gritamos si el usuario de verdad cambió de "vacío" a "lleno" (o viceversa)
     if (prevIsCompleteRef.current !== isComplete) {
-      if (onPredictionChange) {
+      if (onPredictionChange)
         onPredictionChange(match.id.toString(), isComplete);
-      }
       prevIsCompleteRef.current = isComplete;
     }
   }, [match.home_score, match.away_score, match.id, onPredictionChange]);
+
+  // 👇 MAGIA: Detectamos si hay resultados oficiales para expandir la tarjeta
+  const hasOfficial =
+    officialHomeScore !== null &&
+    officialHomeScore !== undefined &&
+    officialHomeScore !== "";
+
+  // Helper para textos de puntos
+  const getPointsText = () => {
+    if (pointsWon === 5) return lang === "en" ? "EXACT +5" : "EXACTO +5";
+    if (pointsWon === 3) return lang === "en" ? "GOAL DIFF +3" : "DIF. GOL +3";
+    if (pointsWon === 1) return lang === "en" ? "WINNER +1" : "GANADOR +1";
+    return lang === "en" ? "MISS 0" : "FALLO 0";
+  };
 
   return (
     <div className="flex flex-col bg-white/5 dark:bg-slate-100 border border-white/10 dark:border-slate-200 rounded-lg mb-3 overflow-hidden shadow-sm hover:border-white/20 transition-all">
@@ -227,79 +227,99 @@ export const MatchRow = ({
         </div>
       </div>
 
-      <div className="flex items-center justify-between p-2 relative h-16">
-        {/* NOMBRE LOCAL (CORREGIDO) */}
+      {/* 👇 Acomodamos el alto dinámicamente si hay partido oficial */}
+      <div
+        className={`flex items-center justify-between p-2 relative ${hasOfficial ? "py-4 min-h-[5.5rem]" : "h-16"}`}
+      >
         <div className="flex-1 flex items-center justify-end pr-3">
           <span className="text-sm font-medium text-gray-300 dark:text-slate-700 text-right leading-tight block wrap-break-words">
             {getName(match.home_team)}
           </span>
         </div>
 
-        <div className="flex items-end justify-center gap-2">
-          {/* BANDERA LOCAL */}
-          <div className="flex flex-col items-center gap-1">
-            <div className="w-6 h-4 rounded shadow-sm overflow-hidden border border-white/20 dark:border-slate-300 relative">
-              <TeamFlag
-                code={match.home_team?.flag_code}
-                name={getName(match.home_team)}
-              />
+        {/* 👇 CENTRO MÁGICO: Flex-Col para apilar Banderas, Inputs, y Marcador Oficial */}
+        <div className="flex flex-col items-center justify-center shrink-0 px-1 gap-1.5">
+          {/* BADGE PUNTOS GANADOS (Arriba) */}
+          {hasOfficial && pointsWon !== undefined && pointsWon !== null && (
+            <div
+              className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center justify-center gap-1 shadow-sm whitespace-nowrap ${pointsWon > 0 ? "bg-slate-800 border border-emerald-500/50 text-emerald-400" : "bg-slate-800 border border-red-500/50 text-red-400"}`}
+            >
+              {pointsWon > 0 ? "✅" : "❌"} {getPointsText()}
             </div>
-            {editable ? (
-              <input
-                type="number"
-                placeholder="-"
-                value={
-                  match.home_score === null || match.home_score === undefined
-                    ? ""
-                    : match.home_score
-                }
-                onChange={(e) => handleInputChange(e, "home")}
-                onKeyDown={handleKeyDown}
-                enterKeyHint="next"
-                className="w-10 h-8 text-center text-lg font-bold bg-blue-200 text-slate-900 border border-cyan-400 rounded focus:border-2 focus:border-cyan-600 focus:outline-none focus:ring-0 appearance-none transition-all"
-              />
-            ) : (
-              <div className="w-10 h-8 flex items-center justify-center bg-black/40 dark:bg-slate-300 rounded border border-white/10 dark:border-slate-400 font-mono font-bold text-white dark:text-slate-800 text-sm">
-                {match.home_score ?? "-"}
+          )}
+
+          {/* ÁREA DE INPUTS Y BANDERAS (Centro) */}
+          <div className="flex items-end justify-center gap-2">
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-6 h-4 rounded shadow-sm overflow-hidden border border-white/20 dark:border-slate-300 relative">
+                <TeamFlag
+                  code={match.home_team?.flag_code}
+                  name={getName(match.home_team)}
+                />
               </div>
-            )}
+              {editable ? (
+                <input
+                  type="number"
+                  placeholder="-"
+                  value={
+                    match.home_score === null || match.home_score === undefined
+                      ? ""
+                      : match.home_score
+                  }
+                  onChange={(e) => handleInputChange(e, "home")}
+                  onKeyDown={handleKeyDown}
+                  enterKeyHint="next"
+                  className="w-10 h-8 text-center text-lg font-bold bg-blue-200 text-slate-900 border border-cyan-400 rounded focus:border-2 focus:border-cyan-600 focus:outline-none focus:ring-0 appearance-none transition-all"
+                />
+              ) : (
+                <div className="w-10 h-8 flex items-center justify-center bg-black/40 dark:bg-slate-300 rounded border border-white/10 dark:border-slate-400 font-mono font-bold text-white dark:text-slate-800 text-sm">
+                  {match.home_score ?? "-"}
+                </div>
+              )}
+            </div>
+
+            <span className="text-gray-500 dark:text-slate-400 font-bold text-xs mb-2">
+              -
+            </span>
+
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-6 h-4 rounded shadow-sm overflow-hidden border border-white/20 dark:border-slate-300 relative bg-gray-800">
+                <TeamFlag
+                  code={match.away_team?.flag_code}
+                  name={getName(match.away_team)}
+                />
+              </div>
+              {editable ? (
+                <input
+                  type="number"
+                  placeholder="-"
+                  value={
+                    match.away_score === null || match.away_score === undefined
+                      ? ""
+                      : match.away_score
+                  }
+                  onChange={(e) => handleInputChange(e, "away")}
+                  onKeyDown={handleKeyDown}
+                  enterKeyHint="next"
+                  className="w-10 h-8 text-center text-lg font-bold bg-blue-200 text-slate-900 border border-cyan-400 rounded focus:border-2 focus:border-cyan-600 focus:outline-none focus:ring-0 appearance-none transition-all"
+                />
+              ) : (
+                <div className="w-10 h-8 flex items-center justify-center bg-black/40 dark:bg-slate-300 rounded border border-white/10 dark:border-slate-400 font-mono font-bold text-white dark:text-slate-800 text-sm">
+                  {match.away_score ?? "-"}
+                </div>
+              )}
+            </div>
           </div>
 
-          <span className="text-gray-500 dark:text-slate-400 font-bold text-xs mb-2">
-            -
-          </span>
-
-          {/* VISITANTE */}
-          <div className="flex flex-col items-center gap-1">
-            <div className="w-6 h-4 rounded shadow-sm overflow-hidden border border-white/20 dark:border-slate-300 relative bg-gray-800">
-              <TeamFlag
-                code={match.away_team?.flag_code}
-                name={getName(match.away_team)}
-              />
+          {/* BADGE MARCADOR OFICIAL (Abajo) */}
+          {hasOfficial && (
+            <div className="bg-black/80 text-gray-300 text-[10px] font-bold px-2 py-0.5 rounded border border-gray-600 shadow-sm whitespace-nowrap mt-0.5">
+              {lang === "en" ? "OFFICIAL:" : "OFICIAL:"} {officialHomeScore} -{" "}
+              {officialAwayScore}
             </div>
-            {editable ? (
-              <input
-                type="number"
-                placeholder="-"
-                value={
-                  match.away_score === null || match.away_score === undefined
-                    ? ""
-                    : match.away_score
-                }
-                onChange={(e) => handleInputChange(e, "away")}
-                onKeyDown={handleKeyDown}
-                enterKeyHint="next"
-                className="w-10 h-8 text-center text-lg font-bold bg-blue-200 text-slate-900 border border-cyan-400 rounded focus:border-2 focus:border-cyan-600 focus:outline-none focus:ring-0 appearance-none transition-all"
-              />
-            ) : (
-              <div className="w-10 h-8 flex items-center justify-center bg-black/40 dark:bg-slate-300 rounded border border-white/10 dark:border-slate-400 font-mono font-bold text-white dark:text-slate-800 text-sm">
-                {match.away_score ?? "-"}
-              </div>
-            )}
-          </div>
+          )}
         </div>
 
-        {/* NOMBRE VISITANTE (CORREGIDO) */}
         <div className="flex-1 flex items-center justify-start pl-3">
           <span className="text-sm font-medium text-gray-300 dark:text-slate-700 text-left leading-tight block wrap-break-word">
             {getName(match.away_team)}

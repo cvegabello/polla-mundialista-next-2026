@@ -16,10 +16,11 @@ interface FanHeaderProps {
   totalPredictions: number;
   totalMatches: number;
   onSubmitPredictions?: () => void;
-  // 👇 NUEVAS PROPS PARA LOS BOTONES DE PODER 👇
   hasUnsavedChanges?: boolean;
   onManualSave?: () => void;
   onRefresh?: () => void;
+  // 👇 NUEVA PROP: Recibimos los puntos reales del usuario
+  totalPoints?: number;
 }
 
 export const FanHeader = ({
@@ -34,6 +35,7 @@ export const FanHeader = ({
   hasUnsavedChanges = false,
   onManualSave,
   onRefresh,
+  totalPoints = 0, // 👇 Valor por defecto en caso de que no haya puntos aún
 }: FanHeaderProps) => {
   const t = DICTIONARY[lang];
   const isSubmitted = !!userSession?.submission_date;
@@ -45,9 +47,7 @@ export const FanHeader = ({
     setIsMounted(true);
   }, []);
 
-  // 👇 1. ESTA ES LA VACUNA NUCLEAR (Agréguela justo aquí)
   if (!isMounted) {
-    // Devolvemos el "cascarón" vacío con la misma altura para que la pantalla no brinque
     return (
       <header className="flex flex-col items-center w-full px-4 pt-6 pb-4 relative z-30 min-h-[150px]"></header>
     );
@@ -84,12 +84,12 @@ export const FanHeader = ({
       <UserStats
         username={userSession?.username}
         pollaName={userSession?.polla_name}
-        points={1000}
+        points={totalPoints} // 👈 ¡ADIÓS AL 1000 QUEMADO! Ahora usa el valor real
         submissionDate={userSession?.submission_date}
         lang={lang}
       />
 
-      {/* 3. PANELES DE CONTROL (NUEVO DISEÑO DIVIDIDO) */}
+      {/* 3. PANELES DE CONTROL */}
       <div className="flex flex-col md:flex-row gap-4 mt-4 mb-4 justify-center items-center w-full">
         {/* PANEL IZQUIERDO: REPORTES */}
         <ReportsMenu lang={lang} />

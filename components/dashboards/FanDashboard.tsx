@@ -231,6 +231,12 @@ export const FanDashboard = ({
     );
   }
 
+  // Sume los puntos usando su arreglo de predicciones:
+  const calculatedTotalPoints = userPredictions.reduce(
+    (acc, pred) => acc + (pred.points_won || 0),
+    0,
+  );
+
   return (
     <main className="min-h-screen transition-colors duration-300 bg-transparent dark:bg-transparent relative pb-20 overflow-x-hidden">
       <StarBackground />
@@ -247,6 +253,7 @@ export const FanDashboard = ({
         hasUnsavedChanges={hasUnsavedChanges}
         onManualSave={handleManualSave}
         onRefresh={handleRefresh}
+        totalPoints={calculatedTotalPoints}
       />
 
       <div className="relative z-10 px-4">

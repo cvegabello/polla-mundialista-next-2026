@@ -7,7 +7,7 @@ import { GroupModal } from "./GroupModal";
 import { DICTIONARY, Language } from "@/components/constants/dictionary";
 import { GroupDataReal } from "@/types";
 import { useGroupLogic } from "@/hooks/useGroupLogic";
-import { saveGroupBulkPredictionsAction } from "@/lib/actions/fan-actions"; // Se usa SOLO en el modal
+import { saveGroupBulkPredictionsAction } from "@/lib/actions/fan-actions";
 import { Maximize2 } from "lucide-react";
 
 interface GroupCardProps {
@@ -71,16 +71,30 @@ export const GroupCard = ({
             </div>
 
             <div className="space-y-1 mb-4">
-              {matches.map((match) => (
-                <MatchRow
-                  key={match.id}
-                  match={match}
-                  editable={!isLocked}
-                  onScoreChange={handleScoreChange} // 👈 Solo actualiza estado local y activa bandera de salvar
-                  lang={lang}
-                  onPredictionChange={onPredictionChange}
-                />
-              ))}
+              {matches.map((match) => {
+                // 👇 CEREBRO: Extraemos los datos puros para mostrarlos en la UI
+                const originalOfficialMatch = group.matches.find(
+                  (m) => m.id === match.id,
+                );
+                const userPrediction = initialPredictions.find(
+                  (p) => p.match_id.toString() === match.id.toString(),
+                );
+
+                return (
+                  <MatchRow
+                    key={match.id}
+                    match={match}
+                    editable={!isLocked}
+                    onScoreChange={handleScoreChange}
+                    lang={lang}
+                    onPredictionChange={onPredictionChange}
+                    // 👇 Pasamos la "verdad absoluta" para que se pinte debajo
+                    officialHomeScore={originalOfficialMatch?.home_score}
+                    officialAwayScore={originalOfficialMatch?.away_score}
+                    pointsWon={userPrediction?.points_won}
+                  />
+                );
+              })}
             </div>
 
             <GroupTable
@@ -100,7 +114,6 @@ export const GroupCard = ({
           isLocked={isLocked}
           onClose={() => setIsModalOpen(false)}
           onSave={async (newMatches, newTable) => {
-            // 1. EL MODAL SÍ SALVA A BASE DE DATOS (Como pediste)
             const bulkData = newMatches.map((m) => ({
               matchId: m.id,
               hScore: m.home_score ?? null,
@@ -117,12 +130,9 @@ export const GroupCard = ({
               }
             }
 
-            // 2. Sincronizamos la tarjeta principal SIN activar el botón de salvar del encabezado
-            // Para eso, NO llamamos a onGroupDirty aquí, solo actualizamos los datos visuales.
             if (handleBulkUpdate) {
               handleBulkUpdate(newMatches, newTable);
             }
-
             setIsModalOpen(false);
           }}
         />
