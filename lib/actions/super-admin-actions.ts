@@ -3,6 +3,8 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { calculateMatchPoints, ScoreConfig } from "@/utils/points-engine";
+import { calculateStandings } from "@/utils/standings";
+import { evaluateGroupBonusesAction } from "./bonus-actions";
 
 export const saveOfficialScoreAction = async (
   matchId: number,
@@ -70,6 +72,44 @@ export const saveOfficialScoreAction = async (
             "Error actualizando los puntos de las predicciones:",
             upsertError,
           );
+        }
+      }
+    }
+
+    // 🌟 EL RADAR DE GRUPOS COMPLETADOS
+    const { data: currentMatch } = await supabase
+      .from("matches")
+      .select("group_id")
+      .eq("id", matchId)
+      .single();
+
+    if (currentMatch?.group_id && currentMatch.group_id !== "FI") {
+      // 1. Volvemos al select normal que sabemos que NUNCA falla
+      const { data: groupMatches } = await supabase
+        .from("matches")
+        .select("*")
+        .eq("group_id", currentMatch.group_id);
+
+      if (groupMatches && groupMatches.length > 0) {
+        const isGroupComplete = groupMatches.every(
+          (m) => m.home_score !== null && m.away_score !== null,
+        );
+
+        if (isGroupComplete) {
+          const officialTable = calculateStandings(groupMatches, "es");
+
+          // 👇 LA CORRECCIÓN DE ORO: teamId con la "I" mayúscula
+          const firstId = officialTable[0]?.teamId;
+          const secondId = officialTable[1]?.teamId;
+
+          if (firstId && secondId) {
+            await evaluateGroupBonusesAction(
+              currentMatch.group_id,
+              groupMatches,
+              firstId,
+              secondId,
+            );
+          }
         }
       }
     }

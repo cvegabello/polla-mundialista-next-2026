@@ -7,8 +7,10 @@ export const calculateStandings = (
 ): TableStats[] => {
   const stats: Record<string, any> = {};
 
-  const getName = (team: any) =>
-    lang === "en" ? team.name_en || team.name_es : team.name_es;
+  const getName = (team: any) => {
+    if (!team) return "TBD"; // 🪂 Si el equipo llega vacío, no se revienta
+    return lang === "en" ? team.name_en || team.name_es : team.name_es;
+  };
 
   // 1. Inicializar estadísticas
   matches.forEach((m: any) => {

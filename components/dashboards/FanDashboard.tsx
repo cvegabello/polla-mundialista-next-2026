@@ -35,10 +35,12 @@ interface FanDashboardProps {
   userSession: any;
   groupsData: any[];
   userPredictions: any[];
-  officialScores?: any[]; // 👈 NUEVO
-  officialWinners?: Record<string, any>; // 👈 NUEVO
+  officialScores?: any[];
+  officialWinners?: Record<string, any>;
   loadingData: boolean;
   lang: Language;
+  // 👇 NUEVO: Recibimos los bonos de la base de datos
+  userBonuses?: any[];
 }
 
 const getFlagUrl = (code3: string | null | undefined): string | null => {
@@ -100,6 +102,7 @@ export const FanDashboard = ({
   officialWinners,
   loadingData,
   lang,
+  userBonuses = [], // 👈 Inicializamos como arreglo vacío por seguridad
 }: FanDashboardProps) => {
   const [isMounted, setIsMounted] = useState(false);
 
@@ -136,22 +139,17 @@ export const FanDashboard = ({
     handleLogoutAttempt,
   } = useFanDashboardLogic(userPredictions, userSession?.id, groupsData);
 
-  // 🛠️ MODIFICACIÓN CLAVE: Manejo de persistencia del modal y limpieza de estados null/pendientes
   const handleInternalModalSave = async (
     groupId: string,
     matches: any[],
     tableData: any[],
   ) => {
-    // 1. Sincronizamos los datos con el hook (esto internamente pone hasUnsavedChanges en true)
     handleGroupDataChange(groupId, matches, tableData);
 
-    // 2. ⚡ FORZAMOS EL RESET: Ejecutamos el guardado manual pasando 'false'.
-    // Esto limpia la lista de 'unsavedPredictions' en el hook y pone hasUnsavedChanges en false,
-    // evitando que el botón del Header se active por residuos de valores null.
     if (typeof handleManualSave === "function") {
       setTimeout(async () => {
         await handleManualSave(false);
-      }, 100); // Un pequeño delay asegura que el estado anterior se haya procesado
+      }, 100);
     }
   };
 
@@ -159,7 +157,7 @@ export const FanDashboard = ({
     matchId: string | number,
     winner: any,
     isFinalMatch: boolean,
-    isManualAction: boolean = false, // 👈 Recibimos el chisme aquí
+    isManualAction: boolean = false,
   ) => {
     handleAdvanceTeam(matchId, winner);
 
@@ -231,11 +229,16 @@ export const FanDashboard = ({
     );
   }
 
-  // Sume los puntos usando su arreglo de predicciones:
-  const calculatedTotalPoints = userPredictions.reduce(
+  // 👇 MAGIA MATEMÁTICA: Sumamos puntos de partidos + puntos de bonos de grupos
+  const matchPoints = userPredictions.reduce(
     (acc, pred) => acc + (pred.points_won || 0),
     0,
   );
+  const bonusPoints = userBonuses.reduce(
+    (acc, bonus) => acc + (bonus.points_won || 0),
+    0,
+  );
+  const calculatedTotalPoints = matchPoints + bonusPoints;
 
   return (
     <main className="min-h-screen transition-colors duration-300 bg-transparent dark:bg-transparent relative pb-20 overflow-x-hidden">
@@ -253,7 +256,7 @@ export const FanDashboard = ({
         hasUnsavedChanges={hasUnsavedChanges}
         onManualSave={handleManualSave}
         onRefresh={handleRefresh}
-        totalPoints={calculatedTotalPoints}
+        totalPoints={calculatedTotalPoints} // 👈 ¡Se va con el total completo!
       />
 
       <div className="relative z-10 px-4">
@@ -277,6 +280,10 @@ export const FanDashboard = ({
                     onPredictionChange={handlePredictionChange}
                     isLocked={isLocked}
                     onGroupDirty={handleGroupDataChange}
+                    // 👇 EL PASE GOL: Le filtramos a la tarjeta su bono correspondiente
+                    groupBonus={userBonuses.find(
+                      (b) => b.bonus_type === `GROUP_${group.id}`,
+                    )}
                   />
                 ))}
             </div>
@@ -312,6 +319,7 @@ export const FanDashboard = ({
                     </div>
                   }
                 >
+                  {/* ... Resto del código del Bracket intacto ... */}
                   <PhaseColumn
                     title={t.bracketPhaseR32Full}
                     isActive={currentView === "pred_finals"}
@@ -363,7 +371,7 @@ export const FanDashboard = ({
                     )}
                   </PhaseColumn>
 
-                  {/* Columnas de R16, QF, SF, F */}
+                  {/* Resto de columnas (R16, QF, SF, F)... (Mismo código sin cambios) */}
                   <PhaseColumn
                     title={t.bracketPhaseR16Full}
                     isActive={false}
@@ -416,7 +424,6 @@ export const FanDashboard = ({
                       );
                     })}
                   </PhaseColumn>
-
                   <PhaseColumn
                     title={t.bracketPhaseQFFull}
                     isActive={false}
@@ -469,7 +476,6 @@ export const FanDashboard = ({
                       );
                     })}
                   </PhaseColumn>
-
                   <PhaseColumn
                     title={t.bracketPhaseSFFull}
                     isActive={false}
@@ -522,7 +528,6 @@ export const FanDashboard = ({
                       );
                     })}
                   </PhaseColumn>
-
                   <PhaseColumn
                     title={t.bracketPhaseFTitle}
                     isActive={false}
@@ -547,8 +552,8 @@ export const FanDashboard = ({
                           isFinal={isFinal}
                           style={
                             idx % 2 !== 0
-                              ? { marginTop: "60px" } // Tercer Puesto
-                              : { marginTop: "15px" } // Final
+                              ? { marginTop: "60px" }
+                              : { marginTop: "15px" }
                           }
                           homeTeam={{
                             ...match.home,
@@ -583,12 +588,11 @@ export const FanDashboard = ({
             {currentView === "res_groups" && (
               <OfficialGroupsResults groupsData={groupsData} lang={lang} />
             )}
-            {/* 👇 AQUÍ VA EL NUEVO COMPONENTE DE RESULTADOS OFICIALES 👇 */}
             {currentView === "res_finals" && (
               <OfficialKnockoutResults
                 groupsData={groupsData}
-                officialWinners={officialWinners || {}} // 👈 ¡CONECTADO!
-                officialScores={officialScores || []} // 👈 ¡CONECTADO!
+                officialWinners={officialWinners || {}}
+                officialScores={officialScores || []}
                 lang={lang}
               />
             )}
@@ -605,6 +609,7 @@ export const FanDashboard = ({
         />
       )}
 
+      {/* Modal de Ganador del Torneo (Sin cambios) */}
       {showWinnerModal && winnerTeam && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
           <div className="relative bg-slate-900 border-2 border-amber-400/50 rounded-3xl p-8 max-w-sm w-full text-center shadow-[0_0_50px_rgba(251,191,36,0.4)] animate-in zoom-in-95 duration-300">

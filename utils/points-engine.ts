@@ -72,3 +72,42 @@ export const calculateMatchPoints = (
   // Fallo total
   return 0;
 };
+
+/**
+ * 🏆 MOTOR DE GRUPOS: Calcula los bonos por acertar los clasificados de un grupo
+ * Retorna los puntos y el tipo de acierto para mostrar en la interfaz.
+ */
+export const calculateGroupBonusPoints = (
+  predFirstId: string | null | undefined,
+  predSecondId: string | null | undefined,
+  offFirstId: string | null | undefined,
+  offSecondId: string | null | undefined,
+  config: ScoreConfig,
+): { points: number; type: "PERFECT" | "INVERSE" | "SINGLE" | "NONE" } => {
+  // 🛡️ Filtro: Si faltan datos oficiales o el fan no llenó, cero puntos.
+  if (!offFirstId || !offSecondId || !predFirstId || !predSecondId) {
+    return { points: 0, type: "NONE" };
+  }
+
+  // 🥇 REY DE GRUPO (+10): Acierta 1ro y 2do en el orden exacto
+  if (predFirstId === offFirstId && predSecondId === offSecondId) {
+    return { points: config.group_perfect || 0, type: "PERFECT" };
+  }
+
+  // 🥈 CLASIFICADOS INV (+5): Acierta los dos, pero al revés
+  if (predFirstId === offSecondId && predSecondId === offFirstId) {
+    return { points: config.group_inverse || 0, type: "INVERSE" };
+  }
+
+  // 🥉 1 ACIERTO (+2): Pega solo uno de los dos clasificados (en cualquier posición)
+  let hits = 0;
+  if (predFirstId === offFirstId || predFirstId === offSecondId) hits++;
+  if (predSecondId === offFirstId || predSecondId === offSecondId) hits++;
+
+  if (hits === 1) {
+    return { points: config.group_single || 0, type: "SINGLE" };
+  }
+
+  // ❌ NADA: No le atinó a ninguno de los dos que pasaron
+  return { points: 0, type: "NONE" };
+};

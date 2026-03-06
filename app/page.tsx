@@ -4,10 +4,10 @@ import { FanDashboard } from "@/components/dashboards/FanDashboard";
 import { getFullGroupsData } from "@/services/groupService";
 import { getUserPredictions } from "@/services/predictionService";
 import { Language } from "@/components/constants/dictionary";
-// 👇 Nuestro servicio de partidos oficiales
 import { getOfficialMatches } from "@/services/matchService";
+// 👇 1. Importamos el cliente de Supabase para poder consultar la tabla nueva
+import { createClient } from "@/utils/supabase/server";
 
-// 👇 Optimizaciones de caché de Next.js
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -15,34 +15,40 @@ export default async function HomePage() {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("polla_session");
 
-  // Si no hay galleta, el middleware ya debió sacarlo, pero nos curamos en salud
   if (!sessionCookie) {
     redirect("/login");
   }
 
-  // Leemos la galleta que horneó el LoginMockup
   const userSession = JSON.parse(decodeURIComponent(sessionCookie.value));
-
-  // 🕵️‍♂️ CORRECCIÓN: Leemos el idioma de la sesión que guardamos en el Login
   const lang = (userSession.lang as Language) || "es";
 
-  // ⚡ LA MAGIA DE SERVER COMPONENTS: Carga todo en paralelo en milisegundos
-  const [groupsData, userPredictions, officialMatchesRaw] = await Promise.all([
+  // 👇 2. Inicializamos el teléfono rojo con Supabase
+  const supabase = await createClient();
+
+  // ⚡ LA MAGIA: Agregamos la consulta de bonos a la carga en paralelo
+  const [
+    groupsData,
+    userPredictions,
+    officialMatchesRaw,
+    bonusesResponse, // 👈 Aquí llega la respuesta de la nueva tabla
+  ] = await Promise.all([
     getFullGroupsData(),
     getUserPredictions(userSession.id),
-    getOfficialMatches(), // La verdad absoluta de la BD
+    getOfficialMatches(),
+    supabase.from("bonus_points").select("*").eq("user_id", userSession.id), // 👈 Consultamos los bonos del usuario
   ]);
 
-  // 🧠 MASTICAMOS LA DATA OFICIAL EN EL SERVIDOR (Cero carga para el celular)
+  // Sacamos los datos limpios de la respuesta
+  const userBonuses = bonusesResponse.data || [];
+
   const officialScores: any[] = [];
   const officialWinners: Record<string, any> = {};
 
   if (officialMatchesRaw) {
     officialMatchesRaw.forEach((m: any) => {
-      // 👇 AHORA SÍ LE MANDAMOS EL PAQUETE COMPLETO
       officialScores.push({
-        ...m, // 👈 El truco mágico: clonamos TODO lo que trae Supabase (incluyendo home_team y away_team)
-        match_id: m.id, // Mantenemos match_id por compatibilidad con sus otros componentes
+        ...m,
+        match_id: m.id,
       });
 
       if (m.winner_id) {
@@ -55,7 +61,6 @@ export default async function HomePage() {
     });
   }
 
-  // Opcional: leer el idioma de otra cookie si la tiene, o por defecto 'es'
   const langCookie = cookieStore.get("polla_lang")?.value || "es";
 
   return (
@@ -65,8 +70,9 @@ export default async function HomePage() {
       userPredictions={userPredictions}
       officialScores={officialScores}
       officialWinners={officialWinners}
-      loadingData={false} // 👈 Ya nunca habrá spinner, la data llega instantánea
+      loadingData={false}
       lang={lang}
+      userBonuses={userBonuses} // 👈 3. ¡EL PASE GOL! Le mandamos los bonos a la vista
     />
   );
 }
