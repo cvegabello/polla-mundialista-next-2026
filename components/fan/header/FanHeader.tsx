@@ -127,6 +127,7 @@ export const FanHeader = ({
           isComplete={isComplete}
           progress={totalPredictions}
           total={totalMatches}
+          hasUnsavedChanges={hasUnsavedChanges}
           onSubmit={onSubmitPredictions || (() => {})}
         />
       )}

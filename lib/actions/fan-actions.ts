@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 
 export async function saveGroupStandingsAction(
   userId: string,
@@ -39,17 +40,43 @@ export async function saveGroupStandingsAction(
 }
 
 // Su función de submit sigue igual de melo
+// Su función de submit con actualización de galleta en tiempo real
 export async function submitPredictionsAction(userId: string) {
   const supabase = await createClient();
   try {
     const submissionDate = new Date().toISOString();
+
+    // 1. Guardamos en la Base de Datos
     const { error } = await supabase
       .from("profiles")
       .update({ submission_date: submissionDate })
       .eq("id", userId);
 
     if (error) throw error;
-    revalidatePath("/dashboard");
+
+    // 2. 👇 LA MAGIA: Actualizamos la galleta directamente desde el servidor
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("polla_session");
+
+    if (sessionCookie) {
+      // Abrimos la galleta, le metemos la nueva fecha y la volvemos a hornear
+      const sessionData = JSON.parse(decodeURIComponent(sessionCookie.value));
+      sessionData.submission_date = submissionDate;
+
+      cookieStore.set(
+        "polla_session",
+        encodeURIComponent(JSON.stringify(sessionData)),
+        {
+          path: "/",
+          maxAge: 60 * 60 * 24 * 30, // 30 días
+          sameSite: "lax",
+        },
+      );
+    }
+
+    // 3. Limpiamos la caché profunda para que toda la vista se refresque
+    revalidatePath("/", "layout");
+
     return { success: true, date: submissionDate };
   } catch (error) {
     console.error("Error en submitPredictionsAction:", error);
