@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { AdminGroupCard } from "@/components/groups/AdminGroupCard";
-import { SuperAdminHeader } from "@/components/admin/header/SuperAdminHeader";
+import { AdminGroupCard } from "@/components/superadmin/groups/AdminGroupCard";
+import { SuperAdminHeader } from "@/components/superadmin/header/SuperAdminHeader";
 import { DICTIONARY, Language } from "@/components/constants/dictionary";
-import { AdminKnockoutBoard } from "@/components/admin/bracket/AdminKnockoutBoard";
+import { AdminKnockoutBoard } from "@/components/superadmin/finals/AdminKnockoutBoard";
 
 interface SuperAdminDashboardProps {
   groupsData: any[];
