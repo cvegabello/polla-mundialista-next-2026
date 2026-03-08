@@ -1,6 +1,6 @@
 import React from "react";
 import { DICTIONARY, Language } from "@/components/constants/dictionary";
-import { Rocket, CheckCircle, Lock, AlertTriangle } from "lucide-react"; // 👈 Agregamos AlertTriangle
+import { Rocket, CheckCircle, Lock, AlertTriangle } from "lucide-react";
 
 interface SubmitZoneProps {
   lang: Language;
@@ -8,8 +8,10 @@ interface SubmitZoneProps {
   isComplete: boolean;
   progress: number;
   total: number;
-  hasUnsavedChanges: boolean; // 👈 NUEVO: Recibimos el estado de guardado
+  hasUnsavedChanges: boolean;
   onSubmit: () => void;
+  // 👇 NUEVA PROP: Recibimos la orden de si se puede enviar o no
+  isSubmitAllowed?: boolean;
 }
 
 export const SubmitZone = ({
@@ -18,8 +20,9 @@ export const SubmitZone = ({
   isComplete,
   progress,
   total,
-  hasUnsavedChanges, // 👈 Lo sacamos de las props
+  hasUnsavedChanges,
   onSubmit,
+  isSubmitAllowed = true, // 👈 Por defecto es true
 }: SubmitZoneProps) => {
   const t = DICTIONARY[lang];
 
@@ -31,7 +34,7 @@ export const SubmitZone = ({
     "bg-linear-to-r from-emerald-400 to-green-500 text-[#0a2f15] border border-green-400 shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:shadow-[0_0_30px_rgba(16,185,129,0.6)] hover:scale-[1.02] cursor-pointer animate-pulse-slow";
 
   const btnWarning =
-    "bg-amber-500/20 border border-amber-500/50 text-amber-400 cursor-not-allowed shadow-none opacity-90"; // 👈 NUEVO ESTADO AMARILLO
+    "bg-amber-500/20 border border-amber-500/50 text-amber-400 cursor-not-allowed shadow-none opacity-90";
 
   const btnSubmitted =
     "bg-green-900/20 border border-green-500/50 text-green-400 cursor-default";
@@ -39,9 +42,12 @@ export const SubmitZone = ({
   return (
     <div className="w-full max-w-2xl mx-auto mb-6 relative z-20">
       <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-[#0f1016] border border-gray-700 shadow-2xl relative overflow-hidden transition-all duration-300">
-        {isComplete && !isSubmitted && !hasUnsavedChanges && (
-          <div className="absolute inset-0 bg-green-500/5 blur-3xl pointer-events-none" />
-        )}
+        {isComplete &&
+          !isSubmitted &&
+          !hasUnsavedChanges &&
+          isSubmitAllowed && (
+            <div className="absolute inset-0 bg-green-500/5 blur-3xl pointer-events-none" />
+          )}
 
         {isSubmitted ? (
           <div className="flex flex-col items-center gap-2">
@@ -52,31 +58,43 @@ export const SubmitZone = ({
               {t.submittedLabel}
             </div>
             <span className="text-gray-400 text-xs mt-2 flex items-center gap-1">
-              <Lock size={12} /> Tus pronósticos están blindados
+              <Lock size={12} />{" "}
+              {lang === "en"
+                ? "Your predictions are secured"
+                : "Tus pronósticos están blindados"}
             </span>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4 w-full">
-            {/* 👇 LA MAGIA DE LOS 3 ESTADOS DEL BOTÓN */}
+            {/* 👇 LA MAGIA DE LOS 4 ESTADOS DEL BOTÓN */}
             <button
               onClick={onSubmit}
-              disabled={!isComplete || hasUnsavedChanges}
+              // 🔒 Bloqueamos si falta llenar, si hay cambios sin guardar, O SI ESTÁ CERRADO EL CANDADO
+              disabled={
+                !isComplete || hasUnsavedChanges || isSubmitAllowed === false
+              }
               className={`relative flex items-center justify-center gap-3 px-6 py-4 rounded-xl font-black text-base md:text-lg tracking-[0.2em] uppercase transition-all duration-300 w-full shadow-lg group ${
-                isComplete && !hasUnsavedChanges
+                isComplete && !hasUnsavedChanges && isSubmitAllowed
                   ? btnActive
-                  : isComplete && hasUnsavedChanges
+                  : isComplete && hasUnsavedChanges && isSubmitAllowed
                     ? btnWarning
                     : btnDisabled
               }`}
             >
-              {isComplete && hasUnsavedChanges ? (
-                // 🟡 ESTADO: COMPLETO PERO SIN GUARDAR
+              {!isSubmitAllowed ? (
+                // 🔴 ESTADO CERRADO POR EL SUPER ADMIN
+                <>
+                  <Lock size={20} className="text-gray-500" />
+                  {lang === "en" ? "SUBMISSIONS CLOSED" : "ENVÍOS CERRADOS"}
+                </>
+              ) : isComplete && hasUnsavedChanges ? (
+                // 🟡 ESTADO COMPLETO PERO SIN GUARDAR
                 <>
                   <AlertTriangle size={20} className="text-amber-400" />
                   {lang === "en" ? "SAVE TO SUBMIT" : "GUARDE PARA ENVIAR"}
                 </>
               ) : (
-                // 🟢 ESTADO ACTIVO O 🔴 ESTADO INCOMPLETO
+                // 🟢 ESTADO ACTIVO O INCOMPLETO
                 <>
                   <Rocket
                     size={20}
@@ -87,29 +105,34 @@ export const SubmitZone = ({
               )}
             </button>
 
-            {!isComplete ? (
+            {/* 👇 MENSAJES DE ESTADO INFERIORES */}
+            {!isSubmitAllowed ? (
+              <p className="text-gray-400 text-sm font-bold uppercase tracking-widest text-center mt-1">
+                {lang === "en"
+                  ? "The administrator has not opened this phase yet."
+                  : "El administrador aún no ha habilitado esta fase."}
+              </p>
+            ) : !isComplete ? (
               <div className="text-center flex flex-col items-center gap-1">
                 <p className="text-white text-base font-medium drop-shadow-md">
                   {t.submitWarning}
                 </p>
                 <p className="text-xs text-gray-400 uppercase tracking-wider mt-1">
-                  Progreso:
+                  {lang === "en" ? "Progress:" : "Progreso:"}
                   <span
-                    className={`ml-2 text-2xl font-black drop-shadow-[0_0_10px_rgba(250,204,21,0.5)] text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.6)]`}
+                    className={`ml-2 text-2xl font-black drop-shadow-[0_0_10px_rgba(250,204,21,0.5)] text-yellow-400`}
                   >
                     {progress}/{total}
                   </span>
                 </p>
               </div>
             ) : hasUnsavedChanges ? (
-              // Mensaje cuando está completo pero falta guardar
               <p className="text-amber-400 text-sm font-bold uppercase tracking-widest animate-pulse drop-shadow-[0_0_5px_rgba(251,191,36,0.5)]">
                 {lang === "en"
                   ? "⚠️ YOU HAVE UNSAVED CHANGES"
                   : "⚠️ TIENE CAMBIOS SIN GUARDAR"}
               </p>
             ) : (
-              // Mensaje cuando ya está listo para enviar
               <p className="text-green-400 text-sm font-bold uppercase tracking-widest animate-pulse drop-shadow-[0_0_5px_rgba(34,197,94,0.5)]">
                 {t.readyMsg}
               </p>

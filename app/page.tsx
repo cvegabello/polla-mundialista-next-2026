@@ -5,7 +5,6 @@ import { getFullGroupsData } from "@/services/groupService";
 import { getUserPredictions } from "@/services/predictionService";
 import { Language } from "@/components/constants/dictionary";
 import { getOfficialMatches } from "@/services/matchService";
-// 👇 1. Importamos el cliente de Supabase para poder consultar la tabla nueva
 import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -21,25 +20,25 @@ export default async function HomePage() {
 
   const userSession = JSON.parse(decodeURIComponent(sessionCookie.value));
   const lang = (userSession.lang as Language) || "es";
-
-  // 👇 2. Inicializamos el teléfono rojo con Supabase
   const supabase = await createClient();
 
-  // ⚡ LA MAGIA: Agregamos la consulta de bonos a la carga en paralelo
+  // ⚡ LA MAGIA: Las 5 consultas en paralelo, perfectas y sin errores
   const [
     groupsData,
     userPredictions,
     officialMatchesRaw,
-    bonusesResponse, // 👈 Aquí llega la respuesta de la nueva tabla
+    bonusesResponse,
+    configResponse,
   ] = await Promise.all([
     getFullGroupsData(),
     getUserPredictions(userSession.id),
     getOfficialMatches(),
-    supabase.from("bonus_points").select("*").eq("user_id", userSession.id), // 👈 Consultamos los bonos del usuario
+    supabase.from("bonus_points").select("*").eq("user_id", userSession.id),
+    supabase.from("global_config").select("*").single(),
   ]);
 
-  // Sacamos los datos limpios de la respuesta
   const userBonuses = bonusesResponse.data || [];
+  const globalConfig = configResponse.data || {};
 
   const officialScores: any[] = [];
   const officialWinners: Record<string, any> = {};
@@ -61,8 +60,6 @@ export default async function HomePage() {
     });
   }
 
-  const langCookie = cookieStore.get("polla_lang")?.value || "es";
-
   return (
     <FanDashboard
       userSession={userSession}
@@ -72,7 +69,8 @@ export default async function HomePage() {
       officialWinners={officialWinners}
       loadingData={false}
       lang={lang}
-      userBonuses={userBonuses} // 👈 3. ¡EL PASE GOL! Le mandamos los bonos a la vista
+      userBonuses={userBonuses}
+      globalConfig={globalConfig}
     />
   );
 }

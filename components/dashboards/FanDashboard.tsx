@@ -2,22 +2,16 @@
 
 import React, { useState, useEffect } from "react";
 import { StarBackground } from "@/components/shared/StarBackground";
-import { CloudsBackground } from "@/components/shared/CloudsBackground";
 import { GroupCard } from "@/components/groups/GroupCard";
 import { DICTIONARY, Language } from "@/components/constants/dictionary";
 import confetti from "canvas-confetti";
 import { resolveBracketMatches } from "@/utils/bracket-resolver";
 
-// Componentes del Header y Navegación
 import { FanHeader } from "@/components/fan/header/FanHeader";
 import { FloatingProgress } from "@/components/fan/FloatingProgress";
-
-// Componentes del Bracket
 import { BracketContainer } from "@/components/bracket/BracketContainer";
 import { PhaseColumn } from "@/components/bracket/PhaseColumn";
 import { BracketMatchCard } from "@/components/bracket/BracketMatchCard";
-
-// Hook de Lógica
 import { useFanDashboardLogic } from "@/hooks/useFanDashboardLogic";
 import { FloatingPhase } from "@/components/fan/FloatingPhase";
 import { SystemAlerts } from "@/components/shared/SystemAlerts";
@@ -34,13 +28,13 @@ import {
 interface FanDashboardProps {
   userSession: any;
   groupsData: any[];
-  userPredictions: any[];
+  userPredictions?: any[]; // 👈 Opcional por seguridad
   officialScores?: any[];
   officialWinners?: Record<string, any>;
   loadingData: boolean;
   lang: Language;
-  // 👇 NUEVO: Recibimos los bonos de la base de datos
   userBonuses?: any[];
+  globalConfig?: any;
 }
 
 const getFlagUrl = (code3: string | null | undefined): string | null => {
@@ -97,12 +91,13 @@ const getFlagUrl = (code3: string | null | undefined): string | null => {
 export const FanDashboard = ({
   userSession,
   groupsData,
-  userPredictions,
+  userPredictions = [],
   officialScores,
   officialWinners,
   loadingData,
   lang,
-  userBonuses = [], // 👈 Inicializamos como arreglo vacío por seguridad
+  userBonuses = [],
+  globalConfig = {},
 }: FanDashboardProps) => {
   const [isMounted, setIsMounted] = useState(false);
 
@@ -113,6 +108,12 @@ export const FanDashboard = ({
   const t = DICTIONARY[lang];
   const [winnerTeam, setWinnerTeam] = useState<any>(null);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
+
+  // 🛡️ SEGUROS DE VIDA ANTI-CRASHEOS
+  const safePredictions = userPredictions || [];
+  const safeBonuses = userBonuses || [];
+  const safeGroups = groupsData || [];
+  const safeConfig = globalConfig || {};
 
   const {
     currentView,
@@ -137,21 +138,7 @@ export const FanDashboard = ({
     confirmRefresh,
     proceedWithLogout,
     handleLogoutAttempt,
-  } = useFanDashboardLogic(userPredictions, userSession?.id, groupsData);
-
-  const handleInternalModalSave = async (
-    groupId: string,
-    matches: any[],
-    tableData: any[],
-  ) => {
-    handleGroupDataChange(groupId, matches, tableData);
-
-    if (typeof handleManualSave === "function") {
-      setTimeout(async () => {
-        await handleManualSave(false);
-      }, 100);
-    }
-  };
+  } = useFanDashboardLogic(safePredictions, userSession?.id, safeGroups);
 
   const handleFinalAdvance = (
     matchId: string | number,
@@ -183,10 +170,8 @@ export const FanDashboard = ({
           startVelocity: 55,
         });
       };
-
       fireInitialBurst();
       setTimeout(() => setShowWinnerModal(true), 600);
-
       const duration = 4000;
       const animationEnd = Date.now() + duration;
       const interval: any = setInterval(() => {
@@ -206,9 +191,16 @@ export const FanDashboard = ({
     }
   };
 
-  const isLocked = !!userSession?.submission_date || hasSubmitted;
+  // 🔥 LA LÓGICA DE CANDADOS ACTUALIZADA 🔥
+  const isSubmissionLocked = !!userSession?.submission_date || hasSubmitted;
 
-  const headerSession = isLocked
+  // 1. Las cajitas SOLO se bloquean si el usuario ya envió su polla oficial.
+  const isGroupInputsLocked = isSubmissionLocked;
+
+  // 2. El botón de envío se bloquea si el usuario ya envió, O si el SuperAdmin cerró la fase.
+  const isGroupSubmitAllowed = safeConfig.allow_groups && !isSubmissionLocked;
+
+  const headerSession = isSubmissionLocked
     ? {
         ...userSession,
         submission_date:
@@ -223,18 +215,13 @@ export const FanDashboard = ({
     window.location.href = "/login";
   };
 
-  if (!isMounted) {
-    return (
-      <main className="min-h-screen bg-black transition-colors duration-300"></main>
-    );
-  }
+  if (!isMounted) return <main className="min-h-screen bg-black"></main>;
 
-  // 👇 MAGIA MATEMÁTICA: Sumamos puntos de partidos + puntos de bonos de grupos
-  const matchPoints = userPredictions.reduce(
+  const matchPoints = safePredictions.reduce(
     (acc, pred) => acc + (pred.points_won || 0),
     0,
   );
-  const bonusPoints = userBonuses.reduce(
+  const bonusPoints = safeBonuses.reduce(
     (acc, bonus) => acc + (bonus.points_won || 0),
     0,
   );
@@ -256,7 +243,9 @@ export const FanDashboard = ({
         hasUnsavedChanges={hasUnsavedChanges}
         onManualSave={handleManualSave}
         onRefresh={handleRefresh}
-        totalPoints={calculatedTotalPoints} // 👈 ¡Se va con el total completo!
+        totalPoints={calculatedTotalPoints}
+        // 👇 Le pasamos la llave al Header para que sepa si prender el botón o no
+        isSubmitAllowed={isGroupSubmitAllowed}
       />
 
       <div className="relative z-10 px-4">
@@ -269,19 +258,19 @@ export const FanDashboard = ({
             <div
               className={`grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 max-w-[1600px] mx-auto justify-items-center ${currentView === "pred_groups" ? "grid" : "hidden"}`}
             >
-              {groupsData
+              {safeGroups
                 ?.filter((g) => g.id !== "FI")
                 .map((group) => (
                   <GroupCard
                     key={group.id}
                     group={group}
                     lang={lang}
-                    initialPredictions={userPredictions}
+                    initialPredictions={safePredictions}
                     onPredictionChange={handlePredictionChange}
-                    isLocked={isLocked}
+                    // 👇 Las cajitas obedecen ÚNICAMENTE al hecho de si el usuario ya envió todo
+                    isLocked={isGroupInputsLocked}
                     onGroupDirty={handleGroupDataChange}
-                    // 👇 EL PASE GOL: Le filtramos a la tarjeta su bono correspondiente
-                    groupBonus={userBonuses.find(
+                    groupBonus={safeBonuses.find(
                       (b) => b.bonus_type === `GROUP_${group.id}`,
                     )}
                   />
@@ -319,12 +308,12 @@ export const FanDashboard = ({
                     </div>
                   }
                 >
-                  {/* ... Resto del código del Bracket intacto ... */}
                   <PhaseColumn
                     title={t.bracketPhaseR32Full}
-                    isActive={currentView === "pred_finals"}
+                    isActive={safeConfig?.allow_r32 && !isSubmissionLocked}
                     lang={lang}
                     showFloating={showFloating}
+                    onAction={handleSubmit}
                   >
                     {bracketMatches.length > 0 ? (
                       bracketMatches.map((match, idx) => (
@@ -357,7 +346,7 @@ export const FanDashboard = ({
                             flag: match.away.flag,
                             group: match.away.group,
                           }}
-                          prediction={userPredictions?.find(
+                          prediction={safePredictions?.find(
                             (p) =>
                               p.match_id.toString() === match.id.toString(),
                           )}
@@ -371,12 +360,12 @@ export const FanDashboard = ({
                     )}
                   </PhaseColumn>
 
-                  {/* Resto de columnas (R16, QF, SF, F)... (Mismo código sin cambios) */}
                   <PhaseColumn
                     title={t.bracketPhaseR16Full}
-                    isActive={false}
+                    isActive={safeConfig?.allow_r16 && !isSubmissionLocked}
                     lang={lang}
                     showFloating={showFloating}
+                    onAction={handleSubmit}
                   >
                     {R16_MATCHUPS.map((match, idx) => {
                       const homeWinner =
@@ -415,7 +404,7 @@ export const FanDashboard = ({
                             name_en: awayWinner?.name_en,
                             flag: awayWinner ? awayWinner.flag : null,
                           }}
-                          prediction={userPredictions?.find(
+                          prediction={safePredictions?.find(
                             (p) =>
                               p.match_id.toString() === match.id.toString(),
                           )}
@@ -424,11 +413,13 @@ export const FanDashboard = ({
                       );
                     })}
                   </PhaseColumn>
+
                   <PhaseColumn
                     title={t.bracketPhaseQFFull}
-                    isActive={false}
+                    isActive={safeConfig?.allow_qf && !isSubmissionLocked}
                     lang={lang}
                     showFloating={showFloating}
+                    onAction={handleSubmit}
                   >
                     {QF_MATCHUPS.map((match, idx) => {
                       const homeWinner =
@@ -467,7 +458,7 @@ export const FanDashboard = ({
                             name_en: awayWinner?.name_en,
                             flag: awayWinner ? awayWinner.flag : null,
                           }}
-                          prediction={userPredictions?.find(
+                          prediction={safePredictions?.find(
                             (p) =>
                               p.match_id.toString() === match.id.toString(),
                           )}
@@ -476,11 +467,13 @@ export const FanDashboard = ({
                       );
                     })}
                   </PhaseColumn>
+
                   <PhaseColumn
                     title={t.bracketPhaseSFFull}
-                    isActive={false}
+                    isActive={safeConfig?.allow_sf && !isSubmissionLocked}
                     lang={lang}
                     showFloating={showFloating}
+                    onAction={handleSubmit}
                   >
                     {SF_MATCHUPS.map((match, idx) => {
                       const homeWinner =
@@ -519,7 +512,7 @@ export const FanDashboard = ({
                             name_en: awayWinner?.name_en,
                             flag: awayWinner ? awayWinner.flag : null,
                           }}
-                          prediction={userPredictions?.find(
+                          prediction={safePredictions?.find(
                             (p) =>
                               p.match_id.toString() === match.id.toString(),
                           )}
@@ -528,14 +521,16 @@ export const FanDashboard = ({
                       );
                     })}
                   </PhaseColumn>
+
                   <PhaseColumn
                     title={t.bracketPhaseFTitle}
-                    isActive={false}
+                    isActive={safeConfig?.allow_f && !isSubmissionLocked}
                     lang={lang}
                     showFloating={showFloating}
+                    onAction={handleSubmit}
                   >
                     {resolveBracketMatches(
-                      groupsData,
+                      safeGroups,
                       knockoutWinners,
                       F_MATCHUPS,
                     ).map((match, idx) => {
@@ -573,7 +568,7 @@ export const FanDashboard = ({
                                 : match.away.name_es
                               : t.bracketTBD,
                           }}
-                          prediction={userPredictions?.find(
+                          prediction={safePredictions?.find(
                             (p) =>
                               p.match_id.toString() === match.id.toString(),
                           )}
@@ -586,11 +581,11 @@ export const FanDashboard = ({
               )}
             </div>
             {currentView === "res_groups" && (
-              <OfficialGroupsResults groupsData={groupsData} lang={lang} />
+              <OfficialGroupsResults groupsData={safeGroups} lang={lang} />
             )}
             {currentView === "res_finals" && (
               <OfficialKnockoutResults
-                groupsData={groupsData}
+                groupsData={safeGroups}
                 officialWinners={officialWinners || {}}
                 officialScores={officialScores || []}
                 lang={lang}
@@ -600,7 +595,8 @@ export const FanDashboard = ({
         )}
       </div>
 
-      {currentView === "pred_groups" && !isLocked && (
+      {/* 👇 La barra de progreso flota sin importar el candado del SuperAdmin */}
+      {currentView === "pred_groups" && !isSubmissionLocked && (
         <FloatingProgress
           current={progress}
           total={totalMatches}
@@ -609,7 +605,6 @@ export const FanDashboard = ({
         />
       )}
 
-      {/* Modal de Ganador del Torneo (Sin cambios) */}
       {showWinnerModal && winnerTeam && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
           <div className="relative bg-slate-900 border-2 border-amber-400/50 rounded-3xl p-8 max-w-sm w-full text-center shadow-[0_0_50px_rgba(251,191,36,0.4)] animate-in zoom-in-95 duration-300">

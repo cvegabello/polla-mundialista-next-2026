@@ -5,6 +5,7 @@ import { AdminGroupCard } from "@/components/superadmin/groups/AdminGroupCard";
 import { SuperAdminHeader } from "@/components/superadmin/header/SuperAdminHeader";
 import { DICTIONARY, Language } from "@/components/constants/dictionary";
 import { AdminKnockoutBoard } from "@/components/superadmin/finals/AdminKnockoutBoard";
+import { SystemConfigPanel } from "@/components/superadmin/SystemConfigPanel";
 
 interface SuperAdminDashboardProps {
   groupsData: any[];
@@ -78,17 +79,21 @@ export const SuperAdminDashboard = ({
           </div>
         )}
 
-        {/* ⚙️ VISTA 3: CONFIGURACIÓN (Próximamente) */}
+        {/* ⚙️ VISTA 3: CONFIGURACIÓN (¡Ya no es próximamente!) */}
         {currentView === "settings" && (
-          <div className="flex flex-col items-center justify-center mt-20 opacity-50 border-2 border-dashed border-gray-800 rounded-3xl p-10">
-            <h2 className="text-3xl font-bold text-purple-400 mb-4 uppercase tracking-widest">
-              {lang === "en" ? "System Settings" : "Configuración del Sistema"}
-            </h2>
-            <p className="text-gray-400 font-bold tracking-widest uppercase">
-              {lang === "en"
-                ? "Locks and rules coming soon..."
-                : "Candados y reglas en construcción..."}
-            </p>
+          <div className="mt-6">
+            <div className="flex items-center gap-3 mb-8 border-l-4 border-purple-500 pl-4">
+              <h2 className="text-2xl font-black uppercase tracking-widest text-gray-200">
+                {lang === "en"
+                  ? "System Settings"
+                  : "Configuración del Sistema"}{" "}
+                <span className="text-purple-500">|</span>{" "}
+                {lang === "en" ? "Rules & Phases" : "Reglas y Fases"}
+              </h2>
+            </div>
+
+            {/* AQUÍ METEMOS EL PANEL DE CONTROL */}
+            <SystemConfigPanel />
           </div>
         )}
       </div>

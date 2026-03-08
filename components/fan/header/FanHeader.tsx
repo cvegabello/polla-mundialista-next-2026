@@ -19,8 +19,9 @@ interface FanHeaderProps {
   hasUnsavedChanges?: boolean;
   onManualSave?: () => void;
   onRefresh?: () => void;
-  // 👇 NUEVA PROP: Recibimos los puntos reales del usuario
   totalPoints?: number;
+  // 👇 NUEVA PROP: Recibimos la llave del candado desde el FanDashboard
+  isSubmitAllowed?: boolean;
 }
 
 export const FanHeader = ({
@@ -35,7 +36,8 @@ export const FanHeader = ({
   hasUnsavedChanges = false,
   onManualSave,
   onRefresh,
-  totalPoints = 0, // 👇 Valor por defecto en caso de que no haya puntos aún
+  totalPoints = 0,
+  isSubmitAllowed = true, // 👈 La recibimos aquí (por defecto true para que no se rompa nada)
 }: FanHeaderProps) => {
   const t = DICTIONARY[lang];
   const isSubmitted = !!userSession?.submission_date;
@@ -84,17 +86,14 @@ export const FanHeader = ({
       <UserStats
         username={userSession?.username}
         pollaName={userSession?.polla_name}
-        points={totalPoints} // 👈 ¡ADIÓS AL 1000 QUEMADO! Ahora usa el valor real
+        points={totalPoints}
         submissionDate={userSession?.submission_date}
         lang={lang}
       />
 
       {/* 3. PANELES DE CONTROL */}
       <div className="flex flex-col md:flex-row gap-4 mt-4 mb-4 justify-center items-center w-full">
-        {/* PANEL IZQUIERDO: REPORTES */}
         <ReportsMenu lang={lang} />
-
-        {/* PANEL DERECHO: ACCIONES DE SISTEMA */}
         <ActionMenu
           lang={lang}
           onLogout={onLogout}
@@ -129,6 +128,7 @@ export const FanHeader = ({
           total={totalMatches}
           hasUnsavedChanges={hasUnsavedChanges}
           onSubmit={onSubmitPredictions || (() => {})}
+          isSubmitAllowed={isSubmitAllowed} // 👈 ¡EL PASE GOL! Le mandamos el candado al componente del botón
         />
       )}
     </header>
