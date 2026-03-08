@@ -33,6 +33,21 @@ export const GroupCard = ({
   const t = DICTIONARY[lang];
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // 🧠 LA NUEVA BARRERA INTELIGENTE:
+  // Si es la vista del Fan, le borramos los goles de la FIFA al grupo
+  // ANTES de meterlo a la memoria, para que no salgan fantasmas.
+  const isPredictionView = typeof onGroupDirty === "function";
+  const cleanGroupForFan = isPredictionView
+    ? {
+        ...group,
+        matches: group.matches.map((m: any) => ({
+          ...m,
+          home_score: null,
+          away_score: null,
+        })),
+      }
+    : group;
+
   const {
     matches,
     tableData,
@@ -41,7 +56,7 @@ export const GroupCard = ({
     handleScoreChange,
     handleManualSort,
     handleBulkUpdate,
-  } = useGroupLogic(group, lang, initialPredictions, onGroupDirty);
+  } = useGroupLogic(cleanGroupForFan, lang, initialPredictions, onGroupDirty); // 👈 MAGIA: Pasamos el grupo limpio aquí
 
   // 👇 HELPER: Dibuja el banner según los puntos ganados
   const renderBonusBanner = (points: number) => {
@@ -114,7 +129,7 @@ export const GroupCard = ({
                 return (
                   <MatchRow
                     key={match.id}
-                    match={match}
+                    match={match} // 👈 MAGIA: Volvemos a pasar el match limpio que reacciona al teclado
                     editable={!isLocked}
                     onScoreChange={handleScoreChange}
                     lang={lang}

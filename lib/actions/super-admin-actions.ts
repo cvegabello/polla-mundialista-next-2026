@@ -8,19 +8,43 @@ import { evaluateGroupBonusesAction } from "./bonus-actions";
 
 export const saveOfficialScoreAction = async (
   matchId: number,
-  homeScore: number | null,
-  awayScore: number | null,
+  homeScore: any, // 👈 1. Cambiamos a 'any' para atrapar el texto vacío ("")
+  awayScore: any, // 👈 1. Cambiamos a 'any'
   winnerId?: string | null,
 ) => {
+  // 📸 CÁMARAS DE SEGURIDAD AQUÍ:
+  console.log("=== DEBUG SUPER ADMIN: INICIO DE GUARDADO ===");
+  console.log("ID del Partido:", matchId);
+  console.log("homeScore crudo:", homeScore, "| Tipo:", typeof homeScore);
+  console.log("awayScore crudo:", awayScore, "| Tipo:", typeof awayScore);
   try {
     const supabase = await createClient();
 
-    // 1. Guardamos la verdad absoluta en la tabla 'matches' (Como lo teníamos)
+    // 🛡️ 2. EL FILTRO QUIRÚRGICO: Si es "", lo vuelve null. Si es número, lo asegura como Number.
+    const cleanHome =
+      homeScore === "" || homeScore === null || homeScore === undefined
+        ? null
+        : Number(homeScore);
+    const cleanAway =
+      awayScore === "" || awayScore === null || awayScore === undefined
+        ? null
+        : Number(awayScore);
+
+    // 📸 SEGUNDA CÁMARA:
+    console.log(
+      "Datos limpios listos para BD -> cleanHome:",
+      cleanHome,
+      "| cleanAway:",
+      cleanAway,
+    );
+    console.log("=============================================");
+
+    // 1. Guardamos la verdad absoluta en la tabla 'matches' usando los datos limpios
     const { error: matchError } = await supabase
       .from("matches")
       .update({
-        home_score: homeScore,
-        away_score: awayScore,
+        home_score: cleanHome, // 👈 Usamos la variable limpia
+        away_score: cleanAway, // 👈 Usamos la variable limpia
         winner_id: winnerId,
       })
       .eq("id", matchId);
@@ -28,7 +52,6 @@ export const saveOfficialScoreAction = async (
     if (matchError) throw matchError;
 
     // 🏆 2. LA MAGIA: Traemos la configuración de puntos
-    // (Por ahora traemos la primera que encuentre, luego lo amarramos a polla_id si tiene varias)
     const { data: configData } = await supabase
       .from("score_configs")
       .select("*")
@@ -36,7 +59,7 @@ export const saveOfficialScoreAction = async (
       .single();
 
     if (configData) {
-      // 3. Traemos TODAS las predicciones que los fans hicieron para este partido específico
+      // 3. Traemos TODAS las predicciones que los fans hicieron para este partido
       const { data: predictions } = await supabase
         .from("predictions")
         .select("*")
@@ -49,20 +72,19 @@ export const saveOfficialScoreAction = async (
             pred.pred_home,
             pred.pred_away,
             pred.predicted_winner,
-            homeScore,
-            awayScore,
+            cleanHome, // 👈 Pasamos el limpio para calcular puntos
+            cleanAway, // 👈 Pasamos el limpio para calcular puntos
             winnerId,
             configData as ScoreConfig,
           );
 
-          // Armamos el objeto de actualización
           return {
-            ...pred, // Dejamos el id, user_id y los pronósticos intactos
-            points_won: points, // 👈 ¡Sobreescribimos con el nuevo puntaje calculado!
+            ...pred,
+            points_won: points,
           };
         });
 
-        // 5. Guardado Masivo (Bulk Upsert): Actualiza miles de registros en 1 segundo
+        // 5. Guardado Masivo (Bulk Upsert)
         const { error: upsertError } = await supabase
           .from("predictions")
           .upsert(updates);
@@ -84,7 +106,6 @@ export const saveOfficialScoreAction = async (
       .single();
 
     if (currentMatch?.group_id && currentMatch.group_id !== "FI") {
-      // 1. Volvemos al select normal que sabemos que NUNCA falla
       const { data: groupMatches } = await supabase
         .from("matches")
         .select("*")
@@ -98,7 +119,6 @@ export const saveOfficialScoreAction = async (
         if (isGroupComplete) {
           const officialTable = calculateStandings(groupMatches, "es");
 
-          // 👇 LA CORRECCIÓN DE ORO: teamId con la "I" mayúscula
           const firstId = officialTable[0]?.teamId;
           const secondId = officialTable[1]?.teamId;
 

@@ -53,21 +53,31 @@ export const AdminGroupCard = ({ group, lang = "es" }: AdminGroupCardProps) => {
     setMessage({ text: "", type: "" });
 
     try {
-      const matchesToSave = localMatches.filter(
-        (m) => m.home_score !== null && m.away_score !== null,
-      );
+      // 🕵️‍♂️ EL FILTRO ARREGLADO:
+      // Ahora guardamos los partidos que fueron MODIFICADOS, no importa si son números o null.
+      const matchesToSave = localMatches.filter((lm) => {
+        const om = group.matches.find((m: any) => m.id === lm.id);
+        return (
+          lm.home_score !== om?.home_score || lm.away_score !== om?.away_score
+        );
+      });
 
       for (const match of matchesToSave) {
         let winnerId = null;
-        if (match.home_score! > match.away_score!)
-          winnerId = match.home_team_id;
-        else if (match.away_score! > match.home_score!)
-          winnerId = match.away_team_id;
 
+        // Solo calculamos el winnerId si hay números válidos
+        if (match.home_score !== null && match.away_score !== null) {
+          if (match.home_score > match.away_score)
+            winnerId = match.home_team_id;
+          else if (match.away_score > match.home_score)
+            winnerId = match.away_team_id;
+        }
+
+        // 🚀 Ahora sí, mandamos el null felizmente al servidor
         await saveOfficialScoreAction(
           match.id,
-          match.home_score!,
-          match.away_score!,
+          match.home_score,
+          match.away_score,
           winnerId,
         );
       }
@@ -88,7 +98,6 @@ export const AdminGroupCard = ({ group, lang = "es" }: AdminGroupCardProps) => {
   const groupTitle = lang === "en" ? `GROUP ${rawName}` : `GRUPO ${rawName}`;
 
   return (
-    // 👇 AQUÍ LA MAGIA: max-w-[400px] en lugar de 350px para darles más aire
     <div className="relative group w-full max-w-[400px] mx-auto transform-gpu">
       <div className="relative bg-black border-2 border-red-900/50 rounded-xl flex flex-col overflow-hidden shadow-2xl shadow-red-900/20 z-10">
         <div className="h-1.5 w-full bg-linear-to-r from-red-600 to-orange-500"></div>
