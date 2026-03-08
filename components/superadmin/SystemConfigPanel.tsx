@@ -1,106 +1,197 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Settings, Users, AlertOctagon } from "lucide-react";
+import { Settings, Users, AlertOctagon, Lock } from "lucide-react";
 import {
-  getGlobalConfigAction,
+  getAdminPanelDataAction,
   togglePhaseAction,
 } from "@/lib/actions/admin-config-actions";
 
 export const SystemConfigPanel = () => {
-  const [config, setConfig] = useState<any>(null);
+  const [panelData, setPanelData] = useState<{
+    config: any;
+    stats: any;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Cargamos la configuración al montar el componente
+  // Función para recargar la data
+  const loadData = async () => {
+    setLoading(true);
+    const data = await getAdminPanelDataAction();
+    if (data) setPanelData(data);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const loadConfig = async () => {
-      const data = await getGlobalConfigAction();
-      if (data) setConfig(data);
-      setLoading(false);
-    };
-    loadConfig();
+    loadData();
   }, []);
 
   const handleTogglePhase = async (column: string, currentValue: boolean) => {
     const newValue = !currentValue;
 
-    // 👇 LA CIRUGÍA: Solo asustamos y preguntamos si NO es la Fase de Grupos
     if (newValue && column !== "allow_groups") {
       const isConfirmed = window.confirm(
-        "¡ATENCIÓN! Al abrir esta fase, se borrarán los pronósticos imaginarios de todos los fans de esta fase en adelante y se les habilitará la plataforma para que vuelvan a pronosticar con las llaves oficiales. ¿Está seguro?",
+        "¡ATENCIÓN! Al abrir esta fase, se inyectarán las llaves oficiales y se borrarán los pronósticos de los fans de esta fase en adelante (El pasado no se toca). ¿Está seguro?",
       );
       if (!isConfirmed) return;
     }
 
-    // Actualizamos la UI inmediatamente para que se sienta rápido
-    setConfig({ ...config, [column]: newValue });
+    // Actualizamos la UI inmediatamente (Optimistic UI)
+    setPanelData((prev: any) => ({
+      ...prev,
+      config: { ...prev.config, [column]: newValue },
+    }));
 
-    // 👇 Le mandamos un tercer parámetro al servidor: ¿debe borrar o no?
     const shouldClearPredictions = newValue && column !== "allow_groups";
     await togglePhaseAction(column, newValue, shouldClearPredictions);
   };
 
-  if (loading)
+  if (loading && !panelData) {
     return (
       <div className="text-orange-400 animate-pulse text-center p-8 font-bold tracking-widest">
         CARGANDO SISTEMA...
       </div>
     );
+  }
+
+  const { config, stats } = panelData!;
+
+  // 🧠 LÓGICA DE CANDADOS Y CONTADORES VISUALES ELEGANTES
+  const phases = [
+    {
+      label: "Grupos",
+      col: "allow_groups",
+      disabled: false,
+      count: stats.groups,
+      total: 72,
+    },
+    {
+      label: "16avos",
+      col: "allow_r32",
+      disabled: stats.groups < 72,
+      count: stats.r32,
+      total: 16,
+    },
+    {
+      label: "8vos",
+      col: "allow_r16",
+      disabled: stats.r32 < 16,
+      count: stats.r16,
+      total: 8,
+    },
+    {
+      label: "Cuartos",
+      col: "allow_qf",
+      disabled: stats.r16 < 8,
+      count: stats.qf,
+      total: 4,
+    },
+    {
+      label: "Semis",
+      col: "allow_sf",
+      disabled: stats.qf < 4,
+      count: stats.sf,
+      total: 2,
+    },
+    {
+      label: "Final",
+      col: "allow_f",
+      disabled: stats.sf < 2,
+      count: stats.f,
+      total: 2,
+    },
+  ];
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-[2px] rounded-2xl bg-gradient-to-br from-slate-700/50 to-slate-800/30 shadow-[0_0_30px_rgba(0,0,0,0.5)] mt-8">
+    <div className="w-full max-w-5xl mx-auto p-[2px] rounded-2xl bg-gradient-to-br from-slate-700/50 to-slate-800/30 shadow-[0_0_30px_rgba(0,0,0,0.5)] mt-8">
       <div className="bg-[#0f1016] rounded-2xl p-6 md:p-10 w-full h-full border border-slate-800/80">
-        {/* ENCABEZADO */}
-        <div className="flex items-center justify-center gap-3 mb-12 pb-6 border-b border-white/5">
+        <div className="flex items-center justify-center gap-3 mb-8 pb-6 border-b border-white/5 relative">
           <Settings className="text-orange-500" size={32} />
           <h2 className="text-2xl md:text-3xl font-black text-orange-500 tracking-widest uppercase drop-shadow-[0_2px_10px_rgba(249,115,22,0.4)]">
             Configuración & Reglas
           </h2>
+          <button
+            onClick={loadData}
+            className="absolute right-0 text-xs bg-slate-800 text-slate-300 px-4 py-2 rounded-lg hover:text-white hover:bg-slate-700 transition-colors flex items-center gap-2 shadow-sm"
+          >
+            <span>🔄</span> Refrescar Data
+          </button>
         </div>
 
-        {/* SECCIÓN 1: FASES */}
+        {/* FASES CON CANDADO Y CONTADORES */}
         <div className="mb-12">
-          <p className="text-slate-400 font-bold text-sm mb-6 tracking-widest uppercase text-center">
-            Habilitar Fases{" "}
-            <span className="text-orange-400 lowercase font-normal">
-              (check para abrir)
+          <p className="text-slate-400 font-bold text-sm mb-6 tracking-widest uppercase text-center flex flex-col items-center gap-1">
+            <span>Habilitar Fases (Check para abrir)</span>
+            <span className="text-xs text-orange-400/80 normal-case font-normal max-w-md">
+              Las fases finales se desbloquearán cuando se ingresen todos los
+              marcadores oficiales de la fase anterior.
             </span>
           </p>
 
-          <div className="flex flex-wrap justify-center gap-4 md:gap-6 bg-black/30 p-8 rounded-2xl border border-white/5 shadow-inner">
-            {[
-              { label: "Grupos", col: "allow_groups" },
-              { label: "16avos", col: "allow_r32" },
-              { label: "8vos", col: "allow_r16" },
-              { label: "Cuartos", col: "allow_qf" },
-              { label: "Semis", col: "allow_sf" },
-              { label: "Final", col: "allow_f" },
-            ].map((phase) => (
-              <label
-                key={phase.col}
-                className={`flex items-center gap-3 px-6 py-4 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:-translate-y-1 ${
-                  config?.[phase.col]
-                    ? "bg-orange-950/40 border-orange-500/60 text-orange-200 shadow-[0_5px_15px_rgba(249,115,22,0.2)]"
-                    : "bg-slate-900/60 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200"
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  className="w-5 h-5 accent-orange-500 cursor-pointer rounded bg-slate-800 border-slate-600"
-                  checked={config?.[phase.col] || false}
-                  onChange={() =>
-                    handleTogglePhase(phase.col, config?.[phase.col])
-                  }
-                />
-                <span className="font-bold text-sm uppercase tracking-wider">
-                  {phase.label}
-                </span>
-              </label>
-            ))}
+          <div className="flex flex-wrap justify-center gap-6 bg-black/30 p-8 rounded-2xl border border-white/5 shadow-inner">
+            {phases.map((phase) => {
+              const isComplete = phase.count === phase.total;
+
+              return (
+                <label
+                  key={phase.col}
+                  className={`flex items-center justify-start gap-5 px-6 py-6 min-w-[190px] rounded-2xl border-2 transition-all duration-300 relative ${
+                    phase.disabled
+                      ? "bg-[#13141c] border-slate-800 text-slate-600 cursor-not-allowed opacity-60"
+                      : config?.[phase.col]
+                        ? "bg-orange-950/40 border-orange-500/60 text-orange-200 shadow-[0_5px_15px_rgba(249,115,22,0.2)] cursor-pointer hover:-translate-y-1"
+                        : "bg-slate-900/60 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200 cursor-pointer hover:-translate-y-1"
+                  }`}
+                >
+                  {/* Icono o Checkbox (Con un contenedor de tamaño fijo) */}
+                  <div className="flex-shrink-0 flex items-center justify-center w-6 h-6">
+                    {phase.disabled ? (
+                      <Lock size={22} className="text-slate-600" />
+                    ) : (
+                      <input
+                        type="checkbox"
+                        className="w-5 h-5 accent-orange-500 cursor-pointer rounded bg-slate-800 border-slate-600"
+                        checked={config?.[phase.col] || false}
+                        onChange={() =>
+                          handleTogglePhase(phase.col, config?.[phase.col])
+                        }
+                      />
+                    )}
+                  </div>
+
+                  {/* Textos y Pastillita (Badge) con más respiro */}
+                  <div className="flex flex-col items-start gap-2 w-full">
+                    <span className="font-black text-sm md:text-base uppercase tracking-wider">
+                      {phase.label}
+                    </span>
+
+                    {/* El contador elegante más redondito y espacioso */}
+                    <span
+                      className={`text-xs px-3 py-1 rounded-full font-bold tracking-widest inline-block ${
+                        isComplete
+                          ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                          : phase.disabled
+                            ? "bg-slate-800 text-slate-500 border border-slate-700"
+                            : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                      }`}
+                    >
+                      {phase.count} / {phase.total}
+                    </span>
+                  </div>
+
+                  {/* Tooltip interactivo */}
+                  {phase.disabled && (
+                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black border border-slate-700 text-xs text-slate-300 px-4 py-2 rounded-lg opacity-0 hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl">
+                      Requiere completar fase anterior
+                    </div>
+                  )}
+                </label>
+              );
+            })}
           </div>
         </div>
 
-        {/* SECCIÓN 2: GESTIÓN DE USUARIOS */}
+        {/* RESTO DE SECCIONES */}
         <div className="flex justify-center mt-8 mb-14 border-b border-white/5 pb-12">
           <button className="cursor-pointer group relative flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black uppercase tracking-[0.2em] py-4 px-16 rounded-2xl transition-all duration-300 shadow-[0_0_20px_rgba(79,70,229,0.4)] hover:shadow-[0_0_30px_rgba(79,70,229,0.6)] hover:scale-105 border border-blue-400/30">
             <Users size={24} className="group-hover:animate-bounce" />
@@ -109,7 +200,6 @@ export const SystemConfigPanel = () => {
           </button>
         </div>
 
-        {/* SECCIÓN 3: ZONA DE PELIGRO */}
         <div className="flex flex-col items-center bg-red-950/10 p-8 rounded-2xl border border-red-900/20">
           <div className="flex items-center gap-2 text-red-500 font-black text-sm tracking-widest uppercase mb-6 animate-pulse">
             <AlertOctagon size={18} />

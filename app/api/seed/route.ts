@@ -1,25 +1,19 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse, NextRequest } from "next/server";
 
-// Recibimos 'request' para poder leer la URL y buscar la contraseña
 export async function GET(request: NextRequest) {
   // --- 0. ZONA DE SEGURIDAD (CANDADO) 🔒 ---
   const { searchParams } = new URL(request.url);
   const secret = searchParams.get("secret");
-
-  // Leemos la contraseña real desde tu archivo .env.local
   const MY_SECRET_KEY = process.env.SEED_SECRET;
 
-  // Si no hay contraseña configurada o la que mandaron no coincide, bloqueamos todo.
   if (!MY_SECRET_KEY || secret !== MY_SECRET_KEY) {
     return NextResponse.json(
       { error: "⛔ Acceso Denegado: Contraseña incorrecta o faltante." },
       { status: 401 },
     );
   }
-  // ------------------------------------------
 
-  // 1. CONEXIÓN DIRECTA
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -48,7 +42,7 @@ export async function GET(request: NextRequest) {
     ];
     await supabase.from("groups").upsert(groupsData);
 
-    // 4. LOS 48 EQUIPOS (Oficiales + Repechajes - ¡INTACTOS CON SUS BANDERAS!)
+    // 4. LOS 48 EQUIPOS
     const teamsData = [
       // GRUPO A
       { name_es: "México", name_en: "Mexico", flag_code: "mex", group_id: "A" },
@@ -292,7 +286,6 @@ export async function GET(request: NextRequest) {
       { name_es: "Panamá", name_en: "Panama", flag_code: "pan", group_id: "L" },
     ];
 
-    // Insertar Equipos
     const { data: teamsDB, error: teamsError } = await supabase
       .from("teams")
       .upsert(teamsData, { onConflict: "flag_code" })
@@ -304,15 +297,12 @@ export async function GET(request: NextRequest) {
         { status: 500 },
       );
 
-    // Helper
     const getID = (code: string) =>
       teamsDB?.find((t) => t.flag_code === code)?.id;
 
-    // ------------------------------------------------------------------
-    // 5. LOS 72 PARTIDOS (CALENDARIO OFICIAL ACTUALIZADO ✅)
-    // ------------------------------------------------------------------
+    // 5. LOS 72 PARTIDOS EN BRUTO
     const matchesData = [
-      // --- GRUPO A ---
+      // GRUPO A
       {
         group_id: "A",
         home_team_id: getID("mex"),
@@ -361,8 +351,7 @@ export async function GET(request: NextRequest) {
         stadium: "Estadio BBVA",
         city: "Guadalupe",
       },
-
-      // --- GRUPO B ---
+      // GRUPO B
       {
         group_id: "B",
         home_team_id: getID("can"),
@@ -411,8 +400,7 @@ export async function GET(request: NextRequest) {
         stadium: "Lumen Field",
         city: "Seattle",
       },
-
-      // --- GRUPO C ---
+      // GRUPO C
       {
         group_id: "C",
         home_team_id: getID("bra"),
@@ -461,8 +449,7 @@ export async function GET(request: NextRequest) {
         stadium: "Mercedes-Benz Stadium",
         city: "Atlanta",
       },
-
-      // --- GRUPO D ---
+      // GRUPO D
       {
         group_id: "D",
         home_team_id: getID("usa"),
@@ -511,8 +498,7 @@ export async function GET(request: NextRequest) {
         stadium: "Levi's Stadium",
         city: "Santa Clara",
       },
-
-      // --- GRUPO E ---
+      // GRUPO E
       {
         group_id: "E",
         home_team_id: getID("ger"),
@@ -561,8 +547,7 @@ export async function GET(request: NextRequest) {
         stadium: "Lincoln Financial Field",
         city: "Philadelphia",
       },
-
-      // --- GRUPO F ---
+      // GRUPO F
       {
         group_id: "F",
         home_team_id: getID("ned"),
@@ -611,8 +596,7 @@ export async function GET(request: NextRequest) {
         stadium: "Arrowhead Stadium",
         city: "Kansas City",
       },
-
-      // --- GRUPO G ---
+      // GRUPO G
       {
         group_id: "G",
         home_team_id: getID("bel"),
@@ -661,8 +645,7 @@ export async function GET(request: NextRequest) {
         stadium: "Lumen Field",
         city: "Seattle",
       },
-
-      // --- GRUPO H ---
+      // GRUPO H
       {
         group_id: "H",
         home_team_id: getID("esp"),
@@ -711,8 +694,7 @@ export async function GET(request: NextRequest) {
         stadium: "NRG Stadium",
         city: "Houston",
       },
-
-      // --- GRUPO I ---
+      // GRUPO I
       {
         group_id: "I",
         home_team_id: getID("fra"),
@@ -761,8 +743,7 @@ export async function GET(request: NextRequest) {
         stadium: "BMO Field",
         city: "Toronto",
       },
-
-      // --- GRUPO J ---
+      // GRUPO J
       {
         group_id: "J",
         home_team_id: getID("arg"),
@@ -811,8 +792,7 @@ export async function GET(request: NextRequest) {
         stadium: "Arrowhead Stadium",
         city: "Kansas City",
       },
-
-      // --- GRUPO K ---
+      // GRUPO K
       {
         group_id: "K",
         home_team_id: getID("por"),
@@ -861,8 +841,7 @@ export async function GET(request: NextRequest) {
         stadium: "Mercedes-Benz Stadium",
         city: "Atlanta",
       },
-
-      // --- GRUPO L ---
+      // GRUPO L
       {
         group_id: "L",
         home_team_id: getID("eng"),
@@ -913,10 +892,21 @@ export async function GET(request: NextRequest) {
       },
     ];
 
-    // Inserción Masiva
+    // 🌟 6. LA MAGIA: ORDENAR CRONOLÓGICAMENTE Y ASIGNAR MATCH_NUMBER DEL 1 AL 72
+    const sortedMatches = matchesData.sort(
+      (a, b) =>
+        new Date(a.match_date).getTime() - new Date(b.match_date).getTime(),
+    );
+
+    const matchesWithNumber = sortedMatches.map((match, index) => ({
+      ...match,
+      match_number: index + 1, // 👈 Se numera exactamente como la FIFA
+    }));
+
+    // Inserción Masiva de los partidos ya numerados
     const { error: matchesError } = await supabase
       .from("matches")
-      .insert(matchesData);
+      .insert(matchesWithNumber);
 
     if (matchesError)
       return NextResponse.json(
@@ -926,8 +916,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       message:
-        "✅ ¡Operación Exitosa! Base de datos recargada con los 72 partidos del Mundial.",
-      matches_loaded: matchesData.length,
+        "✅ ¡Operación Exitosa! Base de datos recargada con los 72 partidos del Mundial y numerados cronológicamente.",
+      matches_loaded: matchesWithNumber.length,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
