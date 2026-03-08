@@ -59,23 +59,23 @@ export const saveOfficialScoreAction = async (
       .single();
 
     if (configData) {
-      // 3. Traemos TODAS las predicciones que los fans hicieron para este partido
+      // 3. Traemos TODAS las predicciones de este partido (sin discriminar a los mirones)
       const { data: predictions } = await supabase
         .from("predictions")
         .select("*")
         .eq("match_id", matchId);
 
       if (predictions && predictions.length > 0) {
-        // 4. Pasamos cada predicción por el Motor de Puntos
+        // 4. Pasamos cada predicción válida por el Motor de Puntos
         const updates = predictions.map((pred) => {
           const points = calculateMatchPoints(
             pred.pred_home,
             pred.pred_away,
             pred.predicted_winner,
-            cleanHome, // 👈 Pasamos el limpio para calcular puntos
-            cleanAway, // 👈 Pasamos el limpio para calcular puntos
+            cleanHome,
+            cleanAway,
             winnerId,
-            configData as ScoreConfig,
+            configData as ScoreConfig, // o el tipo que tenga definido
           );
 
           return {
@@ -90,10 +90,7 @@ export const saveOfficialScoreAction = async (
           .upsert(updates);
 
         if (upsertError) {
-          console.error(
-            "Error actualizando los puntos de las predicciones:",
-            upsertError,
-          );
+          console.error("Error actualizando puntos:", upsertError);
         }
       }
     }
