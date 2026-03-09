@@ -60,11 +60,11 @@ export const OfficialKnockoutResults = ({
     // 🧠 AHORA ES "BRUTO": Mapeamos directamente los matchups (R32, R16) sin calcular.
     // Al mantener el map así, su parámetro 'idx' queda INTACTO y las tarjetas no se mueven ni un milímetro.
     return matchups.map((match, idx) => {
-      // 1. Buscamos el partido oficial en la BD (Soporta id o match_id por seguridad)
+      // 🚀 1. BALA DE PLATA: Buscamos el partido oficial en la BD usando 'match_number'
       const officialMatchData = officialScores.find(
         (m) =>
-          m.id?.toString() === match.id.toString() ||
-          m.match_id?.toString() === match.id.toString(),
+          m.match_number?.toString() === match.id.toString() ||
+          m.id?.toString() === match.id.toString(),
       );
 
       // 2. Extraemos la verdad absoluta de los equipos que vienen de Supabase

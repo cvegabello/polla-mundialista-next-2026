@@ -76,7 +76,7 @@ export async function getAdminPanelDataAction() {
   return { config, stats };
 }
 
-// 3. Activar/Desactivar Fases + DESTRUCTOR DE MUNDOS HIPOTÉTICOS (A prueba de balas) 💥🛡️
+// 3. Activar/Desactivar Fases + INYECCIÓN MASIVA CREADORA 💥🛡️
 export async function togglePhaseAction(
   phaseColumn: string,
   isOpen: boolean,
@@ -91,41 +91,115 @@ export async function togglePhaseAction(
 
     if (updateError) throw updateError;
 
-    // EL DESTRUCTOR PROTEGIDO (Usando match_number estático)
     if (shouldClearPredictions) {
-      let startMatchNumber = 0;
+      let currentPhaseStart = 0;
+      let currentPhaseEnd = 0;
+      let futurePhaseStart = 0;
+      let dateColumnToReset = "";
 
-      // Definimos desde qué MATCH_NUMBER borrar
-      if (phaseColumn === "allow_r32") startMatchNumber = 73;
-      else if (phaseColumn === "allow_r16") startMatchNumber = 89;
-      else if (phaseColumn === "allow_qf") startMatchNumber = 97;
-      else if (phaseColumn === "allow_sf") startMatchNumber = 101;
-      else if (phaseColumn === "allow_f") startMatchNumber = 103;
+      if (phaseColumn === "allow_r32") {
+        currentPhaseStart = 73;
+        currentPhaseEnd = 88;
+        futurePhaseStart = 89;
+        dateColumnToReset = "sub_date_r32";
+      } else if (phaseColumn === "allow_r16") {
+        currentPhaseStart = 89;
+        currentPhaseEnd = 96;
+        futurePhaseStart = 97;
+        dateColumnToReset = "sub_date_r16";
+      } else if (phaseColumn === "allow_qf") {
+        currentPhaseStart = 97;
+        currentPhaseEnd = 100;
+        futurePhaseStart = 101;
+        dateColumnToReset = "sub_date_qf";
+      } else if (phaseColumn === "allow_sf") {
+        currentPhaseStart = 101;
+        currentPhaseEnd = 102;
+        futurePhaseStart = 103;
+        dateColumnToReset = "sub_date_sf";
+      } else if (phaseColumn === "allow_f") {
+        currentPhaseStart = 103;
+        currentPhaseEnd = 104;
+        futurePhaseStart = 105;
+        dateColumnToReset = "sub_date_f";
+      }
 
-      if (startMatchNumber > 0) {
-        // PASO 1: Buscar cuáles son los "IDs" físicos de la base de datos que corresponden a esos Match Numbers
-        const { data: matchesToDelete } = await supabase
+      if (currentPhaseStart > 0) {
+        // --- PASO A: Buscar Partidos y Fans ---
+        const { data: officialMatches } = await supabase
           .from("matches")
-          .select("id")
-          .gte("match_number", startMatchNumber);
+          .select("id, home_team_id, away_team_id")
+          .gte("match_number", currentPhaseStart)
+          .lte("match_number", currentPhaseEnd);
 
-        if (matchesToDelete && matchesToDelete.length > 0) {
-          const idsToDelete = matchesToDelete.map((m) => m.id);
+        // Traemos a TODOS los perfiles para ir a la fija
+        const { data: fans } = await supabase.from("profiles").select("id");
 
-          // PASO 2: Borramos las predicciones de esos IDs específicos
-          const { error: deleteError } = await supabase
+        if (
+          officialMatches &&
+          officialMatches.length > 0 &&
+          fans &&
+          fans.length > 0
+        ) {
+          const currentMatchIds = officialMatches.map((m) => m.id);
+
+          // 1. Borramos basura previa
+          await supabase
             .from("predictions")
             .delete()
-            .in("match_id", idsToDelete); // 👈 Borrado preciso
+            .in("match_id", currentMatchIds);
 
-          if (deleteError) throw deleteError;
+          // 2. Preparamos el batallón con las COLUMNAS CORRECTAS 🎯
+          const newPredictions = [];
+          for (const match of officialMatches) {
+            for (const fan of fans) {
+              newPredictions.push({
+                user_id: fan.id,
+                match_id: match.id,
+                predicted_home_team: match.home_team_id, // 👈 CORREGIDO
+                predicted_away_team: match.away_team_id, // 👈 CORREGIDO
+                pred_home: null,
+                pred_away: null,
+                predicted_winner: null,
+              });
+            }
+          }
+
+          // 3. Inyectamos a la fuerza
+          if (newPredictions.length > 0) {
+            const { error: insertError } = await supabase
+              .from("predictions")
+              .insert(newPredictions);
+            if (insertError) {
+              console.error("🚨 EXPLOSIÓN EN EL INSERT:", insertError);
+            }
+          }
         }
 
-        // PASO 3: Desbloqueamos a los fans para que vuelvan a pronosticar con llaves reales
-        await supabase
-          .from("profiles")
-          .update({ submission_date: null })
-          .neq("role", "SUPER-ADMIN");
+        // --- PASO B: DESTRUIR EL FUTURO ---
+        if (futurePhaseStart <= 104) {
+          const { data: futureMatches } = await supabase
+            .from("matches")
+            .select("id")
+            .gte("match_number", futurePhaseStart);
+
+          if (futureMatches && futureMatches.length > 0) {
+            const idsToDelete = futureMatches.map((m) => m.id);
+            await supabase
+              .from("predictions")
+              .delete()
+              .in("match_id", idsToDelete);
+          }
+        }
+
+        // --- PASO C: ABRIR EL CANDADO ---
+        if (dateColumnToReset) {
+          // Abrimos el candado para todos
+          await supabase
+            .from("profiles")
+            .update({ [dateColumnToReset]: null })
+            .neq("id", "00000000-0000-0000-0000-000000000000");
+        }
       }
     }
 

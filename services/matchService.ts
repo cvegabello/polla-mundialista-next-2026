@@ -9,6 +9,7 @@ export const getOfficialMatches = async () => {
     const { data, error } = await supabase.from("matches").select(
       `
         id,
+        match_number,
         home_score,
         away_score,
         winner_id,

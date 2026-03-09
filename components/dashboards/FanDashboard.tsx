@@ -28,7 +28,7 @@ import {
 interface FanDashboardProps {
   userSession: any;
   groupsData: any[];
-  userPredictions?: any[]; // 👈 Opcional por seguridad
+  userPredictions?: any[];
   officialScores?: any[];
   officialWinners?: Record<string, any>;
   loadingData: boolean;
@@ -109,7 +109,6 @@ export const FanDashboard = ({
   const [winnerTeam, setWinnerTeam] = useState<any>(null);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
 
-  // 🛡️ SEGUROS DE VIDA ANTI-CRASHEOS
   const safePredictions = userPredictions || [];
   const safeBonuses = userBonuses || [];
   const safeGroups = groupsData || [];
@@ -139,6 +138,37 @@ export const FanDashboard = ({
     proceedWithLogout,
     handleLogoutAttempt,
   } = useFanDashboardLogic(safePredictions, userSession?.id, safeGroups);
+
+  // 🚀 TRADUCTOR INTERNO: Para que el bracket encuentre la predicción física
+  const getPhysicalMatchId = (matchId: string | number) => {
+    if (!officialScores) return matchId;
+    const match = officialScores.find(
+      (m) =>
+        m.match_number?.toString() === matchId.toString() ||
+        m.id?.toString() === matchId.toString(),
+    );
+    return match ? match.id : matchId;
+  };
+
+  // 🕵️‍♂️ EL ESPÍA DE EQUIPOS: Busca el nombre y bandera real si tenemos el ID en BD
+  // 🕵️‍♂️ EL ESPÍA DE EQUIPOS (Versión Todo-Terreno 🚜)
+  const getTeamData = (teamId: string | null | undefined) => {
+    if (!teamId) return null;
+
+    for (const group of safeGroups) {
+      if (!group.teams) continue; // Si el grupo no tiene equipos, saltamos
+
+      for (const item of group.teams) {
+        // La magia: Soportamos si Supabase lo manda directo (item) o anidado (item.team)
+        const t = item.team ? item.team : item;
+
+        if (t.id === teamId) {
+          return t; // ¡Lo encontramos!
+        }
+      }
+    }
+    return null;
+  };
 
   const handleFinalAdvance = (
     matchId: string | number,
@@ -172,39 +202,20 @@ export const FanDashboard = ({
       };
       fireInitialBurst();
       setTimeout(() => setShowWinnerModal(true), 600);
-      const duration = 4000;
-      const animationEnd = Date.now() + duration;
-      const interval: any = setInterval(() => {
-        const timeLeft = animationEnd - Date.now();
-        if (timeLeft <= 0) return clearInterval(interval);
-        const particleCount = 40 * (timeLeft / duration);
-        confetti({
-          particleCount,
-          startVelocity: 20,
-          spread: 360,
-          ticks: 80,
-          origin: { x: Math.random(), y: Math.random() * 0.4 },
-          colors: ["#fbbf24", "#ffffff", "#fb923c", "#a78bfa", "#34d399"],
-          zIndex: 200,
-        });
-      }, 300);
     }
   };
 
-  // 🔥 LA LÓGICA DE CANDADOS ACTUALIZADA 🔥
-  const isSubmissionLocked = !!userSession?.submission_date || hasSubmitted;
-
-  // 1. Las cajitas SOLO se bloquean si el usuario ya envió su polla oficial.
+  const isSubmissionLocked = !!userSession?.sub_date_groups || hasSubmitted;
   const isGroupInputsLocked = isSubmissionLocked;
-
-  // 2. El botón de envío se bloquea si el usuario ya envió, O si el SuperAdmin cerró la fase.
   const isGroupSubmitAllowed = safeConfig.allow_groups && !isSubmissionLocked;
 
   const headerSession = isSubmissionLocked
     ? {
         ...userSession,
+        sub_date_groups:
+          userSession?.sub_date_groups || new Date().toISOString(),
         submission_date:
-          userSession?.submission_date || new Date().toISOString(),
+          userSession?.sub_date_groups || new Date().toISOString(),
       }
     : userSession;
 
@@ -244,7 +255,6 @@ export const FanDashboard = ({
         onManualSave={handleManualSave}
         onRefresh={handleRefresh}
         totalPoints={calculatedTotalPoints}
-        // 👇 Le pasamos la llave al Header para que sepa si prender el botón o no
         isSubmitAllowed={isGroupSubmitAllowed}
       />
 
@@ -267,7 +277,6 @@ export const FanDashboard = ({
                     lang={lang}
                     initialPredictions={safePredictions}
                     onPredictionChange={handlePredictionChange}
-                    // 👇 Las cajitas obedecen ÚNICAMENTE al hecho de si el usuario ya envió todo
                     isLocked={isGroupInputsLocked}
                     onGroupDirty={handleGroupDataChange}
                     groupBonus={safeBonuses.find(
@@ -308,51 +317,100 @@ export const FanDashboard = ({
                     </div>
                   }
                 >
+                  {/* 🚨 ESCÁNER DE DEBUG V2 (TEMPORAL) 🚨 */}
+                  <div className="w-full max-w-sm mb-6 p-4 bg-red-950 border-2 border-red-500 rounded-xl text-xs text-white font-mono shadow-[0_0_15px_rgba(239,68,68,0.5)]">
+                    <p className="font-bold text-red-400 border-b border-red-500/50 pb-2 mb-2">
+                      🕵️‍♂️ ESCÁNER V2: ABRIENDO EL PRONÓSTICO
+                    </p>
+                    <p className="mb-2 text-yellow-400">
+                      Contenido exacto del Partido 73:
+                    </p>
+                    <div className="p-2 bg-black border border-white/20 rounded break-words text-[10px]">
+                      {JSON.stringify(
+                        safePredictions.find(
+                          (p) =>
+                            p.match_id?.toString() ===
+                              getPhysicalMatchId(73)?.toString() ||
+                            p.match_id?.toString() === "73",
+                        ) || { error: "No encontrado" },
+                      )}
+                    </div>
+                  </div>
+                  {/* 16AVOS */}
                   <PhaseColumn
                     title={t.bracketPhaseR32Full}
-                    isActive={safeConfig?.allow_r32 && !isSubmissionLocked}
+                    isActive={
+                      safeConfig?.allow_r32 &&
+                      !userSession?.sub_date_r32 &&
+                      !hasSubmitted
+                    }
                     lang={lang}
                     showFloating={showFloating}
                     onAction={handleSubmit}
                   >
                     {bracketMatches.length > 0 ? (
-                      bracketMatches.map((match, idx) => (
-                        <BracketMatchCard
-                          key={match.id}
-                          matchId={match.id}
-                          matchCode={`M${match.id}`}
-                          lang={lang}
-                          onAdvanceTeam={handleAdvanceTeam}
-                          style={
-                            idx % 2 !== 0
-                              ? { marginTop: "-8px" }
-                              : { marginTop: "15px" }
-                          }
-                          homeTeam={{
-                            id: match.home.id,
-                            seed: match.h,
-                            name: match.home.name_es || match.h,
-                            name_es: match.home.name_es,
-                            name_en: match.home.name_en,
-                            flag: match.home.flag,
-                            group: match.home.group,
-                          }}
-                          awayTeam={{
-                            id: match.away.id,
-                            seed: match.a,
-                            name: match.away.name_es || match.a,
-                            name_es: match.away.name_es,
-                            name_en: match.away.name_en,
-                            flag: match.away.flag,
-                            group: match.away.group,
-                          }}
-                          prediction={safePredictions?.find(
-                            (p) =>
-                              p.match_id.toString() === match.id.toString(),
-                          )}
-                          onSavePrediction={handleSaveKnockoutPrediction}
-                        />
-                      ))
+                      bracketMatches.map((match, idx) => {
+                        const prediction = safePredictions?.find(
+                          (p) =>
+                            p.match_id?.toString() ===
+                              getPhysicalMatchId(match.id)?.toString() ||
+                            p.match_id?.toString() === match.id?.toString(),
+                        );
+
+                        // 🎯 REGLA DE ORO: Base de datos primero, simulador después
+                        const dbHome = getTeamData(
+                          prediction?.predicted_home_team,
+                        );
+                        const dbAway = getTeamData(
+                          prediction?.predicted_away_team,
+                        );
+                        const finalHome = dbHome || match.home;
+                        const finalAway = dbAway || match.away;
+
+                        return (
+                          <BracketMatchCard
+                            key={match.id}
+                            matchId={match.id}
+                            matchCode={`M${match.id}`}
+                            lang={lang}
+                            onAdvanceTeam={handleAdvanceTeam}
+                            style={
+                              idx % 2 !== 0
+                                ? { marginTop: "-8px" }
+                                : { marginTop: "15px" }
+                            }
+                            homeTeam={{
+                              id: finalHome?.id,
+                              seed: match.h,
+                              // Si dbHome falló, pero hay predicción, grita "EQUIPO EN BD", si no, usa simulador
+                              name:
+                                finalHome?.name_es ||
+                                (prediction?.predicted_home_team
+                                  ? "✅ BD LISTA"
+                                  : match.h),
+                              name_es: finalHome?.name_es,
+                              name_en: finalHome?.name_en,
+                              flag: finalHome?.flag,
+                              group: finalHome?.group,
+                            }}
+                            awayTeam={{
+                              id: finalAway?.id,
+                              seed: match.a,
+                              name:
+                                finalAway?.name_es ||
+                                (prediction?.predicted_away_team
+                                  ? "✅ BD LISTA"
+                                  : match.a),
+                              name_es: finalAway?.name_es,
+                              name_en: finalAway?.name_en,
+                              flag: finalAway?.flag,
+                              group: finalAway?.group,
+                            }}
+                            prediction={prediction}
+                            onSavePrediction={handleSaveKnockoutPrediction}
+                          />
+                        );
+                      })
                     ) : (
                       <div className="text-white/50 text-xs p-4 bg-slate-900/50 rounded-lg text-center border border-white/10">
                         {t.bracketCompleteGroups}
@@ -360,18 +418,38 @@ export const FanDashboard = ({
                     )}
                   </PhaseColumn>
 
+                  {/* OCTAVOS */}
                   <PhaseColumn
                     title={t.bracketPhaseR16Full}
-                    isActive={safeConfig?.allow_r16 && !isSubmissionLocked}
+                    isActive={
+                      safeConfig?.allow_r16 &&
+                      !userSession?.sub_date_r16 &&
+                      !hasSubmitted
+                    }
                     lang={lang}
                     showFloating={showFloating}
                     onAction={handleSubmit}
                   >
                     {R16_MATCHUPS.map((match, idx) => {
-                      const homeWinner =
-                        knockoutWinners[match.h.replace("W", "")];
-                      const awayWinner =
-                        knockoutWinners[match.a.replace("W", "")];
+                      const prediction = safePredictions?.find(
+                        (p) =>
+                          p.match_id?.toString() ===
+                            getPhysicalMatchId(match.id)?.toString() ||
+                          p.match_id?.toString() === match.id?.toString(),
+                      );
+
+                      const dbHome = getTeamData(
+                        prediction?.predicted_home_team,
+                      );
+                      const dbAway = getTeamData(
+                        prediction?.predicted_away_team,
+                      );
+                      const simHome = knockoutWinners[match.h.replace("W", "")];
+                      const simAway = knockoutWinners[match.a.replace("W", "")];
+
+                      const finalHome = dbHome || simHome;
+                      const finalAway = dbAway || simAway;
+
                       return (
                         <BracketMatchCard
                           key={match.id}
@@ -385,47 +463,64 @@ export const FanDashboard = ({
                               : { marginTop: "65px" }
                           }
                           homeTeam={{
-                            id: homeWinner?.id,
+                            id: finalHome?.id,
                             seed: match.h,
-                            name: homeWinner
-                              ? homeWinner.name_es || homeWinner.name
+                            name: finalHome
+                              ? finalHome.name_es || finalHome.name
                               : t.bracketTBD,
-                            name_es: homeWinner?.name_es,
-                            name_en: homeWinner?.name_en,
-                            flag: homeWinner ? homeWinner.flag : null,
+                            name_es: finalHome?.name_es,
+                            name_en: finalHome?.name_en,
+                            flag: finalHome ? finalHome.flag : null,
                           }}
                           awayTeam={{
-                            id: awayWinner?.id,
+                            id: finalAway?.id,
                             seed: match.a,
-                            name: awayWinner
-                              ? awayWinner.name_es || awayWinner.name
+                            name: finalAway
+                              ? finalAway.name_es || finalAway.name
                               : t.bracketTBD,
-                            name_es: awayWinner?.name_es,
-                            name_en: awayWinner?.name_en,
-                            flag: awayWinner ? awayWinner.flag : null,
+                            name_es: finalAway?.name_es,
+                            name_en: finalAway?.name_en,
+                            flag: finalAway ? finalAway.flag : null,
                           }}
-                          prediction={safePredictions?.find(
-                            (p) =>
-                              p.match_id.toString() === match.id.toString(),
-                          )}
+                          prediction={prediction}
                           onSavePrediction={handleSaveKnockoutPrediction}
                         />
                       );
                     })}
                   </PhaseColumn>
 
+                  {/* CUARTOS */}
                   <PhaseColumn
                     title={t.bracketPhaseQFFull}
-                    isActive={safeConfig?.allow_qf && !isSubmissionLocked}
+                    isActive={
+                      safeConfig?.allow_qf &&
+                      !userSession?.sub_date_qf &&
+                      !hasSubmitted
+                    }
                     lang={lang}
                     showFloating={showFloating}
                     onAction={handleSubmit}
                   >
                     {QF_MATCHUPS.map((match, idx) => {
-                      const homeWinner =
-                        knockoutWinners[match.h.replace("W", "")];
-                      const awayWinner =
-                        knockoutWinners[match.a.replace("W", "")];
+                      const prediction = safePredictions?.find(
+                        (p) =>
+                          p.match_id?.toString() ===
+                            getPhysicalMatchId(match.id)?.toString() ||
+                          p.match_id?.toString() === match.id?.toString(),
+                      );
+
+                      const dbHome = getTeamData(
+                        prediction?.predicted_home_team,
+                      );
+                      const dbAway = getTeamData(
+                        prediction?.predicted_away_team,
+                      );
+                      const simHome = knockoutWinners[match.h.replace("W", "")];
+                      const simAway = knockoutWinners[match.a.replace("W", "")];
+
+                      const finalHome = dbHome || simHome;
+                      const finalAway = dbAway || simAway;
+
                       return (
                         <BracketMatchCard
                           key={match.id}
@@ -439,47 +534,64 @@ export const FanDashboard = ({
                               : { marginTop: "200px" }
                           }
                           homeTeam={{
-                            id: homeWinner?.id,
+                            id: finalHome?.id,
                             seed: match.h,
-                            name: homeWinner
-                              ? homeWinner.name_es || homeWinner.name
+                            name: finalHome
+                              ? finalHome.name_es || finalHome.name
                               : t.bracketTBD,
-                            name_es: homeWinner?.name_es,
-                            name_en: homeWinner?.name_en,
-                            flag: homeWinner ? homeWinner.flag : null,
+                            name_es: finalHome?.name_es,
+                            name_en: finalHome?.name_en,
+                            flag: finalHome ? finalHome.flag : null,
                           }}
                           awayTeam={{
-                            id: awayWinner?.id,
+                            id: finalAway?.id,
                             seed: match.a,
-                            name: awayWinner
-                              ? awayWinner.name_es || awayWinner.name
+                            name: finalAway
+                              ? finalAway.name_es || finalAway.name
                               : t.bracketTBD,
-                            name_es: awayWinner?.name_es,
-                            name_en: awayWinner?.name_en,
-                            flag: awayWinner ? awayWinner.flag : null,
+                            name_es: finalAway?.name_es,
+                            name_en: finalAway?.name_en,
+                            flag: finalAway ? finalAway.flag : null,
                           }}
-                          prediction={safePredictions?.find(
-                            (p) =>
-                              p.match_id.toString() === match.id.toString(),
-                          )}
+                          prediction={prediction}
                           onSavePrediction={handleSaveKnockoutPrediction}
                         />
                       );
                     })}
                   </PhaseColumn>
 
+                  {/* SEMIS */}
                   <PhaseColumn
                     title={t.bracketPhaseSFFull}
-                    isActive={safeConfig?.allow_sf && !isSubmissionLocked}
+                    isActive={
+                      safeConfig?.allow_sf &&
+                      !userSession?.sub_date_sf &&
+                      !hasSubmitted
+                    }
                     lang={lang}
                     showFloating={showFloating}
                     onAction={handleSubmit}
                   >
                     {SF_MATCHUPS.map((match, idx) => {
-                      const homeWinner =
-                        knockoutWinners[match.h.replace("W", "")];
-                      const awayWinner =
-                        knockoutWinners[match.a.replace("W", "")];
+                      const prediction = safePredictions?.find(
+                        (p) =>
+                          p.match_id?.toString() ===
+                            getPhysicalMatchId(match.id)?.toString() ||
+                          p.match_id?.toString() === match.id?.toString(),
+                      );
+
+                      const dbHome = getTeamData(
+                        prediction?.predicted_home_team,
+                      );
+                      const dbAway = getTeamData(
+                        prediction?.predicted_away_team,
+                      );
+                      const simHome = knockoutWinners[match.h.replace("W", "")];
+                      const simAway = knockoutWinners[match.a.replace("W", "")];
+
+                      const finalHome = dbHome || simHome;
+                      const finalAway = dbAway || simAway;
+
                       return (
                         <BracketMatchCard
                           key={match.id}
@@ -493,38 +605,40 @@ export const FanDashboard = ({
                               : { marginTop: "450px" }
                           }
                           homeTeam={{
-                            id: homeWinner?.id,
+                            id: finalHome?.id,
                             seed: match.h,
-                            name: homeWinner
-                              ? homeWinner.name_es || homeWinner.name
+                            name: finalHome
+                              ? finalHome.name_es || finalHome.name
                               : t.bracketTBD,
-                            name_es: homeWinner?.name_es,
-                            name_en: homeWinner?.name_en,
-                            flag: homeWinner ? homeWinner.flag : null,
+                            name_es: finalHome?.name_es,
+                            name_en: finalHome?.name_en,
+                            flag: finalHome ? finalHome.flag : null,
                           }}
                           awayTeam={{
-                            id: awayWinner?.id,
+                            id: finalAway?.id,
                             seed: match.a,
-                            name: awayWinner
-                              ? awayWinner.name_es || awayWinner.name
+                            name: finalAway
+                              ? finalAway.name_es || finalAway.name
                               : t.bracketTBD,
-                            name_es: awayWinner?.name_es,
-                            name_en: awayWinner?.name_en,
-                            flag: awayWinner ? awayWinner.flag : null,
+                            name_es: finalAway?.name_es,
+                            name_en: finalAway?.name_en,
+                            flag: finalAway ? finalAway.flag : null,
                           }}
-                          prediction={safePredictions?.find(
-                            (p) =>
-                              p.match_id.toString() === match.id.toString(),
-                          )}
+                          prediction={prediction}
                           onSavePrediction={handleSaveKnockoutPrediction}
                         />
                       );
                     })}
                   </PhaseColumn>
 
+                  {/* FINAL */}
                   <PhaseColumn
                     title={t.bracketPhaseFTitle}
-                    isActive={safeConfig?.allow_f && !isSubmissionLocked}
+                    isActive={
+                      safeConfig?.allow_f &&
+                      !userSession?.sub_date_f &&
+                      !hasSubmitted
+                    }
                     lang={lang}
                     showFloating={showFloating}
                     onAction={handleSubmit}
@@ -535,6 +649,22 @@ export const FanDashboard = ({
                       F_MATCHUPS,
                     ).map((match, idx) => {
                       const isFinal = idx === 0;
+                      const prediction = safePredictions?.find(
+                        (p) =>
+                          p.match_id?.toString() ===
+                            getPhysicalMatchId(match.id)?.toString() ||
+                          p.match_id?.toString() === match.id?.toString(),
+                      );
+
+                      const dbHome = getTeamData(
+                        prediction?.predicted_home_team,
+                      );
+                      const dbAway = getTeamData(
+                        prediction?.predicted_away_team,
+                      );
+                      const finalHome = dbHome || match.home;
+                      const finalAway = dbAway || match.away;
+
                       return (
                         <BracketMatchCard
                           key={match.id}
@@ -551,27 +681,24 @@ export const FanDashboard = ({
                               : { marginTop: "15px" }
                           }
                           homeTeam={{
-                            ...match.home,
+                            ...finalHome,
                             seed: match.h,
-                            name: match.home.id
+                            name: finalHome.id
                               ? lang === "en"
-                                ? match.home.name_en || match.home.name_es
-                                : match.home.name_es
+                                ? finalHome.name_en || finalHome.name_es
+                                : finalHome.name_es
                               : t.bracketTBD,
                           }}
                           awayTeam={{
-                            ...match.away,
+                            ...finalAway,
                             seed: match.a,
-                            name: match.away.id
+                            name: finalAway.id
                               ? lang === "en"
-                                ? match.away.name_en || match.away.name_es
-                                : match.away.name_es
+                                ? finalAway.name_en || finalAway.name_es
+                                : finalAway.name_es
                               : t.bracketTBD,
                           }}
-                          prediction={safePredictions?.find(
-                            (p) =>
-                              p.match_id.toString() === match.id.toString(),
-                          )}
+                          prediction={prediction}
                           onSavePrediction={handleSaveKnockoutPrediction}
                         />
                       );
@@ -595,7 +722,6 @@ export const FanDashboard = ({
         )}
       </div>
 
-      {/* 👇 La barra de progreso flota sin importar el candado del SuperAdmin */}
       {currentView === "pred_groups" && !isSubmissionLocked && (
         <FloatingProgress
           current={progress}
@@ -607,7 +733,7 @@ export const FanDashboard = ({
 
       {showWinnerModal && winnerTeam && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="relative bg-slate-900 border-2 border-amber-400/50 rounded-3xl p-8 max-w-sm w-full text-center shadow-[0_0_50px_rgba(251,191,36,0.4)] animate-in zoom-in-95 duration-300">
+          <div className="relative bg-slate-900 border-2 border-amber-400/50 rounded-3xl p-8 max-w-sm w-full text-center shadow-[0_0_50px_rgba(251,191,36,0.4)]">
             <button
               onClick={() => setShowWinnerModal(false)}
               className="absolute top-4 right-4 text-white/50 hover:text-white"

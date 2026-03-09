@@ -14,7 +14,7 @@ export async function saveGroupStandingsAction(
     const rowsToUpsert = standings.map((row) => ({
       user_id: userId,
       group_id: groupId,
-      team_id: row.teamId, // 👈 Si esto es undefined, sale el error que tiene ahora
+      team_id: row.teamId,
       position: row.pos,
       played: row.played || 0,
       won: row.won || 0,
@@ -39,29 +39,29 @@ export async function saveGroupStandingsAction(
   }
 }
 
-// Su función de submit sigue igual de melo
-// Su función de submit con actualización de galleta en tiempo real
-export async function submitPredictionsAction(userId: string) {
+export async function submitPredictionsAction(
+  userId: string,
+  phaseColumn: string = "sub_date_groups", // 👈 Por defecto asume grupos, pero es dinámico
+) {
   const supabase = await createClient();
   try {
     const submissionDate = new Date().toISOString();
 
-    // 1. Guardamos en la Base de Datos
+    // 1. Guardamos la fecha en la columna exacta de la fase correspondiente
     const { error } = await supabase
       .from("profiles")
-      .update({ submission_date: submissionDate })
+      .update({ [phaseColumn]: submissionDate })
       .eq("id", userId);
 
     if (error) throw error;
 
-    // 2. 👇 LA MAGIA: Actualizamos la galleta directamente desde el servidor
+    // 2. Actualizamos la cookie para que el frontend sepa que ya se bloqueó esa fase
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get("polla_session");
 
     if (sessionCookie) {
-      // Abrimos la galleta, le metemos la nueva fecha y la volvemos a hornear
       const sessionData = JSON.parse(decodeURIComponent(sessionCookie.value));
-      sessionData.submission_date = submissionDate;
+      sessionData[phaseColumn] = submissionDate; // Inyectamos la nueva fecha dinámicamente
 
       cookieStore.set(
         "polla_session",
@@ -74,9 +74,7 @@ export async function submitPredictionsAction(userId: string) {
       );
     }
 
-    // 3. Limpiamos la caché profunda para que toda la vista se refresque
     revalidatePath("/", "layout");
-
     return { success: true, date: submissionDate };
   } catch (error) {
     console.error("Error en submitPredictionsAction:", error);
@@ -103,7 +101,7 @@ export async function getUserStandingsAction(userId: string) {
   return data;
 }
 
-// 👇 NUEVA FUNCIÓN: Guarda los equipos clasificados en la tabla predictions
+// 👇 LA BALA DE PLATA APLICADA AQUÍ
 export async function saveKnockoutTeamsAction(
   userId: string,
   resolvedMatches: any[],
@@ -111,36 +109,38 @@ export async function saveKnockoutTeamsAction(
   const supabase = await createClient();
 
   try {
-    // 1. Mapeamos los partidos resueltos al formato de la tabla predictions
+    // 🚀 TRADUCTOR: Buscamos el mapa de IDs físicos
+    const { data: matchesMap } = await supabase
+      .from("matches")
+      .select("id, match_number");
+
+    const getRealId = (mId: any) => {
+      const found = matchesMap?.find(
+        (m) =>
+          m.match_number?.toString() === mId?.toString() ||
+          m.id?.toString() === mId?.toString(),
+      );
+      return found ? found.id : mId;
+    };
+
     const upsertData = resolvedMatches.map((match) => ({
       user_id: userId,
-      match_id: match.id, // Ej: "73", "74", "75"...
-      predicted_home_team: match.home?.id || null, // El ID del equipo local que calculó el algoritmo
-      predicted_away_team: match.away?.id || null, // El ID del equipo visitante que calculó el algoritmo
+      match_id: getRealId(match.id), // 👈 Guardamos con el ID físico real
+      predicted_home_team: match.home?.id || null,
+      predicted_away_team: match.away?.id || null,
     }));
 
-    // 2. Filtramos para no intentar guardar partidos donde falten IDs de equipos
-    // (Por si el usuario no ha terminado los grupos completos)
     const validData = upsertData.filter(
       (m) => m.predicted_home_team !== null && m.predicted_away_team !== null,
     );
 
-    if (validData.length === 0) {
-      return {
-        success: true,
-        message: "No hay llaves completas para guardar.",
-      };
-    }
+    if (validData.length === 0) return { success: true };
 
-    // 3. Upsert en la base de datos:
-    // Si ya existía el pronóstico para ese partido (ej. 73), le actualiza los equipos.
-    // Si no existía, crea la fila.
     const { error } = await supabase
       .from("predictions")
       .upsert(validData, { onConflict: "user_id, match_id" });
 
     if (error) throw error;
-
     return { success: true };
   } catch (error: any) {
     console.error("❌ Error guardando los equipos del bracket:", error.message);
@@ -148,7 +148,7 @@ export async function saveKnockoutTeamsAction(
   }
 }
 
-// 👇 NUEVA FUNCIÓN: Guarda los goles y el ganador del bracket
+// 👇 LA BALA DE PLATA APLICADA AQUÍ TAMBIÉN
 export async function saveKnockoutPredictionAction(
   userId: string,
   matchId: string | number,
@@ -158,10 +158,19 @@ export async function saveKnockoutPredictionAction(
 ) {
   const supabase = await createClient();
   try {
+    // 🚀 TRADUCTOR: Buscamos el ID real de este partido
+    const { data: realMatch } = await supabase
+      .from("matches")
+      .select("id")
+      .or(`id.eq.${matchId},match_number.eq.${matchId}`)
+      .single();
+
+    const physicalId = realMatch ? realMatch.id : parseInt(matchId.toString());
+
     const { error } = await supabase.from("predictions").upsert(
       {
         user_id: userId,
-        match_id: parseInt(matchId.toString()),
+        match_id: physicalId, // 👈 Guardamos con el ID físico real
         pred_home: homeScore,
         pred_away: awayScore,
         predicted_winner: winnerId,
@@ -169,19 +178,14 @@ export async function saveKnockoutPredictionAction(
       { onConflict: "user_id, match_id" },
     );
 
-    if (error) {
-      // 🕵️‍♂️ RASTREADOR 4: El error exacto de la base de datos
-      console.error("❌ 4. ERROR SUPABASE:", error);
-      throw error;
-    }
-
+    if (error) throw error;
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
 }
 
-// 👇 NUEVA FUNCIÓN: Guardado Masivo de Grupo (Server Action)
+// 👇 Y EN EL GUARDADO MASIVO DE GRUPOS
 export async function saveGroupBulkPredictionsAction(
   userId: string,
   matchesData: {
@@ -192,21 +196,32 @@ export async function saveGroupBulkPredictionsAction(
 ) {
   const supabase = await createClient();
   try {
-    // 1. Mapeamos los datos al formato exacto de tu tabla en Supabase
+    // 🚀 TRADUCTOR: Mapa de IDs
+    const { data: matchesMap } = await supabase
+      .from("matches")
+      .select("id, match_number");
+
+    const getRealId = (mId: any) => {
+      const found = matchesMap?.find(
+        (m) =>
+          m.match_number?.toString() === mId?.toString() ||
+          m.id?.toString() === mId?.toString(),
+      );
+      return found ? found.id : mId;
+    };
+
     const rowsToUpsert = matchesData.map((match) => ({
       user_id: userId,
-      match_id: match.matchId,
+      match_id: getRealId(match.matchId), // 👈 Guardamos con el ID físico real
       pred_home: match.hScore,
       pred_away: match.aScore,
     }));
 
-    // 2. Le pasamos todo el Array a Supabase. ¡Él hace el guardado masivo en 1 milisegundo!
     const { error } = await supabase
       .from("predictions")
       .upsert(rowsToUpsert, { onConflict: "user_id, match_id" });
 
     if (error) throw error;
-
     return { success: true };
   } catch (error: any) {
     console.error("❌ Error en guardado masivo:", error.message);

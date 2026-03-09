@@ -12,8 +12,10 @@ export const getUserPredictions = async (userId: string) => {
 
     const { data, error } = await supabase
       .from("predictions")
-      // 👇 MAGIA: ¡Agregamos points_won a la consulta!
-      .select("match_id, pred_home, pred_away, predicted_winner, points_won")
+      // 👇 MAGIA FINAL: ¡Agregamos predicted_home_team y predicted_away_team a la consulta!
+      .select(
+        "match_id, pred_home, pred_away, predicted_winner, points_won, predicted_home_team, predicted_away_team",
+      )
       .eq("user_id", userId);
 
     if (error) throw error;

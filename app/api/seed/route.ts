@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     await supabase.from("teams").delete().neq("flag_code", "x");
     await supabase.from("groups").delete().neq("id", "x");
 
-    // 3. LOS 12 GRUPOS
+    // 3. LOS GRUPOS (Incluyendo el FI para las Fases Finales)
     const groupsData = [
       { id: "A", name: "Grupo A" },
       { id: "B", name: "Grupo B" },
@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
       { id: "J", name: "Grupo J" },
       { id: "K", name: "Grupo K" },
       { id: "L", name: "Grupo L" },
+      { id: "FI", name: "Fases Finales" }, // 👈 El grupo para el Fan
     ];
     await supabase.from("groups").upsert(groupsData);
 
@@ -300,7 +301,7 @@ export async function GET(request: NextRequest) {
     const getID = (code: string) =>
       teamsDB?.find((t) => t.flag_code === code)?.id;
 
-    // 5. LOS 72 PARTIDOS EN BRUTO
+    // 5. LOS 72 PARTIDOS DE GRUPOS EN BRUTO
     const matchesData = [
       // GRUPO A
       {
@@ -892,7 +893,7 @@ export async function GET(request: NextRequest) {
       },
     ];
 
-    // 🌟 6. LA MAGIA: ORDENAR CRONOLÓGICAMENTE Y ASIGNAR MATCH_NUMBER DEL 1 AL 72
+    // 🌟 6. ORDENAR CRONOLÓGICAMENTE Y ASIGNAR MATCH_NUMBER DEL 1 AL 72
     const sortedMatches = matchesData.sort(
       (a, b) =>
         new Date(a.match_date).getTime() - new Date(b.match_date).getTime(),
@@ -900,13 +901,30 @@ export async function GET(request: NextRequest) {
 
     const matchesWithNumber = sortedMatches.map((match, index) => ({
       ...match,
-      match_number: index + 1, // 👈 Se numera exactamente como la FIFA
+      match_number: index + 1, // 👈 Numeración oficial FIFA
     }));
 
-    // Inserción Masiva de los partidos ya numerados
+    // 🏆 7. CREAR LOS CASCARONES DE LAS FASES FINALES (Partidos 73 al 104)
+    const knockoutMatches = Array.from({ length: 32 }, (_, i) => ({
+      match_number: 73 + i,
+      group_id: "FI", // 👈 ¡EL SELLO MAESTRO PARA QUE EL FAN LOS VEA!
+      home_team_id: null,
+      away_team_id: null,
+      // Fechas del futuro para evitar errores de ordenamiento
+      match_date: new Date(
+        new Date("2026-06-28").getTime() + i * 86400000,
+      ).toISOString(),
+      stadium: "Por definir",
+      city: "Por definir",
+    }));
+
+    // 🤝 Juntamos los 72 de grupos + 32 de finales = 104 Partidos Completos
+    const all104Matches = [...matchesWithNumber, ...knockoutMatches];
+
+    // 8. Inserción Masiva de los 104 partidos
     const { error: matchesError } = await supabase
       .from("matches")
-      .insert(matchesWithNumber);
+      .insert(all104Matches);
 
     if (matchesError)
       return NextResponse.json(
@@ -916,8 +934,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       message:
-        "✅ ¡Operación Exitosa! Base de datos recargada con los 72 partidos del Mundial y numerados cronológicamente.",
-      matches_loaded: matchesWithNumber.length,
+        "✅ ¡Operación Exitosa! Semilla recargada con los 104 partidos del Mundial numerados cronológicamente y Fases Finales listas.",
+      matches_loaded: all104Matches.length,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

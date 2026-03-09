@@ -8,19 +8,17 @@ import { evaluateGroupBonusesAction } from "./bonus-actions";
 
 export const saveOfficialScoreAction = async (
   matchId: number,
-  homeScore: any, // 👈 1. Cambiamos a 'any' para atrapar el texto vacío ("")
-  awayScore: any, // 👈 1. Cambiamos a 'any'
+  homeScore: any,
+  awayScore: any,
   winnerId?: string | null,
 ) => {
-  // 📸 CÁMARAS DE SEGURIDAD AQUÍ:
   console.log("=== DEBUG SUPER ADMIN: INICIO DE GUARDADO ===");
-  console.log("ID del Partido:", matchId);
-  console.log("homeScore crudo:", homeScore, "| Tipo:", typeof homeScore);
-  console.log("awayScore crudo:", awayScore, "| Tipo:", typeof awayScore);
+  console.log("ID/MatchNumber recibido:", matchId);
+
   try {
     const supabase = await createClient();
 
-    // 🛡️ 2. EL FILTRO QUIRÚRGICO: Si es "", lo vuelve null. Si es número, lo asegura como Number.
+    // 🛡️ 1. EL FILTRO QUIRÚRGICO
     const cleanHome =
       homeScore === "" || homeScore === null || homeScore === undefined
         ? null
@@ -30,28 +28,30 @@ export const saveOfficialScoreAction = async (
         ? null
         : Number(awayScore);
 
-    // 📸 SEGUNDA CÁMARA:
-    console.log(
-      "Datos limpios listos para BD -> cleanHome:",
-      cleanHome,
-      "| cleanAway:",
-      cleanAway,
-    );
-    console.log("=============================================");
+    // 🚀 2. LA BALA DE PLATA: Buscar el partido real
+    const { data: realMatch, error: findError } = await supabase
+      .from("matches")
+      .select("id, group_id")
+      .or(`id.eq.${matchId},match_number.eq.${matchId}`)
+      .single();
 
-    // 1. Guardamos la verdad absoluta en la tabla 'matches' usando los datos limpios
+    if (findError || !realMatch) {
+      throw new Error("Partido no encontrado");
+    }
+
+    // 3. Guardamos la verdad absoluta
     const { error: matchError } = await supabase
       .from("matches")
       .update({
-        home_score: cleanHome, // 👈 Usamos la variable limpia
-        away_score: cleanAway, // 👈 Usamos la variable limpia
+        home_score: cleanHome,
+        away_score: cleanAway,
         winner_id: winnerId,
       })
-      .eq("id", matchId);
+      .eq("id", realMatch.id);
 
     if (matchError) throw matchError;
 
-    // 🏆 2. LA MAGIA: Traemos la configuración de puntos
+    // 🏆 4. LA MAGIA DE PUNTOS INDIVIDUALES
     const { data: configData } = await supabase
       .from("score_configs")
       .select("*")
@@ -59,14 +59,12 @@ export const saveOfficialScoreAction = async (
       .single();
 
     if (configData) {
-      // 3. Traemos TODAS las predicciones de este partido (sin discriminar a los mirones)
       const { data: predictions } = await supabase
         .from("predictions")
         .select("*")
-        .eq("match_id", matchId);
+        .eq("match_id", realMatch.id);
 
       if (predictions && predictions.length > 0) {
-        // 4. Pasamos cada predicción válida por el Motor de Puntos
         const updates = predictions.map((pred) => {
           const points = calculateMatchPoints(
             pred.pred_home,
@@ -75,7 +73,7 @@ export const saveOfficialScoreAction = async (
             cleanHome,
             cleanAway,
             winnerId,
-            configData as ScoreConfig, // o el tipo que tenga definido
+            configData as ScoreConfig,
           );
 
           return {
@@ -84,29 +82,16 @@ export const saveOfficialScoreAction = async (
           };
         });
 
-        // 5. Guardado Masivo (Bulk Upsert)
-        const { error: upsertError } = await supabase
-          .from("predictions")
-          .upsert(updates);
-
-        if (upsertError) {
-          console.error("Error actualizando puntos:", upsertError);
-        }
+        await supabase.from("predictions").upsert(updates);
       }
     }
 
-    // 🌟 EL RADAR DE GRUPOS COMPLETADOS
-    const { data: currentMatch } = await supabase
-      .from("matches")
-      .select("group_id")
-      .eq("id", matchId)
-      .single();
-
-    if (currentMatch?.group_id && currentMatch.group_id !== "FI") {
+    // 🌟 5. EL RADAR DE GRUPOS COMPLETADOS
+    if (realMatch.group_id && realMatch.group_id !== "FI") {
       const { data: groupMatches } = await supabase
         .from("matches")
         .select("*")
-        .eq("group_id", currentMatch.group_id);
+        .eq("group_id", realMatch.group_id);
 
       if (groupMatches && groupMatches.length > 0) {
         const isGroupComplete = groupMatches.every(
@@ -120,8 +105,9 @@ export const saveOfficialScoreAction = async (
           const secondId = officialTable[1]?.teamId;
 
           if (firstId && secondId) {
+            // Evaluamos y guardamos bonos en la tabla 'bonus_points'
             await evaluateGroupBonusesAction(
-              currentMatch.group_id,
+              realMatch.group_id,
               groupMatches,
               firstId,
               secondId,
@@ -131,9 +117,49 @@ export const saveOfficialScoreAction = async (
       }
     }
 
-    // Limpiamos caché para que el Fan Dashboard vea todo instantáneamente
-    revalidatePath("/", "layout");
+    // 🚀🚀 6. LA GRAN SUMADORA: Actualizar 'total_points' en profiles 🚀🚀
+    console.log("Calculando Gran Total para la tabla de posiciones...");
 
+    // Traemos todos los puntos de partidos
+    const { data: allPreds } = await supabase
+      .from("predictions")
+      .select("user_id, points_won")
+      .not("points_won", "is", null);
+
+    // Traemos todos los puntos de bonos
+    const { data: allBonuses } = await supabase
+      .from("bonus_points")
+      .select("user_id, points_won")
+      .not("points_won", "is", null);
+
+    // Agrupamos la suma en un "diccionario" por usuario
+    const userTotals: Record<string, number> = {};
+
+    allPreds?.forEach((p) => {
+      userTotals[p.user_id] =
+        (userTotals[p.user_id] || 0) + (p.points_won || 0);
+    });
+
+    allBonuses?.forEach((b) => {
+      userTotals[b.user_id] =
+        (userTotals[b.user_id] || 0) + (b.points_won || 0);
+    });
+
+    // Actualizamos masivamente la tabla profiles
+    const { data: allProfiles } = await supabase.from("profiles").select("id");
+
+    if (allProfiles) {
+      for (const profile of allProfiles) {
+        const finalScore = userTotals[profile.id] || 0;
+        await supabase
+          .from("profiles")
+          .update({ total_points: finalScore })
+          .eq("id", profile.id);
+      }
+    }
+
+    revalidatePath("/", "layout");
+    console.log("=== GUARDADO Y PUNTOS CALCULADOS EXITOSAMENTE ===");
     return { success: true };
   } catch (error) {
     console.error("Error en saveOfficialScoreAction:", error);
@@ -141,7 +167,7 @@ export const saveOfficialScoreAction = async (
   }
 };
 
-// Función para sincronizar los equipos de las llaves en la base de datos
+// 🔄 Sincronizador de Llaves (Bracket) Blindado
 export const syncBracketTeamsAction = async (
   updates: {
     matchId: number;
@@ -152,20 +178,26 @@ export const syncBracketTeamsAction = async (
   try {
     const supabase = await createClient();
 
-    // Actualizamos cada partido que haya tenido un cambio de equipo
     for (const update of updates) {
-      const { error } = await supabase
+      const { data: realMatch } = await supabase
         .from("matches")
-        .update({
-          home_team_id: update.homeTeamId,
-          away_team_id: update.awayTeamId,
-        })
-        .eq("id", update.matchId);
+        .select("id")
+        .or(`id.eq.${update.matchId},match_number.eq.${update.matchId}`)
+        .single();
 
-      if (error) throw error;
+      if (realMatch) {
+        const { error } = await supabase
+          .from("matches")
+          .update({
+            home_team_id: update.homeTeamId,
+            away_team_id: update.awayTeamId,
+          })
+          .eq("id", realMatch.id);
+
+        if (error) throw error;
+      }
     }
 
-    // Limpiamos el caché para que los fans vean los cambios al instante
     revalidatePath("/", "layout");
     return { success: true };
   } catch (error) {

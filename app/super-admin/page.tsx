@@ -1,3 +1,5 @@
+// app/super-admin/page.tsx
+
 import { getFullGroupsData } from "@/services/groupService";
 import { SuperAdminDashboard } from "@/components/dashboards/SuperAdminDashboard";
 import { cookies } from "next/headers";

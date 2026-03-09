@@ -5,7 +5,6 @@ import { getActivePollas } from "@/services/pollaService";
 import { loginOrRegister } from "@/services/authService";
 import { LoginForm } from "@/components/ui/LoginForm";
 import { LoginImageCard } from "@/components/ui/LoginImageCard";
-// 👇 IMPORTANTE: Para la redirección
 import { useRouter } from "next/navigation";
 
 interface LoginMockupProps {
@@ -13,7 +12,7 @@ interface LoginMockupProps {
 }
 
 export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
-  const router = useRouter(); // 👈 Inicializamos el router
+  const router = useRouter();
   const [language, setLanguage] = useState("es");
   const [group, setGroup] = useState("");
   const [isGroupOpen, setIsGroupOpen] = useState(false);
@@ -42,13 +41,10 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
     const loadPollas = async () => {
       try {
         setIsLoadingPools(true);
-
-        // 🕵️‍♂️ BUSCAMOS LA LLAVE SECRETA:
-        // Si la URL es: localhost:3000/login?admin=true
         const params = new URLSearchParams(window.location.search);
         const isAdminMode = params.get("admin") === "true";
 
-        const pollas = await getActivePollas(isAdminMode); // 👈 Le pasamos la verdad
+        const pollas = await getActivePollas(isAdminMode);
         setPoolOptions(pollas);
       } catch (err) {
         console.error("Error cargando pollas:", err);
@@ -78,27 +74,24 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
     setLoading(true);
 
     try {
-      // 1. Buscamos el nombre de la polla que seleccionó
       const selectedPool = poolOptions.find((p) => p.value === group);
       const isMantenimiento = selectedPool?.label === "Mantenimiento";
 
-      // 2. Intentamos el ingreso
+      // 1. Intentamos el ingreso
       const result = await loginOrRegister(username, pin, group);
 
       if (result.success && result.user) {
         const userRole = result.user.role;
 
-        // 🛑 EL FILTRO DE SEGURIDAD:
-        // Si la polla es Mantenimiento pero el usuario NO es SUPER-ADMIN...
         if (isMantenimiento && userRole !== "SUPER-ADMIN") {
           setErrorMsg(
             "Acceso denegado: Usted no tiene permisos de SuperAdmin en esta polla.",
           );
           setLoading(false);
-          return; // ✋ Bloqueamos aquí: No se crean cookies, no hay redirección.
+          return;
         }
 
-        // --- Si pasó el filtro, seguimos con la sesión normal ---
+        // 🚀 LA JUGADA MAESTRA: Metemos todas las fechas en la "maleta" de sesión
         const sessionData = {
           id: result.user.id,
           username: result.user.username,
@@ -106,7 +99,16 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
           polla_id: result.user.polla_id,
           polla_name: selectedPool?.label ?? "",
           lang: language,
-          submission_date: result.user.submission_date || null,
+          // Inyectamos las 6 fechas dinámicas
+          sub_date_groups: result.user.sub_date_groups || null,
+          sub_date_r32: result.user.sub_date_r32 || null,
+          sub_date_r16: result.user.sub_date_r16 || null,
+          sub_date_qf: result.user.sub_date_qf || null,
+          sub_date_sf: result.user.sub_date_sf || null,
+          sub_date_f: result.user.sub_date_f || null,
+          // Mantenemos la vieja por compatibilidad, apuntando a la de grupos
+          submission_date:
+            result.user.sub_date_groups || result.user.submission_date || null,
         };
 
         const cookieValue = encodeURIComponent(JSON.stringify(sessionData));

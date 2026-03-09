@@ -38,6 +38,21 @@ export const AdminKnockoutBoard = ({
   officialMatches,
   lang,
 }: AdminKnockoutBoardProps) => {
+  // 📺 === INICIO DEL VAR ===
+  console.log("=== VAR: ¿QUÉ TRAE EXACTAMENTE UN PARTIDO? ===");
+  console.log(
+    "Muestra del partido en la posición 72 del array:",
+    officialMatches[72],
+  );
+
+  // Vamos a buscar específicamente el partido 73 (o el que usted haya probado)
+  const partido73 = officialMatches?.find(
+    (m) => m.match_number?.toString() === "73" || m.id?.toString() === "73",
+  );
+  console.log("🔍 Radiografía del Partido 73:", partido73);
+  console.log("================================");
+  // 📺 === FIN DEL VAR ===
+
   const [localMatches, setLocalMatches] = useState<any[]>(
     officialMatches || [],
   );
@@ -105,9 +120,13 @@ export const AdminKnockoutBoard = ({
     const updates: any[] = [];
 
     fullResolvedBracket.forEach((calcMatch) => {
+      // 🚀 BALA DE PLATA: Buscar por match_number o id
       const dbMatch = localMatches.find(
-        (m) => m.id?.toString() === calcMatch.id?.toString(),
+        (m) =>
+          m.match_number?.toString() === calcMatch.id?.toString() ||
+          m.id?.toString() === calcMatch.id?.toString(),
       );
+
       if (dbMatch) {
         const dbHome = dbMatch.home_team_id || null;
         const dbAway = dbMatch.away_team_id || null;
@@ -135,8 +154,11 @@ export const AdminKnockoutBoard = ({
         .then(() => {
           setLocalMatches((prev) =>
             prev.map((m) => {
+              // 🚀 BALA DE PLATA: Actualizar en memoria buscando por match_number o id
               const upd = updates.find(
-                (u) => u.matchId.toString() === m.id.toString(),
+                (u) =>
+                  u.matchId.toString() === m.match_number?.toString() ||
+                  u.matchId.toString() === m.id?.toString(),
               );
               if (upd) {
                 return {
@@ -170,10 +192,16 @@ export const AdminKnockoutBoard = ({
 
     try {
       setLocalMatches((prev) => {
-        const exists = prev.find((m) => m.id === matchId);
+        // 🚀 BALA DE PLATA: Buscar si ya existe por match_number o id
+        const exists = prev.find(
+          (m) =>
+            m.match_number?.toString() === matchId.toString() ||
+            m.id?.toString() === matchId.toString(),
+        );
         if (exists) {
           return prev.map((m) =>
-            m.id === matchId
+            m.match_number?.toString() === matchId.toString() ||
+            m.id?.toString() === matchId.toString()
               ? {
                   ...m,
                   home_score: hScore,
@@ -183,10 +211,12 @@ export const AdminKnockoutBoard = ({
               : m,
           );
         } else {
+          // Si por alguna razón no existe localmente, lo creamos con id y match_number igual para salir del paso en UI
           return [
             ...prev,
             {
               id: matchId,
+              match_number: matchId,
               home_score: hScore,
               away_score: aScore,
               winner_id: safeWinnerId,
@@ -211,16 +241,19 @@ export const AdminKnockoutBoard = ({
     side: "home" | "away",
     newTeamId: string,
   ) => {
+    // 🚀 BALA DE PLATA: Buscar partido por match_number o id
     const currentMatch =
-      localMatches.find((m) => m.id?.toString() === matchId.toString()) || {};
+      localMatches.find(
+        (m) =>
+          m.match_number?.toString() === matchId.toString() ||
+          m.id?.toString() === matchId.toString(),
+      ) || {};
 
     const newHomeId =
       side === "home" ? newTeamId || null : currentMatch.home_team_id || null;
     const newAwayId =
       side === "away" ? newTeamId || null : currentMatch.away_team_id || null;
 
-    // 👇 MAGIA 1: Si el equipo que acabamos de reemplazar ERA EL QUE IBA GANANDO,
-    // heredamos esa victoria al nuevo equipo automáticamente.
     let newWinnerId = currentMatch.winner_id;
     if (
       currentMatch.winner_id === currentMatch.home_team_id &&
@@ -236,6 +269,7 @@ export const AdminKnockoutBoard = ({
 
     setLocalMatches((prev) =>
       prev.map((m) =>
+        m.match_number?.toString() === matchId.toString() ||
         m.id?.toString() === matchId.toString()
           ? {
               ...m,
@@ -256,7 +290,6 @@ export const AdminKnockoutBoard = ({
         },
       ]);
 
-      // Si el ganador cambió, aseguramos que la base de datos lo sepa para avanzar al equipo correcto
       if (newWinnerId !== currentMatch.winner_id) {
         await saveOfficialScoreAction(
           Number(matchId),
@@ -280,15 +313,16 @@ export const AdminKnockoutBoard = ({
     return (
       <AdminPhaseColumn title={title}>
         {resolvedMatches.map((m) => {
+          // 🚀 BALA DE PLATA: Buscar el partido oficial para pintar los goles
           const matchData = localMatches.find(
-            (om) => om.id?.toString() === m.id?.toString(),
+            (om) =>
+              om.match_number?.toString() === m.id?.toString() ||
+              om.id?.toString() === m.id?.toString(),
           );
 
           const homeTeamData = { ...(m.home as any), seed: m.h };
           const awayTeamData = { ...(m.away as any), seed: m.a };
 
-          // 👇 MAGIA 2: Si es un tercero modificado manualmente, no solo le pasamos el nombre,
-          // sino que le inyectamos la bandera, el name_es y el GRUPO para que el label (3A, 3F) cambie solo.
           if (m.h?.startsWith("T_") && matchData?.home_team_id) {
             const manualTeam = availableThirds.find(
               (t) => t.id === matchData.home_team_id,
@@ -299,7 +333,7 @@ export const AdminKnockoutBoard = ({
               homeTeamData.name_es = manualTeam.name_es;
               homeTeamData.name_en = manualTeam.name_en;
               homeTeamData.flag = manualTeam.flag;
-              homeTeamData.group = manualTeam.group; // Esto cambia el label rojo!
+              homeTeamData.group = manualTeam.group;
             }
           }
           if (m.a?.startsWith("T_") && matchData?.away_team_id) {
@@ -312,7 +346,7 @@ export const AdminKnockoutBoard = ({
               awayTeamData.name_es = manualTeam.name_es;
               awayTeamData.name_en = manualTeam.name_en;
               awayTeamData.flag = manualTeam.flag;
-              awayTeamData.group = manualTeam.group; // Esto cambia el label rojo!
+              awayTeamData.group = manualTeam.group;
             }
           }
 
