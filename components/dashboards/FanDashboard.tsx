@@ -139,7 +139,6 @@ export const FanDashboard = ({
     handleLogoutAttempt,
   } = useFanDashboardLogic(safePredictions, userSession?.id, safeGroups);
 
-  // 🚀 TRADUCTOR INTERNO: Para que el bracket encuentre la predicción física
   const getPhysicalMatchId = (matchId: string | number) => {
     if (!officialScores) return matchId;
     const match = officialScores.find(
@@ -150,24 +149,30 @@ export const FanDashboard = ({
     return match ? match.id : matchId;
   };
 
-  // 🕵️‍♂️ EL ESPÍA DE EQUIPOS: Busca el nombre y bandera real si tenemos el ID en BD
-  // 🕵️‍♂️ EL ESPÍA DE EQUIPOS (Versión Todo-Terreno 🚜)
   const getTeamData = (teamId: string | null | undefined) => {
     if (!teamId) return null;
-
-    for (const group of safeGroups) {
-      if (!group.teams) continue; // Si el grupo no tiene equipos, saltamos
-
-      for (const item of group.teams) {
-        // La magia: Soportamos si Supabase lo manda directo (item) o anidado (item.team)
-        const t = item.team ? item.team : item;
-
-        if (t.id === teamId) {
-          return t; // ¡Lo encontramos!
+    let foundTeam: any = null;
+    const searchDeep = (obj: any) => {
+      if (foundTeam) return;
+      if (!obj || typeof obj !== "object") return;
+      if (
+        obj.id === teamId ||
+        obj.team_id === teamId ||
+        obj.teamId === teamId
+      ) {
+        if (obj.name || obj.name_es || obj.flag || obj.name_en) {
+          foundTeam = obj;
+          return;
         }
       }
-    }
-    return null;
+      for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+          searchDeep(obj[key]);
+        }
+      }
+    };
+    searchDeep(safeGroups);
+    return foundTeam;
   };
 
   const handleFinalAdvance = (
@@ -317,36 +322,21 @@ export const FanDashboard = ({
                     </div>
                   }
                 >
-                  {/* 🚨 ESCÁNER DE DEBUG V2 (TEMPORAL) 🚨 */}
-                  <div className="w-full max-w-sm mb-6 p-4 bg-red-950 border-2 border-red-500 rounded-xl text-xs text-white font-mono shadow-[0_0_15px_rgba(239,68,68,0.5)]">
-                    <p className="font-bold text-red-400 border-b border-red-500/50 pb-2 mb-2">
-                      🕵️‍♂️ ESCÁNER V2: ABRIENDO EL PRONÓSTICO
-                    </p>
-                    <p className="mb-2 text-yellow-400">
-                      Contenido exacto del Partido 73:
-                    </p>
-                    <div className="p-2 bg-black border border-white/20 rounded break-words text-[10px]">
-                      {JSON.stringify(
-                        safePredictions.find(
-                          (p) =>
-                            p.match_id?.toString() ===
-                              getPhysicalMatchId(73)?.toString() ||
-                            p.match_id?.toString() === "73",
-                        ) || { error: "No encontrado" },
-                      )}
-                    </div>
-                  </div>
                   {/* 16AVOS */}
                   <PhaseColumn
                     title={t.bracketPhaseR32Full}
                     isActive={
-                      safeConfig?.allow_r32 &&
-                      !userSession?.sub_date_r32 &&
-                      !hasSubmitted
+                      safeConfig?.allow_r32 && !userSession?.sub_date_r32
                     }
+                    isSubmitted={!!userSession?.sub_date_r32}
                     lang={lang}
                     showFloating={showFloating}
-                    onAction={handleSubmit}
+                    onAction={() =>
+                      handleSubmit(
+                        "r32",
+                        bracketMatches.map((m) => getPhysicalMatchId(m.id)),
+                      )
+                    }
                   >
                     {bracketMatches.length > 0 ? (
                       bracketMatches.map((match, idx) => {
@@ -357,7 +347,6 @@ export const FanDashboard = ({
                             p.match_id?.toString() === match.id?.toString(),
                         );
 
-                        // 🎯 REGLA DE ORO: Base de datos primero, simulador después
                         const dbHome = getTeamData(
                           prediction?.predicted_home_team,
                         );
@@ -372,6 +361,7 @@ export const FanDashboard = ({
                             key={match.id}
                             matchId={match.id}
                             matchCode={`M${match.id}`}
+                            isLocked={!!userSession?.sub_date_r32} // 🔒 BLOQUEO ACTIVADO
                             lang={lang}
                             onAdvanceTeam={handleAdvanceTeam}
                             style={
@@ -382,7 +372,6 @@ export const FanDashboard = ({
                             homeTeam={{
                               id: finalHome?.id,
                               seed: match.h,
-                              // Si dbHome falló, pero hay predicción, grita "EQUIPO EN BD", si no, usa simulador
                               name:
                                 finalHome?.name_es ||
                                 (prediction?.predicted_home_team
@@ -422,13 +411,17 @@ export const FanDashboard = ({
                   <PhaseColumn
                     title={t.bracketPhaseR16Full}
                     isActive={
-                      safeConfig?.allow_r16 &&
-                      !userSession?.sub_date_r16 &&
-                      !hasSubmitted
+                      safeConfig?.allow_r16 && !userSession?.sub_date_r16
                     }
+                    isSubmitted={!!userSession?.sub_date_r16}
                     lang={lang}
                     showFloating={showFloating}
-                    onAction={handleSubmit}
+                    onAction={() =>
+                      handleSubmit(
+                        "r16",
+                        R16_MATCHUPS.map((m) => getPhysicalMatchId(m.id)),
+                      )
+                    }
                   >
                     {R16_MATCHUPS.map((match, idx) => {
                       const prediction = safePredictions?.find(
@@ -455,6 +448,7 @@ export const FanDashboard = ({
                           key={match.id}
                           matchId={match.id}
                           matchCode={`M${match.id}`}
+                          isLocked={!!userSession?.sub_date_r16} // 🔒 BLOQUEO ACTIVADO
                           lang={lang}
                           onAdvanceTeam={handleAdvanceTeam}
                           style={
@@ -492,14 +486,16 @@ export const FanDashboard = ({
                   {/* CUARTOS */}
                   <PhaseColumn
                     title={t.bracketPhaseQFFull}
-                    isActive={
-                      safeConfig?.allow_qf &&
-                      !userSession?.sub_date_qf &&
-                      !hasSubmitted
-                    }
+                    isActive={safeConfig?.allow_qf && !userSession?.sub_date_qf}
+                    isSubmitted={!!userSession?.sub_date_qf}
                     lang={lang}
                     showFloating={showFloating}
-                    onAction={handleSubmit}
+                    onAction={() =>
+                      handleSubmit(
+                        "qf",
+                        QF_MATCHUPS.map((m) => getPhysicalMatchId(m.id)),
+                      )
+                    }
                   >
                     {QF_MATCHUPS.map((match, idx) => {
                       const prediction = safePredictions?.find(
@@ -526,6 +522,7 @@ export const FanDashboard = ({
                           key={match.id}
                           matchId={match.id}
                           matchCode={`M${match.id}`}
+                          isLocked={!!userSession?.sub_date_qf} // 🔒 BLOQUEO ACTIVADO
                           lang={lang}
                           onAdvanceTeam={handleAdvanceTeam}
                           style={
@@ -563,14 +560,16 @@ export const FanDashboard = ({
                   {/* SEMIS */}
                   <PhaseColumn
                     title={t.bracketPhaseSFFull}
-                    isActive={
-                      safeConfig?.allow_sf &&
-                      !userSession?.sub_date_sf &&
-                      !hasSubmitted
-                    }
+                    isActive={safeConfig?.allow_sf && !userSession?.sub_date_sf}
+                    isSubmitted={!!userSession?.sub_date_sf}
                     lang={lang}
                     showFloating={showFloating}
-                    onAction={handleSubmit}
+                    onAction={() =>
+                      handleSubmit(
+                        "sf",
+                        SF_MATCHUPS.map((m) => getPhysicalMatchId(m.id)),
+                      )
+                    }
                   >
                     {SF_MATCHUPS.map((match, idx) => {
                       const prediction = safePredictions?.find(
@@ -597,6 +596,7 @@ export const FanDashboard = ({
                           key={match.id}
                           matchId={match.id}
                           matchCode={`M${match.id}`}
+                          isLocked={!!userSession?.sub_date_sf} // 🔒 BLOQUEO ACTIVADO
                           lang={lang}
                           onAdvanceTeam={handleAdvanceTeam}
                           style={
@@ -634,14 +634,16 @@ export const FanDashboard = ({
                   {/* FINAL */}
                   <PhaseColumn
                     title={t.bracketPhaseFTitle}
-                    isActive={
-                      safeConfig?.allow_f &&
-                      !userSession?.sub_date_f &&
-                      !hasSubmitted
-                    }
+                    isActive={safeConfig?.allow_f && !userSession?.sub_date_f}
+                    isSubmitted={!!userSession?.sub_date_f}
                     lang={lang}
                     showFloating={showFloating}
-                    onAction={handleSubmit}
+                    onAction={() =>
+                      handleSubmit(
+                        "f",
+                        F_MATCHUPS.map((m) => getPhysicalMatchId(m.id)),
+                      )
+                    }
                   >
                     {resolveBracketMatches(
                       safeGroups,
@@ -670,6 +672,7 @@ export const FanDashboard = ({
                           key={match.id}
                           matchId={match.id}
                           matchCode={`M${match.id}`}
+                          isLocked={!!userSession?.sub_date_f} // 🔒 BLOQUEO ACTIVADO
                           lang={lang}
                           onAdvanceTeam={(id, w, isManual) =>
                             handleFinalAdvance(id, w, isFinal, isManual)

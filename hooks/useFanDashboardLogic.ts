@@ -6,6 +6,7 @@ import {
   getUserStandingsAction,
   saveGroupStandingsAction,
   saveGroupBulkPredictionsAction,
+  submitKnockoutPhaseAction,
 } from "@/lib/actions/fan-actions";
 import { resolveBracketMatches } from "@/utils/bracket-resolver";
 
@@ -310,28 +311,112 @@ export const useFanDashboardLogic = (
     return () => clearInterval(autoSaveInterval);
   }, [hasUnsavedChanges]);
 
-  const handleSubmit = async () => {
+  // 🚦 LA ADUANA BLINDADA
+  // 🚦 LA ADUANA BLINDADA (V2 - Corregida con IDs Reales)
+  const handleSubmit = async (
+    phase?: string,
+    phaseMatchIds?: (string | number)[],
+  ) => {
     if (isSubmitting || hasSubmitted) return;
     if (!userId) return alert("Error: No se identifica el usuario.");
-    setIsSubmitting(true);
-    try {
-      const result = await submitPredictionsAction(userId);
-      if (result.success) {
-        setHasSubmitted(true);
-        setHasUnsavedChanges(false);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-        confetti({
-          particleCount: 150,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ["#22c55e", "#eab308", "#ffffff"],
-          zIndex: 9999,
-        });
-      } else alert("Hubo un problema: " + (result as any).error);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsSubmitting(false);
+
+    if (hasUnsavedChanges) {
+      await handleManualSave(true);
+    }
+
+    // Si viene una FASE ESPECÍFICA (Finales)
+    if (phase && phaseMatchIds) {
+      let phaseName = "";
+      if (phase === "r32") phaseName = "16avos de Final";
+      else if (phase === "r16") phaseName = "Octavos de Final";
+      else if (phase === "qf") phaseName = "Cuartos de Final";
+      else if (phase === "sf") phaseName = "Semifinales";
+      else if (phase === "f") phaseName = "Finales";
+
+      let missing = 0;
+
+      // Inspeccionamos las cédulas exactas de los partidos
+      for (const mId of phaseMatchIds) {
+        // 1. Buscamos en la base de datos
+        const pred = initialPredictions.find(
+          (p: any) => p.match_id?.toString() === mId.toString(),
+        );
+        // 2. Buscamos en la memoria (por si el fan acaba de escribir el número y no ha guardado)
+        const unsaved = unsavedPredictions.current[mId];
+
+        const hScore =
+          unsaved && unsaved.hScore !== undefined
+            ? unsaved.hScore
+            : pred?.pred_home;
+        const aScore =
+          unsaved && unsaved.aScore !== undefined
+            ? unsaved.aScore
+            : pred?.pred_away;
+
+        if (
+          hScore === null ||
+          hScore === undefined ||
+          hScore === "" ||
+          aScore === null ||
+          aScore === undefined ||
+          aScore === ""
+        ) {
+          missing++;
+        }
+      }
+
+      // Si le faltan, le sacamos tarjeta amarilla y abortamos
+      if (missing > 0) {
+        alert(
+          `⚠️ ADUANA: Te faltan ${missing} partidos por llenar en los ${phaseName}. Complétalos todos antes de enviar.`,
+        );
+        return;
+      }
+
+      // Si todo está lleno, sellamos la fase
+      setIsSubmitting(true);
+      try {
+        const result = await submitKnockoutPhaseAction(userId, phase);
+        if (result.success) {
+          confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ["#22c55e", "#eab308", "#ffffff"],
+            zIndex: 9999,
+          });
+          setTimeout(() => window.location.reload(), 1500);
+        } else {
+          alert("Hubo un problema sellando la fase: " + result.error);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+    // Si NO viene fase, es el envío de Grupos original
+    else {
+      setIsSubmitting(true);
+      try {
+        const result = await submitPredictionsAction(userId);
+        if (result.success) {
+          setHasSubmitted(true);
+          setHasUnsavedChanges(false);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ["#22c55e", "#eab308", "#ffffff"],
+            zIndex: 9999,
+          });
+        } else alert("Hubo un problema: " + (result as any).error);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 

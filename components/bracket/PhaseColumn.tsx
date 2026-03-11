@@ -10,6 +10,7 @@ interface PhaseColumnProps {
   children?: React.ReactNode;
   isOfficial?: boolean;
   onAction?: () => void;
+  isSubmitted?: boolean; // 👈 NUEVO: Recibimos la bandera
 }
 
 export const PhaseColumn: React.FC<PhaseColumnProps> = ({
@@ -20,6 +21,7 @@ export const PhaseColumn: React.FC<PhaseColumnProps> = ({
   children,
   isOfficial,
   onAction,
+  isSubmitted, // 👈 Lo pasamos al Header
 }) => {
   return (
     <div className="flex flex-col w-[280px] shrink-0 relative h-full">
@@ -30,6 +32,7 @@ export const PhaseColumn: React.FC<PhaseColumnProps> = ({
           lang={lang}
           isOfficial={isOfficial}
           onAction={onAction}
+          isSubmitted={isSubmitted}
         />
       </div>
       <div className="flex flex-col gap-4 pb-12">{children}</div>

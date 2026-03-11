@@ -30,27 +30,22 @@ export const BracketMatchRow: React.FC<BracketMatchRowProps> = ({
     }
   };
 
-  // 🪄 MAGIA 1: Detectar la tecla "Enter" para saltar a la siguiente cajita
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      e.preventDefault(); // Evitamos que haga saltos de línea raros
+      e.preventDefault();
 
-      // Buscamos todas las cajitas de marcador en la pantalla usando la clase 'score-input'
       const inputs = Array.from(
         document.querySelectorAll(".score-input"),
       ) as HTMLInputElement[];
 
-      // Encontramos en cuál estamos parados ahora mismo
       const currentIndex = inputs.indexOf(e.currentTarget);
 
-      // Si hay una siguiente cajita, ¡pum! le pasamos el foco
       if (currentIndex > -1 && currentIndex < inputs.length - 1) {
         inputs[currentIndex + 1].focus();
       }
     }
   };
 
-  // 🪄 MAGIA 2: Seleccionar (subrayar) todo el texto apenas entra a la cajita
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     e.target.select();
   };
@@ -79,17 +74,27 @@ export const BracketMatchRow: React.FC<BracketMatchRowProps> = ({
           }`}
         />
 
-        {/* INPUT REPOTENCIADO */}
+        {/* INPUT REPOTENCIADO - CON BORDE VISIBLE 📦 */}
         <input
           type="number"
           disabled={isLocked}
-          enterKeyHint="next" // 👈 ¡EL TRUCO! Esto pone la flechita "Siguiente" en el teclado del celular
+          enterKeyHint="next"
           value={score}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
           placeholder="-"
-          className="score-input w-9 h-7 bg-white text-black text-center font-black rounded-md border-none shadow-inner focus:ring-2 focus:ring-cyan-500 outline-none transition-all text-sm"
+          className={`score-input w-9 h-7 text-center font-black rounded-md shadow-inner outline-none transition-all text-sm ${
+            isLocked
+              ? "bg-[#1e293b] border border-[#475569] cursor-not-allowed opacity-100" // 👈 AQUÍ LE PUSE EL BORDE
+              : "bg-white text-black border-none focus:ring-2 focus:ring-cyan-500"
+          }`}
+          style={{
+            opacity: 1,
+            WebkitOpacity: 1,
+            WebkitTextFillColor: isLocked ? "#ffffff" : "#000000",
+            color: isLocked ? "#ffffff" : "#000000",
+          }}
         />
       </div>
     </div>

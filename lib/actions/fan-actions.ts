@@ -228,3 +228,50 @@ export async function saveGroupBulkPredictionsAction(
     return { success: false, error: error.message };
   }
 }
+
+// 🔒 NUEVO CANDADO PARA FASES DE ELIMINATORIA
+export async function submitKnockoutPhaseAction(userId: string, phase: string) {
+  const { createClient } = await import("@/utils/supabase/server");
+  const supabase = await createClient();
+
+  const columnToUpdate = `sub_date_${phase}`;
+  const now = new Date().toISOString();
+
+  try {
+    // 1. Guardamos la fecha en la Base de Datos
+    const { error } = await supabase
+      .from("profiles")
+      .update({ [columnToUpdate]: now })
+      .eq("id", userId);
+
+    if (error) throw error;
+
+    // 2. 🍪 LA MAGIA: Actualizamos la galleta del navegador
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("polla_session");
+
+    if (sessionCookie) {
+      // Abrimos la galleta vieja
+      const sessionData = JSON.parse(decodeURIComponent(sessionCookie.value));
+
+      // Le inyectamos la nueva fecha de bloqueo (ej: sub_date_r32)
+      sessionData[columnToUpdate] = now;
+
+      // Horneamos la galleta de nuevo y se la mandamos al navegador
+      cookieStore.set(
+        "polla_session",
+        encodeURIComponent(JSON.stringify(sessionData)),
+        {
+          path: "/",
+          maxAge: 60 * 60 * 24 * 30, // 30 días
+          sameSite: "lax",
+        },
+      );
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error(`Error sellando la fase ${phase}:`, error);
+    return { success: false, error: error.message };
+  }
+}
