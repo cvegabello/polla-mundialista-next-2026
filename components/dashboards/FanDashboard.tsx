@@ -340,12 +340,29 @@ export const FanDashboard = ({
                   >
                     {bracketMatches.length > 0 ? (
                       bracketMatches.map((match, idx) => {
+                        const physicalId = getPhysicalMatchId(match.id);
                         const prediction = safePredictions?.find(
                           (p) =>
-                            p.match_id?.toString() ===
-                              getPhysicalMatchId(match.id)?.toString() ||
+                            p.match_id?.toString() === physicalId?.toString() ||
                             p.match_id?.toString() === match.id?.toString(),
                         );
+
+                        // 👇 LECTOR DEL MARCADOR OFICIAL
+                        const offScore = officialScores?.find(
+                          (m) =>
+                            m.match_number?.toString() ===
+                              physicalId?.toString() ||
+                            m.id?.toString() === physicalId?.toString(),
+                        );
+                        const officialScoreObj =
+                          offScore &&
+                          offScore.home_score !== null &&
+                          offScore.away_score !== null
+                            ? {
+                                home: offScore.home_score,
+                                away: offScore.away_score,
+                              }
+                            : undefined;
 
                         const dbHome = getTeamData(
                           prediction?.predicted_home_team,
@@ -361,7 +378,7 @@ export const FanDashboard = ({
                             key={match.id}
                             matchId={match.id}
                             matchCode={`M${match.id}`}
-                            isLocked={!!userSession?.sub_date_r32} // 🔒 BLOQUEO ACTIVADO
+                            isLocked={!!userSession?.sub_date_r32}
                             lang={lang}
                             onAdvanceTeam={handleAdvanceTeam}
                             style={
@@ -397,6 +414,10 @@ export const FanDashboard = ({
                             }}
                             prediction={prediction}
                             onSavePrediction={handleSaveKnockoutPrediction}
+                            // 👇 ENVIAMOS PUNTOS Y OFICIAL
+                            pointsWon={prediction?.points_won}
+                            pointsCondition={prediction?.points_condition}
+                            officialScore={officialScoreObj}
                           />
                         );
                       })
@@ -424,12 +445,28 @@ export const FanDashboard = ({
                     }
                   >
                     {R16_MATCHUPS.map((match, idx) => {
+                      const physicalId = getPhysicalMatchId(match.id);
                       const prediction = safePredictions?.find(
                         (p) =>
-                          p.match_id?.toString() ===
-                            getPhysicalMatchId(match.id)?.toString() ||
+                          p.match_id?.toString() === physicalId?.toString() ||
                           p.match_id?.toString() === match.id?.toString(),
                       );
+
+                      const offScore = officialScores?.find(
+                        (m) =>
+                          m.match_number?.toString() ===
+                            physicalId?.toString() ||
+                          m.id?.toString() === physicalId?.toString(),
+                      );
+                      const officialScoreObj =
+                        offScore &&
+                        offScore.home_score !== null &&
+                        offScore.away_score !== null
+                          ? {
+                              home: offScore.home_score,
+                              away: offScore.away_score,
+                            }
+                          : undefined;
 
                       const dbHome = getTeamData(
                         prediction?.predicted_home_team,
@@ -448,7 +485,7 @@ export const FanDashboard = ({
                           key={match.id}
                           matchId={match.id}
                           matchCode={`M${match.id}`}
-                          isLocked={!!userSession?.sub_date_r16} // 🔒 BLOQUEO ACTIVADO
+                          isLocked={!!userSession?.sub_date_r16}
                           lang={lang}
                           onAdvanceTeam={handleAdvanceTeam}
                           style={
@@ -478,6 +515,9 @@ export const FanDashboard = ({
                           }}
                           prediction={prediction}
                           onSavePrediction={handleSaveKnockoutPrediction}
+                          pointsWon={prediction?.points_won}
+                          pointsCondition={prediction?.points_condition}
+                          officialScore={officialScoreObj}
                         />
                       );
                     })}
@@ -498,12 +538,28 @@ export const FanDashboard = ({
                     }
                   >
                     {QF_MATCHUPS.map((match, idx) => {
+                      const physicalId = getPhysicalMatchId(match.id);
                       const prediction = safePredictions?.find(
                         (p) =>
-                          p.match_id?.toString() ===
-                            getPhysicalMatchId(match.id)?.toString() ||
+                          p.match_id?.toString() === physicalId?.toString() ||
                           p.match_id?.toString() === match.id?.toString(),
                       );
+
+                      const offScore = officialScores?.find(
+                        (m) =>
+                          m.match_number?.toString() ===
+                            physicalId?.toString() ||
+                          m.id?.toString() === physicalId?.toString(),
+                      );
+                      const officialScoreObj =
+                        offScore &&
+                        offScore.home_score !== null &&
+                        offScore.away_score !== null
+                          ? {
+                              home: offScore.home_score,
+                              away: offScore.away_score,
+                            }
+                          : undefined;
 
                       const dbHome = getTeamData(
                         prediction?.predicted_home_team,
@@ -522,7 +578,7 @@ export const FanDashboard = ({
                           key={match.id}
                           matchId={match.id}
                           matchCode={`M${match.id}`}
-                          isLocked={!!userSession?.sub_date_qf} // 🔒 BLOQUEO ACTIVADO
+                          isLocked={!!userSession?.sub_date_qf}
                           lang={lang}
                           onAdvanceTeam={handleAdvanceTeam}
                           style={
@@ -552,6 +608,9 @@ export const FanDashboard = ({
                           }}
                           prediction={prediction}
                           onSavePrediction={handleSaveKnockoutPrediction}
+                          pointsWon={prediction?.points_won}
+                          pointsCondition={prediction?.points_condition}
+                          officialScore={officialScoreObj}
                         />
                       );
                     })}
@@ -572,12 +631,28 @@ export const FanDashboard = ({
                     }
                   >
                     {SF_MATCHUPS.map((match, idx) => {
+                      const physicalId = getPhysicalMatchId(match.id);
                       const prediction = safePredictions?.find(
                         (p) =>
-                          p.match_id?.toString() ===
-                            getPhysicalMatchId(match.id)?.toString() ||
+                          p.match_id?.toString() === physicalId?.toString() ||
                           p.match_id?.toString() === match.id?.toString(),
                       );
+
+                      const offScore = officialScores?.find(
+                        (m) =>
+                          m.match_number?.toString() ===
+                            physicalId?.toString() ||
+                          m.id?.toString() === physicalId?.toString(),
+                      );
+                      const officialScoreObj =
+                        offScore &&
+                        offScore.home_score !== null &&
+                        offScore.away_score !== null
+                          ? {
+                              home: offScore.home_score,
+                              away: offScore.away_score,
+                            }
+                          : undefined;
 
                       const dbHome = getTeamData(
                         prediction?.predicted_home_team,
@@ -596,7 +671,7 @@ export const FanDashboard = ({
                           key={match.id}
                           matchId={match.id}
                           matchCode={`M${match.id}`}
-                          isLocked={!!userSession?.sub_date_sf} // 🔒 BLOQUEO ACTIVADO
+                          isLocked={!!userSession?.sub_date_sf}
                           lang={lang}
                           onAdvanceTeam={handleAdvanceTeam}
                           style={
@@ -626,6 +701,9 @@ export const FanDashboard = ({
                           }}
                           prediction={prediction}
                           onSavePrediction={handleSaveKnockoutPrediction}
+                          pointsWon={prediction?.points_won}
+                          pointsCondition={prediction?.points_condition}
+                          officialScore={officialScoreObj}
                         />
                       );
                     })}
@@ -651,12 +729,28 @@ export const FanDashboard = ({
                       F_MATCHUPS,
                     ).map((match, idx) => {
                       const isFinal = idx === 0;
+                      const physicalId = getPhysicalMatchId(match.id);
                       const prediction = safePredictions?.find(
                         (p) =>
-                          p.match_id?.toString() ===
-                            getPhysicalMatchId(match.id)?.toString() ||
+                          p.match_id?.toString() === physicalId?.toString() ||
                           p.match_id?.toString() === match.id?.toString(),
                       );
+
+                      const offScore = officialScores?.find(
+                        (m) =>
+                          m.match_number?.toString() ===
+                            physicalId?.toString() ||
+                          m.id?.toString() === physicalId?.toString(),
+                      );
+                      const officialScoreObj =
+                        offScore &&
+                        offScore.home_score !== null &&
+                        offScore.away_score !== null
+                          ? {
+                              home: offScore.home_score,
+                              away: offScore.away_score,
+                            }
+                          : undefined;
 
                       const dbHome = getTeamData(
                         prediction?.predicted_home_team,
@@ -672,7 +766,7 @@ export const FanDashboard = ({
                           key={match.id}
                           matchId={match.id}
                           matchCode={`M${match.id}`}
-                          isLocked={!!userSession?.sub_date_f} // 🔒 BLOQUEO ACTIVADO
+                          isLocked={!!userSession?.sub_date_f}
                           lang={lang}
                           onAdvanceTeam={(id, w, isManual) =>
                             handleFinalAdvance(id, w, isFinal, isManual)
@@ -703,6 +797,9 @@ export const FanDashboard = ({
                           }}
                           prediction={prediction}
                           onSavePrediction={handleSaveKnockoutPrediction}
+                          pointsWon={prediction?.points_won}
+                          pointsCondition={prediction?.points_condition}
+                          officialScore={officialScoreObj}
                         />
                       );
                     })}

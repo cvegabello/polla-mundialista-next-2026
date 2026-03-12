@@ -100,9 +100,35 @@ export const useFanDashboardLogic = (
     return () => window.removeEventListener("scroll", handleScroll, true);
   }, []);
 
+  // 🚀 EL CARGADOR DE LLAVES (Con Interruptor Inteligente)
   useEffect(() => {
     const loadBracket = async () => {
       if (currentView === "pred_finals" && userId) {
+        // 1. EL SENSOR: ¿El SuperAdmin ya inyectó equipos oficiales en 16avos?
+        // Buscamos si en las predicciones ya hay equipos con UUID para los partidos 73 al 88 (o 383+).
+        const isBracketSeeded = initialPredictions.some(
+          (p: any) =>
+            (p.match_id?.toString() === "73" ||
+              p.match_id?.toString() === "383" ||
+              Number(p.match_id) >= 73) &&
+            p.pred_home !== undefined &&
+            p.predicted_home_team !== null,
+        );
+
+        if (isBracketSeeded) {
+          // 🏎️ MODO VISTA BRUTA (Turbo): Nos saltamos la base de datos.
+          // Llamamos al resolver con un arreglo vacío solo para que nos escupa el "esqueleto" de los partidos.
+          const emptyStandings: any[] = [];
+          const resolved = resolveBracketMatches(
+            emptyStandings,
+            initialPredictions,
+          );
+          setBracketMatches(resolved);
+          setIsLoadingBracket(false); // Ni siquiera encendemos el letrero
+          return; // Abortamos el resto de la función
+        }
+
+        // 🐢 MODO CALCULADORA (El clásico): Si todavía estamos en Fase de Grupos, hace la matemática.
         setIsLoadingBracket(true);
         try {
           const standings = await getUserStandingsAction(userId);
@@ -116,7 +142,7 @@ export const useFanDashboardLogic = (
       }
     };
     loadBracket();
-  }, [currentView, userId]);
+  }, [currentView, userId, initialPredictions]);
 
   const handlePredictionChange = useCallback(
     (matchId: string, isComplete: boolean) => {

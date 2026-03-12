@@ -33,6 +33,9 @@ interface BracketMatchCardProps {
     aScore: number,
     winnerId: string,
   ) => void;
+  pointsWon?: number | null;
+  pointsCondition?: string | null;
+  officialScore?: { home: number; away: number };
 }
 
 export const BracketMatchCard = ({
@@ -47,6 +50,9 @@ export const BracketMatchCard = ({
   onAdvanceTeam,
   prediction,
   onSavePrediction,
+  pointsWon,
+  pointsCondition,
+  officialScore,
 }: BracketMatchCardProps) => {
   const getName = (team: TeamProps) => {
     if (lang === "en") return team.name_en || team.name_es || team.name;
@@ -60,7 +66,6 @@ export const BracketMatchCard = ({
     prediction?.pred_away != null ? String(prediction.pred_away) : "",
   );
 
-  // 🚀 ARREGLO 1: Leemos el ganador apenas nace el componente para evitar que arranque en falso
   const initialWinner = prediction?.predicted_winner;
   const [homeWinner, setHomeWinner] = useState(
     !!initialWinner && initialWinner === homeTeam?.id,
@@ -70,8 +75,6 @@ export const BracketMatchCard = ({
   );
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Bandera para saber si el cambio vino de las manos del usuario
   const isUserInteraction = useRef(false);
 
   const hScore = parseInt(homeScore);
@@ -79,7 +82,6 @@ export const BracketMatchCard = ({
   const isComplete = !isNaN(hScore) && !isNaN(aScore);
   const isTie = isComplete && hScore === aScore;
 
-  // 🚀 ARREGLO 2: Mantenemos sincronizado si llegan datos frescos sin parpadeos extraños
   useEffect(() => {
     const winner = prediction?.predicted_winner;
     if (winner) {
@@ -88,22 +90,17 @@ export const BracketMatchCard = ({
     }
   }, [homeTeam?.id, awayTeam?.id, prediction?.predicted_winner]);
 
-  // EL CEREBRO DE LA TARJETA
   useEffect(() => {
     if (!isComplete) {
       setHomeWinner(false);
       setAwayWinner(false);
       if (onAdvanceTeam)
         onAdvanceTeam(matchId, null, isUserInteraction.current);
-      // 🚀 CIRUGÍA LÁSER: Si no está completo pero fue el usuario quien borró, avisamos al Hook
       if (onSavePrediction && isUserInteraction.current) {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-
         saveTimeoutRef.current = setTimeout(() => {
-          // Mandamos null si está vacío, o el número si hay algo
           const valH = homeScore === "" ? null : parseInt(homeScore);
           const valA = awayScore === "" ? null : parseInt(awayScore);
-
           onSavePrediction(matchId, valH as any, valA as any, "" as any);
           isUserInteraction.current = false;
         }, 1000);
@@ -145,14 +142,12 @@ export const BracketMatchCard = ({
         ? awayTeam?.id
         : null;
 
-    // SOLO GUARDAMOS SI EL USUARIO TOCÓ LA TARJETA (isUserInteraction.current === true)
     if (hasWinner && onSavePrediction && isUserInteraction.current) {
       if (winnerId) {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-
         saveTimeoutRef.current = setTimeout(() => {
           onSavePrediction(matchId, hScore, aScore, winnerId);
-          isUserInteraction.current = false; // Apagamos la bandera después de guardar
+          isUserInteraction.current = false;
         }, 1000);
       }
     }
@@ -175,17 +170,14 @@ export const BracketMatchCard = ({
     return team.seed;
   };
 
-  // ENVOLTURAS PARA DETECTAR LA INTERACCIÓN HUMANA
   const handleUserHomeScore = (val: string) => {
     isUserInteraction.current = true;
     setHomeScore(val);
   };
-
   const handleUserAwayScore = (val: string) => {
     isUserInteraction.current = true;
     setAwayScore(val);
   };
-
   const handleUserHomeWin = () => {
     if (!isTie) return;
     isUserInteraction.current = true;
@@ -193,7 +185,6 @@ export const BracketMatchCard = ({
     setAwayWinner(false);
     if (onAdvanceTeam) onAdvanceTeam(matchId, homeTeam);
   };
-
   const handleUserAwayWin = () => {
     if (!isTie) return;
     isUserInteraction.current = true;
@@ -210,18 +201,63 @@ export const BracketMatchCard = ({
     ? "bg-gradient-to-b from-amber-200 via-yellow-500 to-orange-500"
     : "bg-gradient-to-b from-cyan-400 via-purple-500 to-pink-500";
 
+  // 👇 PASTILLA DE PUNTOS BLINDADA E INTELIGENTE 👇
+  const getPointsTag = () => {
+    if (pointsWon === undefined || pointsWon === null) return null;
+
+    const isSuccess = pointsWon > 0;
+
+    // Colores obligados en Hexadecimal para que el navegador no los borre
+    const bg = isSuccess
+      ? "bg-[#0f172a] border-[#10b981] text-yellow-500"
+      : "bg-[#0f172a] border-[#ef4444] text-red-500";
+    const icon = isSuccess ? "✅" : "❌";
+
+    // Deducción automática: Si no llega texto, usamos los puntos para adivinar
+    let label = "";
+    if (isSuccess) {
+      const cond = (pointsCondition || "").toUpperCase();
+      if (cond.includes("EXACT") || cond.includes("PLENO") || pointsWon === 5)
+        label = "EXACTO";
+      else if (cond.includes("DIFF") || cond.includes("DIF") || pointsWon === 3)
+        label = "DIF. GOL";
+      else if (
+        cond.includes("WINNER") ||
+        cond.includes("GANADOR") ||
+        pointsWon === 1
+      )
+        label = "GANADOR";
+      else label = cond || "ACIERTO";
+    } else {
+      label = "FALLO";
+    }
+
+    const displayPoints = isSuccess ? `+${pointsWon}` : `${pointsWon}`;
+
+    return (
+      <div
+        className={`flex items-center gap-1.5 px-2 py-0.5 rounded border ${bg} text-[11px] font-black tracking-widest uppercase z-50 shadow-md opacity-100`}
+      >
+        <span>
+          {icon} {label} {displayPoints}
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div
       style={style}
-      className={`shrink-0 group relative flex flex-col w-full bg-black/90 backdrop-blur-lg rounded-2xl border overflow-hidden transition-all duration-300 ${containerClasses}`}
+      className={`shrink-0 group relative flex flex-col w-full bg-black/90 backdrop-blur-lg rounded-2xl border overflow-hidden transition-all duration-300 ${containerClasses} pb-1.5`}
     >
       <div
         className={`absolute left-0 top-0 bottom-0 w-1 ${accentLineClasses}`}
       />
 
-      <div className="flex items-center px-3 py-0.5 bg-gray-600/20 border-b border-white/20">
+      {/* HEADER: Con MXXX y la Pastilla Inteligente */}
+      <div className="flex items-center justify-between px-3 py-1.5 bg-gray-600/20 border-b border-white/20">
         <div
-          className={`px-1 py-0.1 rounded-md ${isFinal ? "bg-amber-500/20" : "bg-gray-400"}`}
+          className={`px-1.5 py-0.5 rounded-md ${isFinal ? "bg-amber-500/20" : "bg-gray-400"}`}
         >
           <span
             className={`text-[11px] font-bold tracking-[0.30em] ${isFinal ? "text-amber-200 drop-shadow-[0_0_5px_rgba(251,191,36,0.2)]" : "text-orange-800 drop-shadow-[0_0_5px_rgba(251,191,36,0.8)]"}`}
@@ -229,9 +265,10 @@ export const BracketMatchCard = ({
             {isFinal ? `🏆 ${matchCode}` : matchCode}
           </span>
         </div>
+        {getPointsTag()}
       </div>
 
-      <div className="fflex flex-col px-2 py-1.5 gap-0">
+      <div className="flex flex-col px-2 py-2 gap-0">
         <BracketMatchRow
           seed={getDisplaySeed(homeTeam) || "1A"}
           teamName={getName(homeTeam) || homeTeam.name}
@@ -243,7 +280,7 @@ export const BracketMatchCard = ({
           isTie={isTie}
         />
 
-        <div className="h-px w-full bg-white/10 my-0" />
+        <div className="h-px w-full bg-white/10 my-1" />
 
         <BracketMatchRow
           seed={getDisplaySeed(awayTeam) || "2B"}
@@ -255,6 +292,17 @@ export const BracketMatchCard = ({
           onWinnerChange={handleUserAwayWin}
           isTie={isTie}
         />
+
+        {/* 👇 MARCADOR OFICIAL PEQUEÑO, ELEGANTE Y ESTILO FASE DE GRUPOS 👇 */}
+        {officialScore && (
+          <div className="flex justify-center mt-2">
+            <div className="px-2 py-[2px] rounded bg-[#eb380c] border border-white shadow-md">
+              <span className="text-[11px] font-bold text-slate-300 tracking-wider">
+                OFICIAL: {officialScore.home} - {officialScore.away}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
