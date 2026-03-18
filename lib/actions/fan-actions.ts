@@ -275,3 +275,75 @@ export async function submitKnockoutPhaseAction(userId: string, phase: string) {
     return { success: false, error: error.message };
   }
 }
+
+// 👇 CONSULTA PARA EL REPORTE GENERAL (EL VAR) 👇
+// 👇 CONSULTA PARA EL REPORTE GENERAL (EL VAR) CON PUNTOS DINÁMICOS 👇
+export async function getVarReportDataAction(userId: string) {
+  const { createClient } = await import("@/utils/supabase/server");
+  const supabase = await createClient();
+
+  try {
+    const { data: currentUser, error: userErr } = await supabase
+      .from("profiles")
+      .select("polla_id")
+      .eq("id", userId)
+      .single();
+
+    if (userErr || !currentUser)
+      throw new Error("No se pudo identificar la polla.");
+    const pollaId = currentUser.polla_id;
+
+    // 🚀 NUEVO: Traer la configuración de puntos de esta polla
+    const { data: scoreConfig } = await supabase
+      .from("score_configs")
+      .select("*")
+      .eq("polla_id", pollaId)
+      .single();
+
+    const { data: participants, error: partErr } = await supabase
+      .from("profiles")
+      .select("id, username")
+      .eq("polla_id", pollaId)
+      .not("sub_date_groups", "is", null);
+
+    if (partErr) throw partErr;
+
+    const { data: matches, error: matchErr } = await supabase
+      .from("matches")
+      .select(
+        `
+        id, match_number, match_date, home_score, away_score, status,
+        home:teams!home_team_id(id, name_es, flag_code),
+        away:teams!away_team_id(id, name_es, flag_code)
+      `,
+      )
+      .order("match_date", { ascending: true });
+
+    if (matchErr) throw matchErr;
+
+    let predictions: any[] = [];
+    if (participants && participants.length > 0) {
+      const participantIds = participants.map((p) => p.id);
+      const { data: preds, error: predErr } = await supabase
+        .from("predictions")
+        .select("user_id, match_id, pred_home, pred_away, points_won")
+        .in("user_id", participantIds);
+
+      if (predErr) throw predErr;
+      predictions = preds || [];
+    }
+
+    return {
+      success: true,
+      data: {
+        participants: participants || [],
+        matches: matches || [],
+        predictions,
+        scoreConfig, // 👈 Mandamos la configuración al frontend
+      },
+    };
+  } catch (error: any) {
+    console.error("❌ Error en getVarReportDataAction:", error.message);
+    return { success: false, error: error.message };
+  }
+}

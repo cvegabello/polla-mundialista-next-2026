@@ -17,6 +17,7 @@ export const ReportsMenu = ({ lang }: ReportsMenuProps) => {
       <div className="inline-flex flex-wrap items-center justify-center gap-3 p-3 rounded-2xl bg-[#0f1016] border border-gray-700 shadow-xl">
         {/* 🏆 BOTÓN 1: POSICIONES */}
         <button
+          onClick={() => (window.location.href = "/dashboard-fan/reportes/var")}
           className={`${btnBaseClass} text-gray-300 hover:text-white hover:border-yellow-400 hover:shadow-[0_0_15px_rgba(250,204,21,0.4)]`}
         >
           <Trophy
