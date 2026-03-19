@@ -302,7 +302,7 @@ export async function getVarReportDataAction(userId: string) {
 
     const { data: participants, error: partErr } = await supabase
       .from("profiles")
-      .select("id, username")
+      .select("id, username, sub_date_groups")
       .eq("polla_id", pollaId)
       .not("sub_date_groups", "is", null);
 
