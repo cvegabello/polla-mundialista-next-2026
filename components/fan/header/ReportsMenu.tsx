@@ -52,6 +52,7 @@ export const ReportsMenu = ({ lang }: ReportsMenuProps) => {
       <VarReportModal
         isOpen={isVarModalOpen}
         onClose={() => setIsVarModalOpen(false)}
+        lang={lang}
       />
     </>
   );

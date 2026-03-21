@@ -2,17 +2,30 @@
 
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { getVarReportDataAction } from "@/lib/actions/fan-actions";
-import { X, RefreshCw } from "lucide-react";
+import { X, RefreshCw, Maximize2, Minimize2 } from "lucide-react";
+import { DICTIONARY, Language } from "@/components/constants/dictionary";
 
 interface VarReportModalProps {
   isOpen: boolean;
   onClose: () => void;
+  lang: Language;
 }
 
-export const VarReportModal = ({ isOpen, onClose }: VarReportModalProps) => {
+export const VarReportModal = ({
+  isOpen,
+  onClose,
+  lang,
+}: VarReportModalProps) => {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [data, setData] = useState<any>(null);
+
+  const [activeTab, setActiveTab] = useState<"matrix" | "positions">("matrix");
+  const [expandedView, setExpandedView] = useState<
+    "none" | "matrix" | "positions"
+  >("none");
+
+  const t = DICTIONARY[lang];
 
   const todayIso = new Date().toISOString().split("T")[0];
   const [selectedDate, setSelectedDate] = useState<string>(todayIso);
@@ -60,7 +73,6 @@ export const VarReportModal = ({ isOpen, onClose }: VarReportModalProps) => {
     });
   }, [data?.matches, selectedDate]);
 
-  // 1. Leaderboard original (Ordenado por Puntos y Fecha de desempate)
   const leaderboard = useMemo(() => {
     if (!data?.participants || !data?.predictions) return [];
     const scores = data.participants.map((p: any) => {
@@ -84,7 +96,6 @@ export const VarReportModal = ({ isOpen, onClose }: VarReportModalProps) => {
     });
   }, [data]);
 
-  // 🚀 2. NUEVO: Matriz alfabética (Copia del leaderboard pero ordenada de la A a la Z)
   const alphabeticalParticipants = useMemo(() => {
     return [...leaderboard].sort((a, b) => {
       const nameA = a.username ? a.username.toLowerCase() : "";
@@ -135,20 +146,44 @@ export const VarReportModal = ({ isOpen, onClose }: VarReportModalProps) => {
 
   const formatDateShort = (dateString: string) => {
     if (!dateString) return "--/--";
+    const locale = lang === "es" ? "es-ES" : "en-US";
     return new Date(dateString)
-      .toLocaleDateString("es-ES", { day: "numeric", month: "short" })
+      .toLocaleDateString(locale, { day: "numeric", month: "short" })
       .toUpperCase();
   };
 
   const formatHour = (dateString: string) => {
     if (!dateString) return "--:--";
-    return new Date(dateString).toLocaleTimeString([], {
+    const locale = lang === "es" ? "es-ES" : "en-US";
+    return new Date(dateString).toLocaleTimeString(locale, {
       hour: "2-digit",
       minute: "2-digit",
     });
   };
 
   if (!isOpen) return null;
+
+  const isMatrixExpanded = expandedView === "matrix";
+  const isPositionsExpanded = expandedView === "positions";
+  const isNoneExpanded = expandedView === "none";
+
+  const matrixMobileClass =
+    isMatrixExpanded || (isNoneExpanded && activeTab === "matrix")
+      ? "flex flex-1 min-h-0"
+      : "hidden";
+  const matrixDesktopClass =
+    isMatrixExpanded || isNoneExpanded ? "xl:flex" : "xl:hidden";
+  const matrixSpanClass = isMatrixExpanded ? "xl:col-span-4" : "xl:col-span-3";
+
+  const positionsMobileClass =
+    isPositionsExpanded || (isNoneExpanded && activeTab === "positions")
+      ? "flex flex-1 min-h-0"
+      : "hidden";
+  const positionsDesktopClass =
+    isPositionsExpanded || isNoneExpanded ? "xl:flex" : "xl:hidden";
+  const positionsSpanClass = isPositionsExpanded
+    ? "xl:col-span-4"
+    : "xl:col-span-1";
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 transition-all duration-300">
@@ -158,93 +193,134 @@ export const VarReportModal = ({ isOpen, onClose }: VarReportModalProps) => {
       ></div>
 
       <div className="relative w-full max-w-[1600px] h-[90vh] bg-black border-2 border-orange-500 shadow-[0_0_50px_-10px_rgba(249,115,22,0.4)] rounded-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300">
-        {/* CABECERA */}
-        <div className="flex flex-col sm:flex-row justify-between items-center p-5 border-b border-orange-600 bg-[#050200] shrink-0 gap-4 relative z-10">
-          <div>
-            <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-500 tracking-tighter uppercase flex items-center gap-2 drop-shadow-[0_2px_10px_rgba(249,115,22,0.5)]">
-              👁️ El VAR
-            </h2>
-            <p className="text-xs text-orange-300 mt-0.5 tracking-widest uppercase font-semibold">
-              Auditoría de pronósticos en vivo.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center bg-black border border-orange-600 rounded-lg overflow-hidden focus-within:border-orange-400 focus-within:shadow-[0_0_10px_rgba(249,115,22,0.3)] transition-all">
-              <span className="pl-3 text-orange-500 text-sm">📅</span>
-              <input
-                type="date"
-                value={selectedDate === "all" ? "" : selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="bg-transparent text-white text-sm font-bold block p-2 outline-none cursor-pointer" // 🚀 Cursor manita en el input
-                style={{ colorScheme: "dark" }}
-              />
+        {isNoneExpanded && (
+          <div className="flex flex-col md:flex-row md:justify-between items-center p-4 pt-16 md:p-5 md:pt-5 border-b border-orange-600 bg-[#050200] shrink-0 gap-4 md:gap-0 relative z-10">
+            <div className="flex flex-col items-center md:items-start text-center md:text-left shrink-0">
+              <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-500 tracking-tighter uppercase flex items-center gap-2 drop-shadow-[0_2px_10px_rgba(249,115,22,0.5)] whitespace-nowrap">
+                {t.varTitle}
+              </h2>
+              <p className="hidden md:block text-xs text-orange-300 mt-0.5 tracking-widest uppercase font-semibold whitespace-nowrap">
+                {t.varSubtitle}
+              </p>
             </div>
-            <button
-              onClick={() => setSelectedDate("all")}
-              className={`cursor-pointer text-sm font-bold py-2 px-4 rounded-lg transition-all border ${selectedDate === "all" ? "bg-orange-600 border-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.5)]" : "bg-black border-orange-700 text-orange-400 hover:bg-[#1a0a00] hover:border-orange-500"}`} // 🚀 Cursor manita
-            >
-              🌎 Todas las Fechas
-            </button>
 
-            {/* BOTÓN DE REFRESCAR */}
-            <button
-              onClick={() => loadData(false)}
-              disabled={isRefreshing}
-              className="ml-2 p-2 cursor-pointer bg-black border border-orange-700 text-orange-500 hover:bg-orange-600 hover:text-white hover:border-orange-500 rounded-lg transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" // 🚀 Cursor manita
-              title="Refrescar resultados en vivo"
-            >
-              <RefreshCw
-                size={20}
-                className={`stroke-[3] ${isRefreshing ? "animate-spin" : ""}`}
-              />
-            </button>
+            {/* 🚀 EL CANDADO APLICADO AQUÍ: flex-nowrap y gap-2 en móviles */}
+            <div className="flex flex-nowrap justify-center items-center gap-2 sm:gap-3 shrink-0">
+              <div className="flex items-center bg-black border border-orange-600 rounded-lg overflow-hidden focus-within:border-orange-400 focus-within:shadow-[0_0_10px_rgba(249,115,22,0.3)] transition-all">
+                <span className="pl-2 sm:pl-3 text-orange-500 text-sm">📅</span>
+                <input
+                  type="date"
+                  value={selectedDate === "all" ? "" : selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="bg-transparent text-white text-xs sm:text-sm font-bold block p-2 outline-none cursor-pointer w-[120px] sm:w-auto"
+                  style={{ colorScheme: "dark" }}
+                />
+              </div>
+              <button
+                onClick={() => setSelectedDate("all")}
+                className={`cursor-pointer text-xs sm:text-sm font-bold py-2 sm:py-2 px-3 sm:px-4 rounded-lg transition-all border whitespace-nowrap shrink-0 ${selectedDate === "all" ? "bg-orange-600 border-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.5)]" : "bg-black border-orange-700 text-orange-400 hover:bg-[#1a0a00] hover:border-orange-500"}`}
+              >
+                {t.varAllDates}
+              </button>
+            </div>
 
-            {/* BOTÓN DE CERRAR */}
-            <button
-              onClick={onClose}
-              className="p-2 cursor-pointer bg-black border border-orange-700 text-orange-500 hover:bg-red-600 hover:text-white hover:border-red-500 rounded-lg transition-all shadow-sm" // 🚀 Cursor manita
-              title="Cerrar VAR"
-            >
-              <X size={20} className="stroke-[3]" />
-            </button>
+            <div className="absolute top-4 right-4 md:static md:top-auto md:right-auto flex justify-end gap-2 shrink-0">
+              <button
+                onClick={() => loadData(false)}
+                disabled={isRefreshing}
+                className="p-2 cursor-pointer bg-black border border-orange-700 text-orange-500 hover:bg-orange-600 hover:text-white hover:border-orange-500 rounded-lg transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                title={t.varRefreshTooltip}
+              >
+                <RefreshCw
+                  size={20}
+                  className={`stroke-[3] ${isRefreshing ? "animate-spin" : ""}`}
+                />
+              </button>
+
+              <button
+                onClick={onClose}
+                className="p-2 cursor-pointer bg-black border border-orange-700 text-orange-500 hover:bg-red-600 hover:text-white hover:border-red-500 rounded-lg transition-all shadow-sm"
+                title={t.varCloseTooltip}
+              >
+                <X size={20} className="stroke-[3]" />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* CONTENIDO DEL MODAL */}
-        <div className="flex-1 overflow-hidden p-5 bg-black">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-3 sm:p-5 bg-black">
+          {isNoneExpanded && (
+            <div className="flex xl:hidden shrink-0 gap-3 mb-4 w-full px-1">
+              <button
+                onClick={() => setActiveTab("matrix")}
+                className={`flex-1 py-3 text-[11px] sm:text-sm font-black uppercase tracking-widest rounded-xl transition-all duration-300 flex justify-center items-center gap-2 border ${
+                  activeTab === "matrix"
+                    ? "bg-gradient-to-r from-orange-600 to-amber-500 text-white border-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.5)]"
+                    : "bg-[#0a0500] border-orange-800 text-orange-500/80 hover:bg-[#1a0a00] hover:text-orange-400"
+                }`}
+              >
+                📊 {t.varTabMatrix}
+              </button>
+              <button
+                onClick={() => setActiveTab("positions")}
+                className={`flex-1 py-3 text-[11px] sm:text-sm font-black uppercase tracking-widest rounded-xl transition-all duration-300 flex justify-center items-center gap-2 border ${
+                  activeTab === "positions"
+                    ? "bg-gradient-to-r from-orange-600 to-amber-500 text-white border-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.5)]"
+                    : "bg-[#0a0500] border-orange-800 text-orange-500/80 hover:bg-[#1a0a00] hover:text-orange-400"
+                }`}
+              >
+                🏆 {t.varTabPositions}
+              </button>
+            </div>
+          )}
+
           {loading ? (
             <div className="w-full h-full flex flex-col items-center justify-center text-orange-500 animate-pulse font-bold tracking-widest uppercase">
               <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(249,115,22,0.5)]"></div>
-              Cargando el VAR...
+              {t.varLoading}
             </div>
           ) : (
-            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 w-full h-full">
-              {/* 🟦 COLUMNA IZQUIERDA: MATRIZ DE PRONÓSTICOS (AHORA ALFABÉTICA) */}
-              <div className="xl:col-span-3 bg-black border border-orange-600/50 rounded-xl flex flex-col shadow-2xl overflow-hidden relative">
+            <div className="flex flex-col xl:grid xl:grid-cols-4 gap-4 sm:gap-6 w-full flex-1 min-h-0 overflow-hidden">
+              <div
+                className={`${matrixMobileClass} ${matrixDesktopClass} ${matrixSpanClass} bg-black border border-orange-600/50 rounded-xl flex-col shadow-2xl overflow-hidden relative xl:h-full`}
+              >
                 <div className="absolute top-0 right-0 w-64 h-64 bg-orange-600/5 rounded-full blur-3xl pointer-events-none"></div>
 
-                <div className="p-3 border-b border-orange-600/50 flex justify-between items-center bg-[#0a0500] shrink-0 relative z-10">
-                  <h3 className="text-sm font-bold text-orange-400 tracking-widest uppercase">
-                    Matriz de Participantes (A-Z)
+                <div className="p-2 sm:p-3 border-b border-orange-600/50 flex justify-between items-center bg-[#0a0500] shrink-0 relative z-10">
+                  <h3 className="text-sm font-bold text-orange-400 tracking-widest uppercase flex items-center gap-2">
+                    📊 {t.varMatrixTitle}
                   </h3>
+                  <button
+                    onClick={() =>
+                      setExpandedView(isMatrixExpanded ? "none" : "matrix")
+                    }
+                    className="p-1.5 bg-black border border-orange-800/60 rounded-md text-orange-500 hover:bg-orange-600 hover:text-white transition-colors"
+                  >
+                    {isMatrixExpanded ? (
+                      <Minimize2 size={16} />
+                    ) : (
+                      <Maximize2 size={16} />
+                    )}
+                  </button>
                 </div>
 
-                <div className="overflow-auto custom-scrollbar flex-1 relative bg-black">
+                <div className="overflow-auto custom-scrollbar flex-1 min-h-0 relative bg-black">
                   <table className="w-full text-sm text-center whitespace-nowrap border-collapse">
                     <thead className="text-[11px] uppercase bg-black sticky top-0 z-30 shadow-lg">
                       <tr className="text-gray-300 border-b border-orange-700/60">
                         <th
                           rowSpan={2}
-                          className="px-4 py-3 sticky left-0 top-0 bg-[#0a0500] z-40 border-r border-orange-700/60 min-w-[180px] text-left"
+                          className="px-2 sm:px-4 py-2 sm:py-3 sticky left-0 top-0 bg-[#0a0500] z-40 border-r border-orange-700/60 min-w-[90px] max-w-[90px] sm:min-w-[180px] sm:max-w-none text-left truncate"
                         >
-                          PARTICIPANTE
+                          {t.varParticipant}
                         </th>
+
                         {filteredMatches.length === 0 && (
                           <th className="px-5 py-4 text-orange-500/50 bg-black">
-                            No hay partidos para esta fecha
+                            {t.varNoMatches}
                           </th>
                         )}
+
                         {filteredMatches.map((m: any) => (
                           <th
                             key={m.id}
@@ -260,25 +336,28 @@ export const VarReportModal = ({ isOpen, onClose }: VarReportModalProps) => {
 
                             {m.home_score !== null && m.away_score !== null ? (
                               <div className="text-[10px] text-orange-200 mt-1 bg-orange-950 rounded inline-block px-2 py-0.5 border border-orange-700/60 shadow-inner">
-                                OFICIAL: {m.home_score} - {m.away_score}
+                                {t.varOfficial}: {m.home_score} - {m.away_score}
                               </div>
                             ) : (
                               <div className="text-[10px] text-orange-600 mt-1">
-                                PENDIENTE
+                                {t.varPending}
                               </div>
                             )}
                           </th>
                         ))}
+
                         {filteredMatches.length > 0 && (
                           <th
                             rowSpan={2}
-                            className="px-4 py-3 sticky right-0 top-0 bg-[#0a0500] z-40 border-l border-orange-700/60 min-w-[80px] shadow-[-5px_0_15px_rgba(0,0,0,0.5)]"
+                            className="px-2 sm:px-4 py-2 sm:py-3 static sm:sticky right-0 top-0 bg-[#0a0500] z-40 border-l border-orange-700/60 min-w-[60px] sm:min-w-[80px] shadow-none sm:shadow-[-5px_0_15px_rgba(0,0,0,0.5)]"
                           >
                             <span className="text-amber-500 font-black tracking-widest">
-                              TOTAL
+                              {t.varTotal}
                             </span>
                             <br />
-                            <span className="text-orange-500/80">PTS</span>
+                            <span className="text-orange-500/80">
+                              {t.varPtsCol}
+                            </span>
                           </th>
                         )}
                       </tr>
@@ -286,13 +365,15 @@ export const VarReportModal = ({ isOpen, onClose }: VarReportModalProps) => {
                         {filteredMatches.map((m: any) => (
                           <React.Fragment key={`teams-${m.id}`}>
                             <th className="px-3 py-1.5 border-r border-orange-900/60 font-bold text-gray-300 min-w-[80px]">
-                              {m.home?.name_es?.toUpperCase() || "TBD"}
+                              {m.home?.[`name_${lang}`]?.toUpperCase() ||
+                                t.bracketTBD}
                             </th>
                             <th className="px-3 py-1.5 border-r border-orange-900/60 font-bold text-gray-300 min-w-[80px]">
-                              {m.away?.name_es?.toUpperCase() || "TBD"}
+                              {m.away?.[`name_${lang}`]?.toUpperCase() ||
+                                t.bracketTBD}
                             </th>
                             <th className="px-2 py-1.5 border-r border-orange-800/60 w-14 text-orange-500 font-black bg-orange-950/20">
-                              PTS
+                              {t.varPtsCol}
                             </th>
                           </React.Fragment>
                         ))}
@@ -300,7 +381,6 @@ export const VarReportModal = ({ isOpen, onClose }: VarReportModalProps) => {
                     </thead>
 
                     <tbody className="divide-y divide-orange-900/40">
-                      {/* 🚀 Usamos alphabeticalParticipants en lugar de leaderboard */}
                       {alphabeticalParticipants.map((user: any) => {
                         const rowTotalPoints = filteredMatches.reduce(
                           (acc: number, m: any) => {
@@ -318,7 +398,7 @@ export const VarReportModal = ({ isOpen, onClose }: VarReportModalProps) => {
                             key={user.id}
                             className="hover:bg-orange-950/30 transition-colors group"
                           >
-                            <td className="px-4 py-2 font-bold sticky left-0 bg-black group-hover:bg-[#0a0500] border-r border-orange-800/50 z-20 text-left truncate max-w-[200px] text-gray-200">
+                            <td className="px-2 sm:px-4 py-2 font-bold text-xs sm:text-sm sticky left-0 bg-black group-hover:bg-[#0a0500] border-r border-orange-800/50 z-20 text-left truncate max-w-[90px] sm:max-w-[200px] text-gray-200">
                               {user.username}
                             </td>
                             {filteredMatches.map((m: any) => {
@@ -343,8 +423,9 @@ export const VarReportModal = ({ isOpen, onClose }: VarReportModalProps) => {
                                 </React.Fragment>
                               );
                             })}
+
                             {filteredMatches.length > 0 && (
-                              <td className="px-4 py-2 font-black sticky right-0 bg-black group-hover:bg-[#0a0500] border-l border-orange-800/50 text-amber-500 z-20 text-base shadow-[-5px_0_15px_rgba(0,0,0,0.5)]">
+                              <td className="px-2 sm:px-4 py-2 font-black static sm:sticky right-0 bg-black group-hover:bg-[#0a0500] border-l border-orange-800/50 text-amber-500 z-20 text-base shadow-none sm:shadow-[-5px_0_15px_rgba(0,0,0,0.5)]">
                                 {rowTotalPoints}
                               </td>
                             )}
@@ -356,30 +437,54 @@ export const VarReportModal = ({ isOpen, onClose }: VarReportModalProps) => {
                 </div>
               </div>
 
-              {/* 🟧 COLUMNA DERECHA: LEADERBOARD (Mantiene el orden por puntos) */}
-              <div className="xl:col-span-1 bg-black border border-orange-600/50 rounded-xl flex flex-col shadow-2xl h-full overflow-hidden">
-                <div className="p-3 border-b border-orange-600/50 flex justify-between items-center bg-[#0a0500] shrink-0">
+              {/* 🟧 COLUMNA DERECHA: LEADERBOARD */}
+              <div
+                className={`${positionsMobileClass} ${positionsDesktopClass} ${positionsSpanClass} bg-black border border-orange-600/50 rounded-xl flex-col shadow-2xl overflow-hidden xl:h-full`}
+              >
+                <div className="p-2 sm:p-3 border-b border-orange-600/50 flex justify-between items-center bg-[#0a0500] shrink-0">
                   <h3 className="text-sm font-bold text-orange-400 tracking-widest uppercase flex items-center gap-2">
-                    🏆 Posiciones
+                    🏆 {t.varPositionsTitle}
                   </h3>
+                  <button
+                    onClick={() =>
+                      setExpandedView(
+                        isPositionsExpanded ? "none" : "positions",
+                      )
+                    }
+                    className="p-1.5 bg-black border border-orange-800/60 rounded-md text-orange-500 hover:bg-orange-600 hover:text-white transition-colors"
+                  >
+                    {isPositionsExpanded ? (
+                      <Minimize2 size={16} />
+                    ) : (
+                      <Maximize2 size={16} />
+                    )}
+                  </button>
                 </div>
 
-                <div className="overflow-y-auto custom-scrollbar flex-1 p-2 bg-black">
+                <div className="overflow-y-auto custom-scrollbar flex-1 min-h-0 p-2 bg-black">
                   <table className="w-full text-sm text-left border-collapse">
-                    <thead className="text-[10px] text-orange-500 uppercase border-b border-orange-700/60">
+                    <thead className="text-[10px] text-orange-500 uppercase border-b border-orange-700/60 sticky top-0 bg-black z-10 shadow-md">
                       <tr>
-                        <th className="px-2 py-2 text-center w-8">#</th>
-                        <th className="px-2 py-2">Participante</th>
-                        <th className="px-2 py-2 text-center">Envío</th>
-                        <th className="px-2 py-2 text-right">Pts</th>
+                        <th className="px-2 py-2 text-center w-8 bg-black">
+                          #
+                        </th>
+                        <th className="px-2 py-2 bg-black">
+                          {t.varParticipant}
+                        </th>
+                        <th className="px-2 py-2 text-center bg-black">
+                          {t.varSubDate}
+                        </th>
+                        <th className="px-2 py-2 text-right bg-black">
+                          {t.varPtsCol}
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-orange-900/40">
-                      {/* 🚀 Aquí seguimos usando leaderboard para las posiciones */}
                       {leaderboard.map((user: any, index: number) => {
+                        const locale = lang === "es" ? "es-ES" : "en-US";
                         const subDate = user.sub_date_groups
                           ? new Date(user.sub_date_groups).toLocaleDateString(
-                              "es-ES",
+                              locale,
                               {
                                 month: "short",
                                 day: "numeric",

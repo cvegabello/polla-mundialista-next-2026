@@ -313,8 +313,8 @@ export async function getVarReportDataAction(userId: string) {
       .select(
         `
         id, match_number, match_date, home_score, away_score, status,
-        home:teams!home_team_id(id, name_es, flag_code),
-        away:teams!away_team_id(id, name_es, flag_code)
+        home:teams!home_team_id(id, name_es, name_en, flag_code),
+        away:teams!away_team_id(id, name_es, name_en, flag_code)
       `,
       )
       .order("match_date", { ascending: true });

@@ -4,7 +4,6 @@ export type Language = "es" | "en";
 
 export const DICTIONARY = {
   es: {
-    // ... (Lo que ya tenía de GroupCard: saving, saved, error, team, pts, etc.)
     saving: "Guardando...",
     saved: "Guardado",
     error: "Error",
@@ -17,7 +16,6 @@ export const DICTIONARY = {
     usaGroup: "Grupo de USA",
     phase: "Fase 1",
 
-    // 👇 NUEVOS TEXTOS PARA EL DASHBOARD
     hello: "Hola",
     yourPredictions: "Tus Predicciones",
     logout: "Cerrar Sesión",
@@ -28,29 +26,24 @@ export const DICTIONARY = {
     manageGroup: "Gestiona este grupo desde el panel principal.",
     adminView: "Vista de Admin",
 
-    // 👇 HEADER & DASHBOARD
     worldCupTitle: "COPA MUNDIAL 2026",
     statusDraft: "BORRADOR",
     statusOfficial: "OFICIAL",
     points: "Puntos",
 
-    // MENÚ ACCIONES
     menuPositions: "Posiciones de la Polla",
     menuThirds: "Mejores 3ros",
     menuExit: "Salir",
 
-    // CAJAS DE NAVEGACIÓN
     myPredictions: "MIS PRONÓSTICOS",
     officialResults: "RESULTADOS FIFA",
     btnGroups: "Fase de Grupos",
     btnFinals: "Fase Final",
 
-    // ZONA DE ENVÍO
     submitButton: "ENVIAR OFICIALMENTE",
     submittedLabel: "PRONÓSTICOS ENVIADOS",
     submitWarning: "Completa los 72 partidos de grupos para enviar.",
 
-    // TÍTULOS DE SECCIÓN
     viewPredGroups: "Mis Pronósticos - Fase de Grupos",
     viewPredFinals: "Mis Pronósticos - Fase Final",
     viewResGroups: "Resultados Oficiales - Fase de Grupos",
@@ -60,7 +53,6 @@ export const DICTIONARY = {
     progressLabel: "Progreso:",
     floatingReady: "¡Listo! Subir a Enviar ⬆",
 
-    // BRACKET (FASE FINAL)
     bracketLoading: "CALCULANDO LLAVES...",
     bracketTBD: "POR DEFINIR",
     bracketCompleteGroups: "Completa la fase de grupos para ver las llaves.",
@@ -81,22 +73,40 @@ export const DICTIONARY = {
     resGroupsBody: "Aquí se cargarán los resultados reales de los grupos.",
     bracketSubmitBtn: "ENVIAR PRONÓSTICO",
     bracketPhaseLocked: "FASE CERRADA",
+
+    // EL VAR
+    varTitle: "👁️ El VAR",
+    varSubtitle: "Auditoría de pronósticos en vivo.",
+    varAllDates: "🌎 Todas Fechas",
+    varRefreshTooltip: "Refrescar resultados en vivo",
+    varCloseTooltip: "Cerrar VAR",
+    varLoading: "Cargando el VAR...",
+    varMatrixTitle: "Matriz de Participantes (A-Z)",
+    varParticipant: "PARTICIPANTE",
+    varNoMatches: "No hay partidos para esta fecha",
+    varOfficial: "OFICIAL",
+    varPending: "PENDIENTE",
+    varTotal: "TOTAL",
+    varPtsCol: "PTS",
+    varPositionsTitle: "🏆 Posiciones",
+    varSubDate: "Envío",
+    // 👇 NOMBRES CORTOS PARA LAS PESTAÑAS (TABS)
+    varTabMatrix: "Matriz",
+    varTabPositions: "Posiciones",
   },
   en: {
-    // ... (Lo que ya tenía)
     saving: "Saving...",
     saved: "Saved",
     error: "Error",
     team: "Team",
     pts: "Pts",
     gf: "GF",
-    gc: "GA", // Goals Against
-    dg: "GD", // Goal Difference
+    gc: "GA",
+    dg: "GD",
     colombiaGroup: "Colombia's Group",
     usaGroup: "USA's Group",
     phase: "Stage 1",
 
-    // 👇 NUEVOS TEXTOS PARA EL DASHBOARD
     hello: "Hello",
     yourPredictions: "Your Predictions",
     logout: "Log Out",
@@ -107,29 +117,24 @@ export const DICTIONARY = {
     manageGroup: "Manage this group from the main dashboard.",
     adminView: "Admin View",
 
-    // 👇 HEADER & DASHBOARD
     worldCupTitle: "WORLD CUP 2026",
     statusDraft: "DRAFT",
     statusOfficial: "OFFICIAL",
     points: "Points",
 
-    // MENÚ ACCIONES
     menuPositions: "Pool Standings",
     menuThirds: "Best 3rds",
     menuExit: "Log Out",
 
-    // CAJAS DE NAVEGACIÓN
     myPredictions: "MY PREDICTIONS",
     officialResults: "FIFA RESULTS",
     btnGroups: "Group Stage",
     btnFinals: "Knockout Stage",
 
-    // ZONA DE ENVÍO
     submitButton: "SUBMIT OFFICIALLY",
     submittedLabel: "PREDICTIONS SUBMITTED",
     submitWarning: "Complete all 72 group matches to submit.",
 
-    // TÍTULOS DE SECCIÓN
     viewPredGroups: "My Predictions - Group Stage",
     viewPredFinals: "My Predictions - Knockout Stage",
     viewResGroups: "Official Results - Group Stage",
@@ -139,7 +144,6 @@ export const DICTIONARY = {
     progressLabel: "Progress:",
     floatingReady: "Ready! Scroll to Submit ⬆",
 
-    // BRACKET (KNOCKOUT STAGE)
     bracketLoading: "CALCULATING BRACKET...",
     bracketTBD: "TBD",
     bracketCompleteGroups: "Complete group stage to see matchups.",
@@ -160,5 +164,25 @@ export const DICTIONARY = {
     resGroupsBody: "Official group stage results will load here.",
     bracketSubmitBtn: "SUBMIT PREDICTION",
     bracketPhaseLocked: "PHASE LOCKED",
+
+    // EL VAR
+    varTitle: "👁️ The VAR",
+    varSubtitle: "Live predictions audit.",
+    varAllDates: "🌎 All Dates",
+    varRefreshTooltip: "Refresh live results",
+    varCloseTooltip: "Close VAR",
+    varLoading: "Loading VAR...",
+    varMatrixTitle: "Participants Matrix (A-Z)",
+    varParticipant: "PARTICIPANT",
+    varNoMatches: "No matches for this date",
+    varOfficial: "OFFICIAL",
+    varPending: "PENDING",
+    varTotal: "TOTAL",
+    varPtsCol: "PTS",
+    varPositionsTitle: "🏆 Standings",
+    varSubDate: "Submitted",
+    // 👇 NOMBRES CORTOS PARA LAS PESTAÑAS (TABS)
+    varTabMatrix: "Matrix",
+    varTabPositions: "Standings",
   },
 };
