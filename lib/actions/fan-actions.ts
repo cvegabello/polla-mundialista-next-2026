@@ -39,27 +39,60 @@ export async function saveGroupStandingsAction(
   }
 }
 
+// 🚀 NUEVA FUNCIÓN: Para traer los equipos y llenar el combobox del Modal
+export async function getAllTeamsAction() {
+  const { createClient } = await import("@/utils/supabase/server");
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("teams")
+    .select("id, name_es, name_en, flag_code")
+    .order("name_es", { ascending: true });
+
+  if (error) {
+    console.error("Error trayendo equipos:", error);
+    return [];
+  }
+  return data;
+}
+
+// 🚀 FUNCIÓN ACTUALIZADA: Ahora recibe el championId y lo guarda en profiles
 export async function submitPredictionsAction(
   userId: string,
   phaseColumn: string = "sub_date_groups",
+  championId?: any, // 👈 NUEVO: Recibimos el ID del campeón
 ) {
+  const { createClient } = await import("@/utils/supabase/server");
   const supabase = await createClient();
+
   try {
     const submissionDate = new Date().toISOString();
 
+    // 1. Preparamos la data a actualizar
+    const updateData: any = { [phaseColumn]: submissionDate };
+
+    // Si estamos cerrando grupos y nos mandaron un campeón, lo guardamos en champion_pick_1
+    if (phaseColumn === "sub_date_groups" && championId) {
+      updateData.champion_pick_1 = championId;
+    }
+
+    // 2. Guardamos todo en la base de datos
     const { error } = await supabase
       .from("profiles")
-      .update({ [phaseColumn]: submissionDate })
+      .update(updateData)
       .eq("id", userId);
 
     if (error) throw error;
 
+    // 3. Actualizamos la galleta
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get("polla_session");
 
     if (sessionCookie) {
       const sessionData = JSON.parse(decodeURIComponent(sessionCookie.value));
       sessionData[phaseColumn] = submissionDate;
+
+      // Si quiere también guardamos el pick en la sesión por si acaso
+      if (championId) sessionData.champion_pick_1 = championId;
 
       cookieStore.set(
         "polla_session",

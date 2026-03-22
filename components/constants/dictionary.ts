@@ -100,6 +100,15 @@ export const DICTIONARY = {
     varWinner: "GANADOR",
     varBonusGrp: "BONO GRP",
     varBonusChamp: "BONO CAMP",
+
+    modalSubmitTitle: "¡CONFIRMACIÓN FINAL!",
+    modalSubmitWarning:
+      "Si envías tus pronósticos ahora, quedarán BLOQUEADOS y te convertirás en un jugador oficial del torneo, aceptando todas las reglas.",
+    modalSubmitChampLabel:
+      "🏆 Elige a tu Campeón del Mundo (Otorga puntos extra al final):",
+    modalSubmitChampPlaceholder: "Selecciona un equipo...",
+    modalSubmitBtnConfirm: "ACEPTAR Y ENVIAR",
+    modalSubmitBtnCancel: "VOLVER",
   },
   en: {
     saving: "Saving...",
@@ -198,5 +207,14 @@ export const DICTIONARY = {
     varWinner: "WINNER",
     varBonusGrp: "GRP BONUS",
     varBonusChamp: "CHAMP BONUS",
+
+    modalSubmitTitle: "FINAL CONFIRMATION!",
+    modalSubmitWarning:
+      "If you submit your predictions now, they will be LOCKED and you will become an official player, accepting all tournament rules.",
+    modalSubmitChampLabel:
+      "🏆 Choose your World Champion (Grants bonus points at the end):",
+    modalSubmitChampPlaceholder: "Select a team...",
+    modalSubmitBtnConfirm: "CONFIRM & SUBMIT",
+    modalSubmitBtnCancel: "GO BACK",
   },
 };

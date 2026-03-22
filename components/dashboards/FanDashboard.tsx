@@ -255,7 +255,10 @@ export const FanDashboard = ({
         onViewChange={setCurrentView}
         totalPredictions={progress}
         totalMatches={totalMatches}
-        onSubmitPredictions={handleSubmit}
+        // 👇 LA CIRUGÍA AQUÍ: Atrapamos el championId y se lo mandamos al hook
+        onSubmitPredictions={(championId) => {
+          handleSubmit("groups", [], championId);
+        }}
         hasUnsavedChanges={hasUnsavedChanges}
         onManualSave={handleManualSave}
         onRefresh={handleRefresh}

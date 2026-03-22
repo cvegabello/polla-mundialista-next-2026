@@ -339,9 +339,11 @@ export const useFanDashboardLogic = (
 
   // 🚦 LA ADUANA BLINDADA
   // 🚦 LA ADUANA BLINDADA (V2 - Corregida con IDs Reales)
+  // 🚦 LA ADUANA BLINDADA (V3 - Con Campeón del Mundo)
   const handleSubmit = async (
     phase?: string,
     phaseMatchIds?: (string | number)[],
+    championId?: any, // 👈 NUEVO: Recibe el ID del campeón
   ) => {
     if (isSubmitting || hasSubmitted) return;
     if (!userId) return alert("Error: No se identifica el usuario.");
@@ -350,7 +352,40 @@ export const useFanDashboardLogic = (
       await handleManualSave(true);
     }
 
-    // Si viene una FASE ESPECÍFICA (Finales)
+    // 🚀 CASO 1: ENVÍO DE GRUPOS (Incluye el Campeón)
+    if (!phase || phase === "groups") {
+      setIsSubmitting(true);
+      try {
+        // 👇 AQUÍ LE MANDAMOS EL CAMPEÓN A LA BASE DE DATOS
+        const result = await submitPredictionsAction(
+          userId,
+          "sub_date_groups",
+          championId,
+        );
+
+        if (result.success) {
+          setHasSubmitted(true);
+          setHasUnsavedChanges(false);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ["#22c55e", "#eab308", "#ffffff"],
+            zIndex: 9999,
+          });
+          // Recargamos la página para que actualice la galleta y bloquee todo
+          setTimeout(() => window.location.reload(), 1500);
+        } else alert("Hubo un problema: " + (result as any).error);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsSubmitting(false);
+      }
+      return; // 👈 Salimos para que no intente ejecutar lo de las finales
+    }
+
+    // 🚀 CASO 2: FASES DE ELIMINATORIA (16avos, Octavos, etc.)
     if (phase && phaseMatchIds) {
       let phaseName = "";
       if (phase === "r32") phaseName = "16avos de Final";
@@ -363,11 +398,9 @@ export const useFanDashboardLogic = (
 
       // Inspeccionamos las cédulas exactas de los partidos
       for (const mId of phaseMatchIds) {
-        // 1. Buscamos en la base de datos
         const pred = initialPredictions.find(
           (p: any) => p.match_id?.toString() === mId.toString(),
         );
-        // 2. Buscamos en la memoria (por si el fan acaba de escribir el número y no ha guardado)
         const unsaved = unsavedPredictions.current[mId];
 
         const hScore =
@@ -415,29 +448,6 @@ export const useFanDashboardLogic = (
         } else {
           alert("Hubo un problema sellando la fase: " + result.error);
         }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
-    // Si NO viene fase, es el envío de Grupos original
-    else {
-      setIsSubmitting(true);
-      try {
-        const result = await submitPredictionsAction(userId);
-        if (result.success) {
-          setHasSubmitted(true);
-          setHasUnsavedChanges(false);
-          window.scrollTo({ top: 0, behavior: "smooth" });
-          confetti({
-            particleCount: 150,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: ["#22c55e", "#eab308", "#ffffff"],
-            zIndex: 9999,
-          });
-        } else alert("Hubo un problema: " + (result as any).error);
       } catch (err) {
         console.error(err);
       } finally {

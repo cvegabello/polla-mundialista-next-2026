@@ -15,12 +15,12 @@ interface FanHeaderProps {
   onViewChange: (view: string) => void;
   totalPredictions: number;
   totalMatches: number;
-  onSubmitPredictions?: () => void;
+  // 👇 EL AJUSTE: Ahora avisamos que esta función recibe el ID del campeón
+  onSubmitPredictions?: (championId: any) => void;
   hasUnsavedChanges?: boolean;
   onManualSave?: () => void;
   onRefresh?: () => void;
   totalPoints?: number;
-  // 👇 NUEVA PROP: Recibimos la llave del candado desde el FanDashboard
   isSubmitAllowed?: boolean;
 }
 
@@ -37,7 +37,7 @@ export const FanHeader = ({
   onManualSave,
   onRefresh,
   totalPoints = 0,
-  isSubmitAllowed = true, // 👈 La recibimos aquí (por defecto true para que no se rompa nada)
+  isSubmitAllowed = true,
 }: FanHeaderProps) => {
   const t = DICTIONARY[lang];
   const isSubmitted = !!userSession?.submission_date;
@@ -127,8 +127,9 @@ export const FanHeader = ({
           progress={totalPredictions}
           total={totalMatches}
           hasUnsavedChanges={hasUnsavedChanges}
-          onSubmit={onSubmitPredictions || (() => {})}
-          isSubmitAllowed={isSubmitAllowed} // 👈 ¡EL PASE GOL! Le mandamos el candado al componente del botón
+          // 👇 EL AJUSTE: Ahora pasamos el championId correctamente si no existe la función
+          onSubmit={onSubmitPredictions || ((id: any) => {})}
+          isSubmitAllowed={isSubmitAllowed}
         />
       )}
     </header>
