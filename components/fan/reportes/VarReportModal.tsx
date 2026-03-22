@@ -75,15 +75,56 @@ export const VarReportModal = ({
 
   const leaderboard = useMemo(() => {
     if (!data?.participants || !data?.predictions) return [];
+
+    const exactVal = data.scoreConfig?.exact_score ?? 5;
+    const diffVal = data.scoreConfig?.goal_diff ?? 3;
+    const winnerVal = data.scoreConfig?.winner_only ?? 1;
+
     const scores = data.participants.map((p: any) => {
       const userPreds = data.predictions.filter(
         (pred: any) => pred.user_id === p.id,
       );
-      const totalPoints = userPreds.reduce(
-        (acc: number, curr: any) => acc + (curr.points_won || 0),
-        0,
-      );
-      return { ...p, totalPoints };
+
+      let matchPoints = 0;
+      let exactPts = 0;
+      let diffPts = 0;
+      let winnerPts = 0;
+
+      userPreds.forEach((pred: any) => {
+        const pts = pred.points_won || 0;
+        matchPoints += pts;
+        if (pts === exactVal) exactPts += pts;
+        else if (pts === diffVal) diffPts += pts;
+        else if (pts === winnerVal) winnerPts += pts;
+      });
+
+      let bonusPoints = 0;
+      let bonusGrp = 0;
+      let bonusChamp = 0;
+
+      if (data.bonusPoints) {
+        data.bonusPoints
+          .filter((b: any) => b.user_id === p.id)
+          .forEach((b: any) => {
+            const pts = b.points_won || 0;
+            bonusPoints += pts;
+            if (b.bonus_type && b.bonus_type.includes("GROUP")) {
+              bonusGrp += pts;
+            } else if (b.bonus_type && b.bonus_type.includes("CHAMPION")) {
+              bonusChamp += pts;
+            }
+          });
+      }
+
+      return {
+        ...p,
+        totalPoints: matchPoints + bonusPoints,
+        exactPts,
+        diffPts,
+        winnerPts,
+        bonusGrp,
+        bonusChamp,
+      };
     });
 
     return scores.sort((a: any, b: any) => {
@@ -185,6 +226,13 @@ export const VarReportModal = ({
     ? "xl:col-span-4"
     : "xl:col-span-1";
 
+  const detailColClass = isPositionsExpanded
+    ? "table-cell"
+    : "hidden max-xl:landscape:table-cell";
+  const expandedTextHeader = isPositionsExpanded ? "xl:text-xs xl:py-4" : "";
+  const expandedTextData = isPositionsExpanded ? "xl:text-base xl:py-4" : "";
+  const expandedTextTotal = isPositionsExpanded ? "xl:text-2xl" : "";
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 transition-all duration-300">
       <div
@@ -195,6 +243,7 @@ export const VarReportModal = ({
       <div className="relative w-full max-w-[1600px] h-[90vh] bg-black border-2 border-orange-500 shadow-[0_0_50px_-10px_rgba(249,115,22,0.4)] rounded-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300">
         {isNoneExpanded && (
           <div className="flex flex-col md:flex-row md:justify-between items-center p-4 pt-16 md:p-5 md:pt-5 border-b border-orange-600 bg-[#050200] shrink-0 gap-4 md:gap-0 relative z-10">
+            {/* IZQUIERDA: Títulos y Nombre Polla (Móvil) */}
             <div className="flex flex-col items-center md:items-start text-center md:text-left shrink-0">
               <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-500 tracking-tighter uppercase flex items-center gap-2 drop-shadow-[0_2px_10px_rgba(249,115,22,0.5)] whitespace-nowrap">
                 {t.varTitle}
@@ -202,9 +251,27 @@ export const VarReportModal = ({
               <p className="hidden md:block text-xs text-orange-300 mt-0.5 tracking-widest uppercase font-semibold whitespace-nowrap">
                 {t.varSubtitle}
               </p>
+
+              {/* 🚀 NOMBRE DE LA POLLA EN MÓVIL: Justo debajo del título */}
+              {data?.pollaName && (
+                <div className="mt-2 md:hidden">
+                  <span className="bg-[#1a0a00] text-amber-500 border border-amber-600/50 px-4 py-1 rounded-full text-[10px] font-black tracking-widest uppercase shadow-[0_0_10px_rgba(249,115,22,0.3)] inline-block truncate max-w-[200px]">
+                    🏆 {data.pollaName}
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* 🚀 EL CANDADO APLICADO AQUÍ: flex-nowrap y gap-2 en móviles */}
+            {/* 🚀 NOMBRE DE LA POLLA EN PC: Centrado matemáticamente gracias al flex-1 */}
+            {data?.pollaName && (
+              <div className="hidden md:flex flex-1 justify-center px-4">
+                <span className="bg-gradient-to-r from-[#1a0a00] to-black text-amber-500 border border-amber-600/50 px-8 py-2 rounded-full text-sm font-black tracking-widest uppercase shadow-[0_0_15px_rgba(249,115,22,0.2)] flex items-center gap-2">
+                  🏆 {data.pollaName}
+                </span>
+              </div>
+            )}
+
+            {/* DERECHA: Fecha y Botones */}
             <div className="flex flex-nowrap justify-center items-center gap-2 sm:gap-3 shrink-0">
               <div className="flex items-center bg-black border border-orange-600 rounded-lg overflow-hidden focus-within:border-orange-400 focus-within:shadow-[0_0_10px_rgba(249,115,22,0.3)] transition-all">
                 <span className="pl-2 sm:pl-3 text-orange-500 text-sm">📅</span>
@@ -224,7 +291,7 @@ export const VarReportModal = ({
               </button>
             </div>
 
-            <div className="absolute top-4 right-4 md:static md:top-auto md:right-auto flex justify-end gap-2 shrink-0">
+            <div className="absolute top-4 right-4 md:static md:top-auto md:right-auto flex justify-end gap-2 shrink-0 md:ml-4">
               <button
                 onClick={() => loadData(false)}
                 disabled={isRefreshing}
@@ -281,6 +348,7 @@ export const VarReportModal = ({
             </div>
           ) : (
             <div className="flex flex-col xl:grid xl:grid-cols-4 gap-4 sm:gap-6 w-full flex-1 min-h-0 overflow-hidden">
+              {/* 🟦 COLUMNA IZQUIERDA: MATRIZ */}
               <div
                 className={`${matrixMobileClass} ${matrixDesktopClass} ${matrixSpanClass} bg-black border border-orange-600/50 rounded-xl flex-col shadow-2xl overflow-hidden relative xl:h-full`}
               >
@@ -310,7 +378,7 @@ export const VarReportModal = ({
                       <tr className="text-gray-300 border-b border-orange-700/60">
                         <th
                           rowSpan={2}
-                          className="px-2 sm:px-4 py-2 sm:py-3 sticky left-0 top-0 bg-[#0a0500] z-40 border-r border-orange-700/60 min-w-[90px] max-w-[90px] sm:min-w-[180px] sm:max-w-none text-left truncate"
+                          className={`px-2 sm:px-4 py-2 sm:py-3 sticky left-0 top-0 bg-[#0a0500] z-40 border-r border-orange-700/60 min-w-[90px] max-w-[90px] sm:min-w-[180px] sm:max-w-none text-left truncate`}
                         >
                           {t.varParticipant}
                         </th>
@@ -345,6 +413,36 @@ export const VarReportModal = ({
                             )}
                           </th>
                         ))}
+
+                        {filteredMatches.length > 0 &&
+                          selectedDate === "all" && (
+                            <>
+                              <th
+                                rowSpan={2}
+                                className="px-2 sm:px-4 py-2 sm:py-3 bg-[#0a0500] z-30 border-l border-orange-700/60 min-w-[60px]"
+                              >
+                                <span className="text-gray-400 font-black tracking-widest">
+                                  {t.varSubtotal || "SUBTOTAL"}
+                                </span>
+                                <br />
+                                <span className="text-gray-500/80">
+                                  {t.varPtsCol}
+                                </span>
+                              </th>
+                              <th
+                                rowSpan={2}
+                                className="px-2 sm:px-4 py-2 sm:py-3 bg-[#0a0500] z-30 border-l border-r border-orange-700/60 min-w-[60px]"
+                              >
+                                <span className="text-cyan-400 font-black tracking-widest">
+                                  {t.varBonus || "BONO"}
+                                </span>
+                                <br />
+                                <span className="text-cyan-500/80">
+                                  {t.varPtsCol}
+                                </span>
+                              </th>
+                            </>
+                          )}
 
                         {filteredMatches.length > 0 && (
                           <th
@@ -382,7 +480,7 @@ export const VarReportModal = ({
 
                     <tbody className="divide-y divide-orange-900/40">
                       {alphabeticalParticipants.map((user: any) => {
-                        const rowTotalPoints = filteredMatches.reduce(
+                        const matchPoints = filteredMatches.reduce(
                           (acc: number, m: any) => {
                             const pred = data?.predictions?.find(
                               (p: any) =>
@@ -392,6 +490,19 @@ export const VarReportModal = ({
                           },
                           0,
                         );
+
+                        let userBonus = 0;
+                        if (selectedDate === "all" && data?.bonusPoints) {
+                          userBonus = data.bonusPoints
+                            .filter((b: any) => b.user_id === user.id)
+                            .reduce(
+                              (acc: number, curr: any) =>
+                                acc + (curr.points_won || 0),
+                              0,
+                            );
+                        }
+
+                        const rowTotalPoints = matchPoints + userBonus;
 
                         return (
                           <tr
@@ -424,6 +535,18 @@ export const VarReportModal = ({
                               );
                             })}
 
+                            {filteredMatches.length > 0 &&
+                              selectedDate === "all" && (
+                                <>
+                                  <td className="px-2 sm:px-4 py-2 font-black bg-black border-l border-orange-800/50 text-gray-400 text-center shadow-inner">
+                                    {matchPoints}
+                                  </td>
+                                  <td className="px-2 sm:px-4 py-2 font-black bg-black border-l border-r border-orange-800/50 text-cyan-400 text-center shadow-inner">
+                                    {userBonus > 0 ? `🌟 +${userBonus}` : "-"}
+                                  </td>
+                                </>
+                              )}
+
                             {filteredMatches.length > 0 && (
                               <td className="px-2 sm:px-4 py-2 font-black static sm:sticky right-0 bg-black group-hover:bg-[#0a0500] border-l border-orange-800/50 text-amber-500 z-20 text-base shadow-none sm:shadow-[-5px_0_15px_rgba(0,0,0,0.5)]">
                                 {rowTotalPoints}
@@ -437,7 +560,7 @@ export const VarReportModal = ({
                 </div>
               </div>
 
-              {/* 🟧 COLUMNA DERECHA: LEADERBOARD */}
+              {/* 🟧 COLUMNA DERECHA: LEADERBOARD SUPER VITAMINADO */}
               <div
                 className={`${positionsMobileClass} ${positionsDesktopClass} ${positionsSpanClass} bg-black border border-orange-600/50 rounded-xl flex-col shadow-2xl overflow-hidden xl:h-full`}
               >
@@ -461,20 +584,49 @@ export const VarReportModal = ({
                   </button>
                 </div>
 
-                <div className="overflow-y-auto custom-scrollbar flex-1 min-h-0 p-2 bg-black">
+                <div className="overflow-x-auto overflow-y-auto custom-scrollbar flex-1 min-h-0 p-2 bg-black w-full">
                   <table className="w-full text-sm text-left border-collapse">
-                    <thead className="text-[10px] text-orange-500 uppercase border-b border-orange-700/60 sticky top-0 bg-black z-10 shadow-md">
+                    <thead
+                      className={`text-[10px] ${expandedTextHeader} text-orange-500 uppercase border-b border-orange-700/60 sticky top-0 bg-black z-10 shadow-md`}
+                    >
                       <tr>
-                        <th className="px-2 py-2 text-center w-8 bg-black">
+                        <th className="px-2 py-2 text-center w-8 bg-black whitespace-nowrap">
                           #
                         </th>
-                        <th className="px-2 py-2 bg-black">
+                        <th className="px-2 py-2 bg-black whitespace-nowrap">
                           {t.varParticipant}
                         </th>
-                        <th className="px-2 py-2 text-center bg-black">
+                        <th className="px-2 py-2 text-center bg-black whitespace-nowrap">
                           {t.varSubDate}
                         </th>
-                        <th className="px-2 py-2 text-right bg-black">
+
+                        <th
+                          className={`px-2 py-2 text-center bg-black whitespace-nowrap ${detailColClass}`}
+                        >
+                          🎯 {t.varExact || "EXACTO"}
+                        </th>
+                        <th
+                          className={`px-2 py-2 text-center bg-black whitespace-nowrap ${detailColClass}`}
+                        >
+                          ⭐ {t.varDiff || "DIFERENCIA"}
+                        </th>
+                        <th
+                          className={`px-2 py-2 text-center bg-black whitespace-nowrap ${detailColClass}`}
+                        >
+                          ✅ {t.varWinner || "GANADOR"}
+                        </th>
+                        <th
+                          className={`px-2 py-2 text-center bg-black whitespace-nowrap ${detailColClass}`}
+                        >
+                          🏆 {t.varBonusGrp || "BONO GRP"}
+                        </th>
+                        <th
+                          className={`px-2 py-2 text-center bg-black whitespace-nowrap ${detailColClass}`}
+                        >
+                          👑 {t.varBonusChamp || "BONO CAMP"}
+                        </th>
+
+                        <th className="px-2 py-2 text-right bg-black whitespace-nowrap">
                           {t.varPtsCol}
                         </th>
                       </tr>
@@ -499,22 +651,55 @@ export const VarReportModal = ({
                             key={`lb-${user.id}`}
                             className="hover:bg-orange-950/30 transition-colors"
                           >
-                            <td className="px-2 py-3 text-center font-black text-orange-500">
+                            <td
+                              className={`px-2 py-3 text-center font-black text-orange-500 whitespace-nowrap ${expandedTextData}`}
+                            >
                               {index + 1}
                             </td>
                             <td
-                              className="px-2 py-3 font-bold text-gray-200 truncate max-w-[100px]"
+                              className={`px-2 py-3 font-bold text-gray-200 truncate max-w-[120px] whitespace-nowrap ${expandedTextData}`}
                               title={user.username}
                             >
                               {user.username}
                             </td>
                             <td
-                              className="px-1 py-3 text-center text-[10px] text-orange-300/60 uppercase tracking-tighter"
+                              className={`px-1 py-3 text-center text-[10px] text-orange-300/60 uppercase tracking-tighter whitespace-nowrap ${expandedTextHeader}`}
                               title={user.sub_date_groups}
                             >
                               {subDate}
                             </td>
-                            <td className="px-2 py-3 text-right font-black text-white">
+
+                            <td
+                              className={`px-2 py-3 text-center font-mono font-bold text-green-400 whitespace-nowrap bg-green-950/10 ${detailColClass} ${expandedTextData}`}
+                            >
+                              {user.exactPts > 0 ? `+${user.exactPts}` : "-"}
+                            </td>
+                            <td
+                              className={`px-2 py-3 text-center font-mono font-bold text-blue-400 whitespace-nowrap bg-blue-950/10 ${detailColClass} ${expandedTextData}`}
+                            >
+                              {user.diffPts > 0 ? `+${user.diffPts}` : "-"}
+                            </td>
+                            <td
+                              className={`px-2 py-3 text-center font-mono font-bold text-amber-400 whitespace-nowrap bg-amber-950/10 ${detailColClass} ${expandedTextData}`}
+                            >
+                              {user.winnerPts > 0 ? `+${user.winnerPts}` : "-"}
+                            </td>
+                            <td
+                              className={`px-2 py-3 text-center font-mono font-black text-cyan-400 whitespace-nowrap bg-cyan-950/10 border-l border-orange-900/50 ${detailColClass} ${expandedTextData}`}
+                            >
+                              {user.bonusGrp > 0 ? `+${user.bonusGrp}` : "-"}
+                            </td>
+                            <td
+                              className={`px-2 py-3 text-center font-mono font-black text-purple-400 whitespace-nowrap bg-purple-950/10 border-r border-orange-900/50 ${detailColClass} ${expandedTextData}`}
+                            >
+                              {user.bonusChamp > 0
+                                ? `+${user.bonusChamp}`
+                                : "-"}
+                            </td>
+
+                            <td
+                              className={`px-2 py-3 text-right font-black text-white whitespace-nowrap text-base ${expandedTextTotal}`}
+                            >
                               {user.totalPoints}
                             </td>
                           </tr>

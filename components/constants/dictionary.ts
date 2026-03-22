@@ -93,6 +93,13 @@ export const DICTIONARY = {
     // 👇 NOMBRES CORTOS PARA LAS PESTAÑAS (TABS)
     varTabMatrix: "Matriz",
     varTabPositions: "Posiciones",
+    varBonus: "BONO",
+    varSubtotal: "SUBTOTAL",
+    varExact: "EXACTO",
+    varDiff: "DIFERENCIA",
+    varWinner: "GANADOR",
+    varBonusGrp: "BONO GRP",
+    varBonusChamp: "BONO CAMP",
   },
   en: {
     saving: "Saving...",
@@ -184,5 +191,12 @@ export const DICTIONARY = {
     // 👇 NOMBRES CORTOS PARA LAS PESTAÑAS (TABS)
     varTabMatrix: "Matrix",
     varTabPositions: "Standings",
+    varBonus: "BONUS",
+    varSubtotal: "SUBTOTAL",
+    varExact: "EXACT",
+    varDiff: "GOAL DIFF",
+    varWinner: "WINNER",
+    varBonusGrp: "GRP BONUS",
+    varBonusChamp: "CHAMP BONUS",
   },
 };

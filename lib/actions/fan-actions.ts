@@ -41,13 +41,12 @@ export async function saveGroupStandingsAction(
 
 export async function submitPredictionsAction(
   userId: string,
-  phaseColumn: string = "sub_date_groups", // 👈 Por defecto asume grupos, pero es dinámico
+  phaseColumn: string = "sub_date_groups",
 ) {
   const supabase = await createClient();
   try {
     const submissionDate = new Date().toISOString();
 
-    // 1. Guardamos la fecha en la columna exacta de la fase correspondiente
     const { error } = await supabase
       .from("profiles")
       .update({ [phaseColumn]: submissionDate })
@@ -55,13 +54,12 @@ export async function submitPredictionsAction(
 
     if (error) throw error;
 
-    // 2. Actualizamos la cookie para que el frontend sepa que ya se bloqueó esa fase
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get("polla_session");
 
     if (sessionCookie) {
       const sessionData = JSON.parse(decodeURIComponent(sessionCookie.value));
-      sessionData[phaseColumn] = submissionDate; // Inyectamos la nueva fecha dinámicamente
+      sessionData[phaseColumn] = submissionDate;
 
       cookieStore.set(
         "polla_session",
@@ -101,7 +99,6 @@ export async function getUserStandingsAction(userId: string) {
   return data;
 }
 
-// 👇 LA BALA DE PLATA APLICADA AQUÍ
 export async function saveKnockoutTeamsAction(
   userId: string,
   resolvedMatches: any[],
@@ -109,7 +106,6 @@ export async function saveKnockoutTeamsAction(
   const supabase = await createClient();
 
   try {
-    // 🚀 TRADUCTOR: Buscamos el mapa de IDs físicos
     const { data: matchesMap } = await supabase
       .from("matches")
       .select("id, match_number");
@@ -125,7 +121,7 @@ export async function saveKnockoutTeamsAction(
 
     const upsertData = resolvedMatches.map((match) => ({
       user_id: userId,
-      match_id: getRealId(match.id), // 👈 Guardamos con el ID físico real
+      match_id: getRealId(match.id),
       predicted_home_team: match.home?.id || null,
       predicted_away_team: match.away?.id || null,
     }));
@@ -148,7 +144,6 @@ export async function saveKnockoutTeamsAction(
   }
 }
 
-// 👇 LA BALA DE PLATA APLICADA AQUÍ TAMBIÉN
 export async function saveKnockoutPredictionAction(
   userId: string,
   matchId: string | number,
@@ -158,7 +153,6 @@ export async function saveKnockoutPredictionAction(
 ) {
   const supabase = await createClient();
   try {
-    // 🚀 TRADUCTOR: Buscamos el ID real de este partido
     const { data: realMatch } = await supabase
       .from("matches")
       .select("id")
@@ -170,7 +164,7 @@ export async function saveKnockoutPredictionAction(
     const { error } = await supabase.from("predictions").upsert(
       {
         user_id: userId,
-        match_id: physicalId, // 👈 Guardamos con el ID físico real
+        match_id: physicalId,
         pred_home: homeScore,
         pred_away: awayScore,
         predicted_winner: winnerId,
@@ -185,7 +179,6 @@ export async function saveKnockoutPredictionAction(
   }
 }
 
-// 👇 Y EN EL GUARDADO MASIVO DE GRUPOS
 export async function saveGroupBulkPredictionsAction(
   userId: string,
   matchesData: {
@@ -196,7 +189,6 @@ export async function saveGroupBulkPredictionsAction(
 ) {
   const supabase = await createClient();
   try {
-    // 🚀 TRADUCTOR: Mapa de IDs
     const { data: matchesMap } = await supabase
       .from("matches")
       .select("id, match_number");
@@ -212,7 +204,7 @@ export async function saveGroupBulkPredictionsAction(
 
     const rowsToUpsert = matchesData.map((match) => ({
       user_id: userId,
-      match_id: getRealId(match.matchId), // 👈 Guardamos con el ID físico real
+      match_id: getRealId(match.matchId),
       pred_home: match.hScore,
       pred_away: match.aScore,
     }));
@@ -229,7 +221,6 @@ export async function saveGroupBulkPredictionsAction(
   }
 }
 
-// 🔒 NUEVO CANDADO PARA FASES DE ELIMINATORIA
 export async function submitKnockoutPhaseAction(userId: string, phase: string) {
   const { createClient } = await import("@/utils/supabase/server");
   const supabase = await createClient();
@@ -238,7 +229,6 @@ export async function submitKnockoutPhaseAction(userId: string, phase: string) {
   const now = new Date().toISOString();
 
   try {
-    // 1. Guardamos la fecha en la Base de Datos
     const { error } = await supabase
       .from("profiles")
       .update({ [columnToUpdate]: now })
@@ -246,18 +236,13 @@ export async function submitKnockoutPhaseAction(userId: string, phase: string) {
 
     if (error) throw error;
 
-    // 2. 🍪 LA MAGIA: Actualizamos la galleta del navegador
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get("polla_session");
 
     if (sessionCookie) {
-      // Abrimos la galleta vieja
       const sessionData = JSON.parse(decodeURIComponent(sessionCookie.value));
-
-      // Le inyectamos la nueva fecha de bloqueo (ej: sub_date_r32)
       sessionData[columnToUpdate] = now;
 
-      // Horneamos la galleta de nuevo y se la mandamos al navegador
       cookieStore.set(
         "polla_session",
         encodeURIComponent(JSON.stringify(sessionData)),
@@ -276,8 +261,6 @@ export async function submitKnockoutPhaseAction(userId: string, phase: string) {
   }
 }
 
-// 👇 CONSULTA PARA EL REPORTE GENERAL (EL VAR) 👇
-// 👇 CONSULTA PARA EL REPORTE GENERAL (EL VAR) CON PUNTOS DINÁMICOS 👇
 export async function getVarReportDataAction(userId: string) {
   const { createClient } = await import("@/utils/supabase/server");
   const supabase = await createClient();
@@ -293,7 +276,14 @@ export async function getVarReportDataAction(userId: string) {
       throw new Error("No se pudo identificar la polla.");
     const pollaId = currentUser.polla_id;
 
-    // 🚀 NUEVO: Traer la configuración de puntos de esta polla
+    // 🚀 NUEVO: Buscar el nombre de la polla (grupo)
+    const { data: groupData } = await supabase
+      .from("pollas")
+      .select("name")
+      .eq("id", pollaId)
+      .single();
+    const pollaName = groupData?.name || "GRUPO"; // Fallback por si acaso
+
     const { data: scoreConfig } = await supabase
       .from("score_configs")
       .select("*")
@@ -322,6 +312,9 @@ export async function getVarReportDataAction(userId: string) {
     if (matchErr) throw matchErr;
 
     let predictions: any[] = [];
+    // 🚀 NUEVO: Array para guardar los bonos
+    let bonusPoints: any[] = [];
+
     if (participants && participants.length > 0) {
       const participantIds = participants.map((p) => p.id);
       const { data: preds, error: predErr } = await supabase
@@ -331,15 +324,29 @@ export async function getVarReportDataAction(userId: string) {
 
       if (predErr) throw predErr;
       predictions = preds || [];
+
+      // 🚀 NUEVO: Traemos los bonos solo de los participantes de esta polla
+      const { data: bonuses, error: bonusErr } = await supabase
+        .from("bonus_points")
+        .select("user_id, points_won, bonus_type")
+        .in("user_id", participantIds);
+
+      if (bonusErr) {
+        console.error("Error trayendo bonos", bonusErr);
+      } else {
+        bonusPoints = bonuses || [];
+      }
     }
 
     return {
       success: true,
       data: {
+        pollaName,
         participants: participants || [],
         matches: matches || [],
         predictions,
-        scoreConfig, // 👈 Mandamos la configuración al frontend
+        scoreConfig,
+        bonusPoints, // 🚀 NUEVO: Retornamos los bonos al Frontend
       },
     };
   } catch (error: any) {
