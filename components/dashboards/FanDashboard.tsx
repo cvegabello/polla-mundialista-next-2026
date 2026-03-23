@@ -17,6 +17,7 @@ import { FloatingPhase } from "@/components/fan/FloatingPhase";
 import { SystemAlerts } from "@/components/shared/SystemAlerts";
 import { OfficialGroupsResults } from "@/components/dashboards/OfficialGroupsResults";
 import { OfficialKnockoutResults } from "@/components/dashboards/OfficialKnockoutResults";
+import { SubmitGroupModal } from "@/components/predictions/SubmitGroupModal";
 
 import {
   R16_MATCHUPS,
@@ -106,6 +107,49 @@ export const FanDashboard = ({
   }, []);
 
   const t = DICTIONARY[lang];
+
+  // 🏆 ESTADOS PARA EL MODAL DE 16AVOS
+  const [isKnockoutModalOpen, setIsKnockoutModalOpen] = useState(false);
+  const [modalTeams, setModalTeams] = useState<any[]>([]);
+  const [isLoadingTeams, setIsLoadingTeams] = useState(false);
+
+  // 🚀 NUEVA VERSIÓN: Valida vacíos y filtra solo a los clasificados
+  const handleOpenKnockoutModal = async (phase: string, matchIds: any[]) => {
+    // 1. VALIDACIÓN: ¿Están todos los partidos llenos?
+    if (!validateKnockoutPhase(phase, matchIds)) return; // Si faltan, saca alerta y no abre el modal
+
+    // 2. Si pasó la aduana, abrimos el modal
+    setIsKnockoutModalOpen(true);
+
+    if (modalTeams.length === 0) {
+      setIsLoadingTeams(true);
+      try {
+        const { getAllTeamsAction } = await import("@/lib/actions/fan-actions");
+        const data = await getAllTeamsAction();
+
+        // 3. 🎯 FILTRO DE CLASIFICADOS:
+        // Buscamos los equipos que están actualmente en el bracket
+        const qualifiedIds = new Set();
+        bracketMatches.forEach((m: any) => {
+          if (m.home_team?.id) qualifiedIds.add(m.home_team.id);
+          if (m.away_team?.id) qualifiedIds.add(m.away_team.id);
+        });
+
+        // Si encontramos equipos en el bracket, dejamos solo esos; si no, dejamos todos por seguridad
+        const filteredTeams =
+          qualifiedIds.size > 0
+            ? data.filter((t: any) => qualifiedIds.has(t.id))
+            : data;
+
+        setModalTeams(filteredTeams || []);
+      } catch (error) {
+        console.error("Error cargando equipos:", error);
+      } finally {
+        setIsLoadingTeams(false);
+      }
+    }
+  };
+
   const [winnerTeam, setWinnerTeam] = useState<any>(null);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
 
@@ -121,6 +165,8 @@ export const FanDashboard = ({
     totalMatches,
     showFloating,
     handleSubmit,
+    validateKnockoutPhase,
+    isSubmitting,
     hasSubmitted,
     handlePredictionChange,
     bracketMatches,
@@ -334,12 +380,11 @@ export const FanDashboard = ({
                     isSubmitted={!!userSession?.sub_date_r32}
                     lang={lang}
                     showFloating={showFloating}
-                    onAction={() =>
-                      handleSubmit(
-                        "r32",
-                        bracketMatches.map((m) => getPhysicalMatchId(m.id)),
-                      )
-                    }
+                    onAction={() => {
+                      // Obtenemos los IDs de los partidos (si usabas getPhysicalMatchId ponlo aquí)
+                      const matchIds = bracketMatches.map((m: any) => m.id);
+                      handleOpenKnockoutModal("r32", matchIds);
+                    }}
                   >
                     {bracketMatches.length > 0 ? (
                       bracketMatches.map((match, idx) => {
@@ -870,6 +915,24 @@ export const FanDashboard = ({
           </div>
         </div>
       )}
+
+      {/* 🏆 MODAL DE CAMPEÓN PARA 16AVOS */}
+      <SubmitGroupModal
+        isOpen={isKnockoutModalOpen}
+        onClose={() => setIsKnockoutModalOpen(false)}
+        teams={modalTeams}
+        lang={lang}
+        isLoading={isSubmitting || isLoadingTeams}
+        onConfirm={(championId) => {
+          // Cuando confirman, mandamos "r32", la lista de partidos y el ID del campeón
+          handleSubmit(
+            "r32",
+            bracketMatches.map((m) => getPhysicalMatchId(m.id)),
+            championId,
+          );
+          setIsKnockoutModalOpen(false);
+        }}
+      />
 
       <SystemAlerts
         modalType={systemModal}

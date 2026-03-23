@@ -27,10 +27,22 @@ export const VarReportModal = ({
 
   const t = DICTIONARY[lang];
 
-  const todayIso = new Date().toISOString().split("T")[0];
+  // 🕒 1. NUEVA FUNCIÓN: Extrae "YYYY-MM-DD" respetando la zona horaria del fan
+  const getLocalYYYYMMDD = (dateObj?: string | Date) => {
+    const d = dateObj ? new Date(dateObj) : new Date();
+    if (isNaN(d.getTime())) return "";
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  // 🎯 2. Usamos la función para sacar el día de hoy localmente
+  const todayIso = getLocalYYYYMMDD();
   const [selectedDate, setSelectedDate] = useState<string>(todayIso);
 
   const loadData = useCallback(async (showMainLoader = true) => {
+    // ... todo su código de loadData queda exactamente igual ...
     if (showMainLoader) setLoading(true);
     else setIsRefreshing(true);
 
@@ -63,12 +75,14 @@ export const VarReportModal = ({
     if (isOpen) loadData(true);
   }, [isOpen, loadData]);
 
+  // 🛡️ 3. FILTRO CORREGIDO: Usamos el reloj local para agrupar los partidos
   const filteredMatches = useMemo(() => {
     if (!data?.matches) return [];
     if (selectedDate === "all") return data.matches;
     return data.matches.filter((m: any) => {
       if (!m.match_date) return false;
-      const matchDateStr = new Date(m.match_date).toISOString().split("T")[0];
+      // Ya no usamos ISOString, usamos nuestra función local
+      const matchDateStr = getLocalYYYYMMDD(m.match_date);
       return matchDateStr === selectedDate;
     });
   }, [data?.matches, selectedDate]);
@@ -417,6 +431,47 @@ export const VarReportModal = ({
                         {filteredMatches.length > 0 &&
                           selectedDate === "all" && (
                             <>
+                              {/* 🏆 ============================================== */}
+                              {/* NUEVAS COLUMNAS DE CAMPEÓN (Antes del subtotal)   */}
+                              {/* ============================================== 🏆 */}
+                              <th
+                                rowSpan={2}
+                                className="px-2 sm:px-4 py-2 sm:py-3 bg-[#0a0500] z-30 border-l border-orange-700/60 min-w-[80px]"
+                              >
+                                <span className="text-[#22c55e] font-black tracking-widest">
+                                  {t.varChamp1Title}
+                                </span>
+                                <br />
+                                <span className="text-[#22c55e]/60 text-[9px]">
+                                  {t.varChamp1Sub}
+                                </span>
+                              </th>
+                              <th
+                                rowSpan={2}
+                                className="px-2 sm:px-4 py-2 sm:py-3 bg-[#0a0500] z-30 border-l border-orange-700/60 min-w-[80px]"
+                              >
+                                <span className="text-[#22c55e] font-black tracking-widest">
+                                  {t.varChamp2Title}
+                                </span>
+                                <br />
+                                <span className="text-[#22c55e]/60 text-[9px]">
+                                  {t.varChamp2Sub}
+                                </span>
+                              </th>
+                              <th
+                                rowSpan={2}
+                                className="px-2 sm:px-4 py-2 sm:py-3 bg-[#0a0500] z-30 border-l border-orange-700/60 min-w-[60px]"
+                              >
+                                <span className="text-[#22c55e] font-black tracking-widest">
+                                  {t.varPtsCol || "PTS"}
+                                </span>
+                                <br />
+                                <span className="text-[#22c55e]/60 text-[9px]">
+                                  {t.varPtsChamp}
+                                </span>
+                              </th>
+
+                              {/* COLUMNAS ORIGINALES (Subtotal y Bono) */}
                               <th
                                 rowSpan={2}
                                 className="px-2 sm:px-4 py-2 sm:py-3 bg-[#0a0500] z-30 border-l border-orange-700/60 min-w-[60px]"
@@ -502,7 +557,9 @@ export const VarReportModal = ({
                             );
                         }
 
-                        const rowTotalPoints = matchPoints + userBonus;
+                        const champPts = user.champPts || 0;
+                        const rowTotalPoints =
+                          matchPoints + userBonus + champPts;
 
                         return (
                           <tr
@@ -525,10 +582,17 @@ export const VarReportModal = ({
                                   <td className="px-2 py-2 border-r border-orange-900/40 font-mono text-gray-300 text-xs">
                                     {pred?.pred_away ?? "-"}
                                   </td>
-                                  <td className="px-1 py-2 border-r border-orange-800/50 font-mono bg-orange-950/10">
-                                    {getPointsTag(
-                                      pred?.points_won,
-                                      data?.scoreConfig,
+                                  <td className="px-1 py-2 border-r border-orange-800/50 font-mono bg-orange-950/10 text-center">
+                                    {m.home_score !== null &&
+                                    m.away_score !== null ? (
+                                      getPointsTag(
+                                        pred?.points_won,
+                                        data?.scoreConfig,
+                                      )
+                                    ) : (
+                                      <span className="text-gray-600 font-bold">
+                                        -
+                                      </span>
                                     )}
                                   </td>
                                 </React.Fragment>
@@ -538,11 +602,61 @@ export const VarReportModal = ({
                             {filteredMatches.length > 0 &&
                               selectedDate === "all" && (
                                 <>
-                                  <td className="px-2 sm:px-4 py-2 font-black bg-black border-l border-orange-800/50 text-gray-400 text-center shadow-inner">
-                                    {matchPoints}
+                                  {/* 🏆 ============================================== */}
+                                  {/* CELDAS DE CAMPEÓN PARA CADA USUARIO               */}
+                                  {/* ============================================== 🏆 */}
+                                  <td className="px-1 py-2 border-l border-orange-800/50 bg-[#0a150a]/30 text-center min-w-[60px] align-middle">
+                                    {user.champion1 ? (
+                                      <div className="flex flex-col items-center justify-center gap-1">
+                                        <img
+                                          src={
+                                            user.champion1.flag_url ??
+                                            "/images/flags/placeholder.svg"
+                                          }
+                                          alt={user.champion1[`name_${lang}`]}
+                                          className="w-6 h-4 object-cover rounded shadow-sm"
+                                          title={user.champion1[`name_${lang}`]}
+                                        />
+                                        <span className="text-[9px] text-gray-400 uppercase leading-none truncate w-12">
+                                          {user.champion1[
+                                            `name_${lang}`
+                                          ]?.substring(0, 3)}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs text-gray-600 font-bold">
+                                        -
+                                      </span>
+                                    )}
                                   </td>
-                                  <td className="px-2 sm:px-4 py-2 font-black bg-black border-l border-r border-orange-800/50 text-cyan-400 text-center shadow-inner">
-                                    {userBonus > 0 ? `🌟 +${userBonus}` : "-"}
+                                  <td className="px-1 py-2 border-l border-orange-800/50 bg-[#0a150a]/30 text-center min-w-[60px] align-middle">
+                                    {user.champion2 ? (
+                                      <div className="flex flex-col items-center justify-center gap-1">
+                                        <img
+                                          src={
+                                            user.champion2.flag_url ??
+                                            "/images/flags/placeholder.svg"
+                                          }
+                                          alt={user.champion2[`name_${lang}`]}
+                                          className="w-6 h-4 object-cover rounded shadow-sm"
+                                          title={user.champion2[`name_${lang}`]}
+                                        />
+                                        <span className="text-[9px] text-gray-400 uppercase leading-none truncate w-12">
+                                          {user.champion2[
+                                            `name_${lang}`
+                                          ]?.substring(0, 3)}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs text-gray-600 font-bold">
+                                        -
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="px-2 py-2 border-l border-orange-800/50 bg-[#0a150a]/50 text-center font-black text-[#22c55e] align-middle">
+                                    {user.champPts > 0
+                                      ? `+${user.champPts}`
+                                      : "-"}
                                   </td>
                                 </>
                               )}

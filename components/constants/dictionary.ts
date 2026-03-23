@@ -100,6 +100,11 @@ export const DICTIONARY = {
     varWinner: "GANADOR",
     varBonusGrp: "BONO GRP",
     varBonusChamp: "BONO CAMP",
+    varChamp1Title: "CAMPEÓN 1",
+    varChamp1Sub: "(Grupos)",
+    varChamp2Title: "CAMPEÓN 2",
+    varChamp2Sub: "(Finales)",
+    varPtsChamp: "CAMPEÓN",
 
     modalSubmitTitle: "¡CONFIRMACIÓN FINAL!",
     modalSubmitWarning:
@@ -207,6 +212,11 @@ export const DICTIONARY = {
     varWinner: "WINNER",
     varBonusGrp: "GRP BONUS",
     varBonusChamp: "CHAMP BONUS",
+    varChamp1Title: "CHAMPION 1",
+    varChamp1Sub: "(Groups)",
+    varChamp2Title: "CHAMPION 2",
+    varChamp2Sub: "(Finals)",
+    varPtsChamp: "CHAMPION",
 
     modalSubmitTitle: "FINAL CONFIRMATION!",
     modalSubmitWarning:

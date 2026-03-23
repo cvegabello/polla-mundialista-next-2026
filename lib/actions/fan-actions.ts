@@ -75,6 +75,11 @@ export async function submitPredictionsAction(
       updateData.champion_pick_1 = championId;
     }
 
+    // Si estamos enviando la primera fase de eliminatorias (r32)
+    else if (phaseColumn === "sub_date_r32" && championId) {
+      updateData.champion_pick_2 = championId;
+    }
+
     // 2. Guardamos todo en la base de datos
     const { error } = await supabase
       .from("profiles")
@@ -301,7 +306,7 @@ export async function getVarReportDataAction(userId: string) {
   try {
     const { data: currentUser, error: userErr } = await supabase
       .from("profiles")
-      .select("polla_id")
+      .select("polla_id, champion_pick_1, champion_pick_2")
       .eq("id", userId)
       .single();
 
@@ -309,13 +314,12 @@ export async function getVarReportDataAction(userId: string) {
       throw new Error("No se pudo identificar la polla.");
     const pollaId = currentUser.polla_id;
 
-    // 🚀 NUEVO: Buscar el nombre de la polla (grupo)
     const { data: groupData } = await supabase
       .from("pollas")
       .select("name")
       .eq("id", pollaId)
       .single();
-    const pollaName = groupData?.name || "GRUPO"; // Fallback por si acaso
+    const pollaName = groupData?.name || "GRUPO";
 
     const { data: scoreConfig } = await supabase
       .from("score_configs")
@@ -323,9 +327,10 @@ export async function getVarReportDataAction(userId: string) {
       .eq("polla_id", pollaId)
       .single();
 
+    // 🚀 CAMBIO 1: Traemos los picks de todos los participantes
     const { data: participants, error: partErr } = await supabase
       .from("profiles")
-      .select("id, username, sub_date_groups")
+      .select("id, username, sub_date_groups, champion_pick_1, champion_pick_2")
       .eq("polla_id", pollaId)
       .not("sub_date_groups", "is", null);
 
@@ -335,7 +340,7 @@ export async function getVarReportDataAction(userId: string) {
       .from("matches")
       .select(
         `
-        id, match_number, match_date, home_score, away_score, status,
+        id, match_number, match_date, home_score, away_score, status, winner_id,
         home:teams!home_team_id(id, name_es, name_en, flag_code),
         away:teams!away_team_id(id, name_es, name_en, flag_code)
       `,
@@ -345,41 +350,129 @@ export async function getVarReportDataAction(userId: string) {
     if (matchErr) throw matchErr;
 
     let predictions: any[] = [];
-    // 🚀 NUEVO: Array para guardar los bonos
     let bonusPoints: any[] = [];
 
     if (participants && participants.length > 0) {
       const participantIds = participants.map((p) => p.id);
-      const { data: preds, error: predErr } = await supabase
+
+      const { data: preds } = await supabase
         .from("predictions")
         .select("user_id, match_id, pred_home, pred_away, points_won")
         .in("user_id", participantIds);
-
-      if (predErr) throw predErr;
       predictions = preds || [];
 
-      // 🚀 NUEVO: Traemos los bonos solo de los participantes de esta polla
-      const { data: bonuses, error: bonusErr } = await supabase
+      const { data: bonuses } = await supabase
         .from("bonus_points")
         .select("user_id, points_won, bonus_type")
         .in("user_id", participantIds);
-
-      if (bonusErr) {
-        console.error("Error trayendo bonos", bonusErr);
-      } else {
-        bonusPoints = bonuses || [];
-      }
+      bonusPoints = bonuses || [];
     }
+
+    // 🏆 CAMBIO 2: Buscamos TODOS los equipos campeones elegidos por el grupo
+    const allChampIds = new Set();
+    participants?.forEach((p) => {
+      if (p.champion_pick_1) allChampIds.add(p.champion_pick_1);
+      if (p.champion_pick_2) allChampIds.add(p.champion_pick_2);
+    });
+
+    let champTeamsMap: any = {};
+    if (allChampIds.size > 0) {
+      const { data: tData } = await supabase
+        .from("teams")
+        .select("id, name_es, name_en, flag_code")
+        .in("id", Array.from(allChampIds));
+
+      tData?.forEach((t) => {
+        champTeamsMap[t.id] = t;
+      });
+    }
+
+    const getFlagUrl = (code?: string) =>
+      code && !code.includes("_rep_")
+        ? `https://flagcdn.com/w80/${code.substring(0, 2)}.png`
+        : null;
+
+    // 🏆 ¡MAGIA AUTOMÁTICA! Buscamos el partido 104 (La Gran Final) y sacamos a su ganador
+    const finalMatch = matches?.find((m: any) => m.match_number === 104);
+    const officialWorldChampionId = finalMatch?.winner_id || null;
+
+    // 🚀 CAMBIO 3: Enriquecemos a cada participante con sus campeones y puntos
+    const enrichedParticipants = participants?.map((p) => {
+      const t1 = p.champion_pick_1 ? champTeamsMap[p.champion_pick_1] : null;
+      const t2 = p.champion_pick_2 ? champTeamsMap[p.champion_pick_2] : null;
+
+      let c1Pts = 0;
+      let c2Pts = 0;
+
+      if (
+        officialWorldChampionId &&
+        p.champion_pick_1 === officialWorldChampionId
+      ) {
+        c1Pts = scoreConfig?.champ_initial || 0;
+      }
+      if (
+        officialWorldChampionId &&
+        p.champion_pick_2 === officialWorldChampionId
+      ) {
+        c2Pts = scoreConfig?.champ_final || 0;
+      }
+
+      return {
+        ...p,
+        champion1: t1 ? { ...t1, flag_url: getFlagUrl(t1.flag_code) } : null,
+        champion2: t2 ? { ...t2, flag_url: getFlagUrl(t2.flag_code) } : null,
+        champPts: c1Pts + c2Pts,
+      };
+    });
+
+    const currentUserPick1 = currentUser.champion_pick_1
+      ? champTeamsMap[currentUser.champion_pick_1]
+      : null;
+    const currentUserPick2 = currentUser.champion_pick_2
+      ? champTeamsMap[currentUser.champion_pick_2]
+      : null;
+
+    let pointsChampion1 = 0;
+    let pointsChampion2 = 0;
+    if (
+      officialWorldChampionId &&
+      currentUser.champion_pick_1 === officialWorldChampionId
+    )
+      pointsChampion1 = scoreConfig?.champ_initial || 0;
+    if (
+      officialWorldChampionId &&
+      currentUser.champion_pick_2 === officialWorldChampionId
+    )
+      pointsChampion2 = scoreConfig?.champ_final || 0;
+
+    const championPicks = {
+      champion1: currentUserPick1
+        ? {
+            ...currentUserPick1,
+            name: currentUserPick1.name_es,
+            flag_url: getFlagUrl(currentUserPick1.flag_code),
+          }
+        : null,
+      champion2: currentUserPick2
+        ? {
+            ...currentUserPick2,
+            name: currentUserPick2.name_es,
+            flag_url: getFlagUrl(currentUserPick2.flag_code),
+          }
+        : null,
+      total_earned_points: pointsChampion1 + pointsChampion2,
+    };
 
     return {
       success: true,
       data: {
         pollaName,
-        participants: participants || [],
+        participants: enrichedParticipants || [], // 👈 Va enriquecido con banderas
         matches: matches || [],
         predictions,
         scoreConfig,
-        bonusPoints, // 🚀 NUEVO: Retornamos los bonos al Frontend
+        bonusPoints,
+        championPicks,
       },
     };
   } catch (error: any) {

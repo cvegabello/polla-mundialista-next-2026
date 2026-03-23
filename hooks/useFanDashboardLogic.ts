@@ -337,125 +337,118 @@ export const useFanDashboardLogic = (
     return () => clearInterval(autoSaveInterval);
   }, [hasUnsavedChanges]);
 
+  // 🛑 NUEVA FUNCIÓN: La Aduana de Validación
+  const validateKnockoutPhase = (
+    phase: string,
+    phaseMatchIds: (string | number)[],
+  ) => {
+    let phaseName = "";
+    if (phase === "r32") phaseName = "16avos de Final";
+    else if (phase === "r16") phaseName = "Octavos de Final";
+    else if (phase === "qf") phaseName = "Cuartos de Final";
+    else if (phase === "sf") phaseName = "Semifinales";
+    else if (phase === "f") phaseName = "Finales";
+
+    let missing = 0;
+    for (const mId of phaseMatchIds) {
+      const pred = initialPredictions.find(
+        (p: any) => p.match_id?.toString() === mId.toString(),
+      );
+      const unsaved = unsavedPredictions.current[mId];
+      const hScore =
+        unsaved && unsaved.hScore !== undefined
+          ? unsaved.hScore
+          : pred?.pred_home;
+      const aScore =
+        unsaved && unsaved.aScore !== undefined
+          ? unsaved.aScore
+          : pred?.pred_away;
+
+      if (
+        hScore === null ||
+        hScore === undefined ||
+        hScore === "" ||
+        aScore === null ||
+        aScore === undefined ||
+        aScore === ""
+      ) {
+        missing++;
+      }
+    }
+
+    if (missing > 0) {
+      alert(
+        `⚠️ ADUANA: Te faltan ${missing} partidos por llenar en los ${phaseName}. Complétalos todos antes de enviar.`,
+      );
+      return false;
+    }
+    return true;
+  };
+
   // 🚦 LA ADUANA BLINDADA
   // 🚦 LA ADUANA BLINDADA (V2 - Corregida con IDs Reales)
   // 🚦 LA ADUANA BLINDADA (V3 - Con Campeón del Mundo)
   const handleSubmit = async (
     phase?: string,
     phaseMatchIds?: (string | number)[],
-    championId?: any, // 👈 NUEVO: Recibe el ID del campeón
+    championId?: any, // 👈 Aceptamos el ID del campeón (any para evitar líos de tipos)
   ) => {
+    // Evitamos doble envío
     if (isSubmitting || hasSubmitted) return;
     if (!userId) return alert("Error: No se identifica el usuario.");
 
+    // 1. Guardar cambios pendientes antes de bloquear
     if (hasUnsavedChanges) {
       await handleManualSave(true);
     }
 
-    // 🚀 CASO 1: ENVÍO DE GRUPOS (Incluye el Campeón)
-    if (!phase || phase === "groups") {
-      setIsSubmitting(true);
-      try {
-        // 👇 AQUÍ LE MANDAMOS EL CAMPEÓN A LA BASE DE DATOS
-        const result = await submitPredictionsAction(
-          userId,
-          "sub_date_groups",
-          championId,
-        );
+    setIsSubmitting(true);
+    try {
+      // 🎯 DETERMINAMOS LA COLUMNA DE DESTINO
+      // Si recibimos "r32" (eliminatorias), apuntamos a esa columna, si no, por defecto a grupos.
+      const isKnockoutSubmission = phase === "r32";
+      const phaseColumn = isKnockoutSubmission
+        ? "sub_date_r32"
+        : "sub_date_groups";
 
-        if (result.success) {
-          setHasSubmitted(true);
-          setHasUnsavedChanges(false);
-          window.scrollTo({ top: 0, behavior: "smooth" });
-          confetti({
-            particleCount: 150,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: ["#22c55e", "#eab308", "#ffffff"],
-            zIndex: 9999,
-          });
-          // Recargamos la página para que actualice la galleta y bloquee todo
-          setTimeout(() => window.location.reload(), 1500);
-        } else alert("Hubo un problema: " + (result as any).error);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsSubmitting(false);
+      console.log(
+        `🚀 Iniciando envío de fase: ${phase || "groups"} en columna: ${phaseColumn}`,
+      );
+
+      // 2. Llamamos a la acción del servidor
+      // Pasamos el championId que viene desde el Modal
+      const result = await submitPredictionsAction(
+        userId,
+        phaseColumn,
+        championId,
+      );
+
+      if (result.success) {
+        setHasSubmitted(true);
+        setHasUnsavedChanges(false);
+
+        // Efecto visual de victoria
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ["#22c55e", "#eab308", "#ffffff"],
+          zIndex: 9999,
+        });
+
+        // Refresco para bloquear la UI y cargar nuevos estados
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        alert("Error al enviar los pronósticos. Intenta de nuevo.");
       }
-      return; // 👈 Salimos para que no intente ejecutar lo de las finales
-    }
-
-    // 🚀 CASO 2: FASES DE ELIMINATORIA (16avos, Octavos, etc.)
-    if (phase && phaseMatchIds) {
-      let phaseName = "";
-      if (phase === "r32") phaseName = "16avos de Final";
-      else if (phase === "r16") phaseName = "Octavos de Final";
-      else if (phase === "qf") phaseName = "Cuartos de Final";
-      else if (phase === "sf") phaseName = "Semifinales";
-      else if (phase === "f") phaseName = "Finales";
-
-      let missing = 0;
-
-      // Inspeccionamos las cédulas exactas de los partidos
-      for (const mId of phaseMatchIds) {
-        const pred = initialPredictions.find(
-          (p: any) => p.match_id?.toString() === mId.toString(),
-        );
-        const unsaved = unsavedPredictions.current[mId];
-
-        const hScore =
-          unsaved && unsaved.hScore !== undefined
-            ? unsaved.hScore
-            : pred?.pred_home;
-        const aScore =
-          unsaved && unsaved.aScore !== undefined
-            ? unsaved.aScore
-            : pred?.pred_away;
-
-        if (
-          hScore === null ||
-          hScore === undefined ||
-          hScore === "" ||
-          aScore === null ||
-          aScore === undefined ||
-          aScore === ""
-        ) {
-          missing++;
-        }
-      }
-
-      // Si le faltan, le sacamos tarjeta amarilla y abortamos
-      if (missing > 0) {
-        alert(
-          `⚠️ ADUANA: Te faltan ${missing} partidos por llenar en los ${phaseName}. Complétalos todos antes de enviar.`,
-        );
-        return;
-      }
-
-      // Si todo está lleno, sellamos la fase
-      setIsSubmitting(true);
-      try {
-        const result = await submitKnockoutPhaseAction(userId, phase);
-        if (result.success) {
-          confetti({
-            particleCount: 150,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: ["#22c55e", "#eab308", "#ffffff"],
-            zIndex: 9999,
-          });
-          setTimeout(() => window.location.reload(), 1500);
-        } else {
-          alert("Hubo un problema sellando la fase: " + result.error);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsSubmitting(false);
-      }
+    } catch (error) {
+      console.error("Error en el proceso de envío:", error);
+      alert("Ocurrió un error inesperado al procesar el envío.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
   // Busca esta función al final de useFanDashboardLogic.ts
   const handleSaveKnockoutPrediction = useCallback(
     async (
@@ -501,6 +494,7 @@ export const useFanDashboardLogic = (
     showFloating,
     handlePredictionChange,
     handleSubmit,
+    validateKnockoutPhase,
     isSubmitting,
     hasSubmitted,
     bracketMatches,
