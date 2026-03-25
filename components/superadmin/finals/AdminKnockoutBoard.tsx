@@ -38,20 +38,10 @@ export const AdminKnockoutBoard = ({
   officialMatches,
   lang,
 }: AdminKnockoutBoardProps) => {
-  // 📺 === INICIO DEL VAR ===
-  console.log("=== VAR: ¿QUÉ TRAE EXACTAMENTE UN PARTIDO? ===");
-  console.log(
-    "Muestra del partido en la posición 72 del array:",
-    officialMatches[72],
-  );
-
   // Vamos a buscar específicamente el partido 73 (o el que usted haya probado)
   const partido73 = officialMatches?.find(
     (m) => m.match_number?.toString() === "73" || m.id?.toString() === "73",
   );
-  console.log("🔍 Radiografía del Partido 73:", partido73);
-  console.log("================================");
-  // 📺 === FIN DEL VAR ===
 
   const [localMatches, setLocalMatches] = useState<any[]>(
     officialMatches || [],
@@ -83,6 +73,7 @@ export const AdminKnockoutBoard = ({
 
           all.push({
             ...row,
+            id: tId, // 🚀 LA PIEZA MAESTRA QUE FALTABA
             position: index + 1,
             group_id: groupLetter,
             team_id: tId,
@@ -112,6 +103,8 @@ export const AdminKnockoutBoard = ({
   }, [officialStandings]);
 
   useEffect(() => {
+    console.log("=== 🕵️‍♂️ VAR DE AUTO-GUARDADO INICIADO ===");
+
     const fullResolvedBracket = resolveBracketMatches(
       officialStandings,
       knockoutWinners,
@@ -120,7 +113,6 @@ export const AdminKnockoutBoard = ({
     const updates: any[] = [];
 
     fullResolvedBracket.forEach((calcMatch) => {
-      // 🚀 BALA DE PLATA: Buscar por match_number o id
       const dbMatch = localMatches.find(
         (m) =>
           m.match_number?.toString() === calcMatch.id?.toString() ||
@@ -130,16 +122,46 @@ export const AdminKnockoutBoard = ({
       if (dbMatch) {
         const dbHome = dbMatch.home_team_id || null;
         const dbAway = dbMatch.away_team_id || null;
-        const calcHome = calcMatch.home?.id || null;
-        const calcAway = calcMatch.away?.id || null;
+
+        // 🚀 CORRECCIÓN Y VAR: Buscamos por 'id' o por 'team_id'
+        const calcHome = calcMatch.home?.id || calcMatch.home?.team_id || null;
+        const calcAway = calcMatch.away?.id || calcMatch.away?.team_id || null;
 
         const isHomeThird = calcMatch.h?.startsWith("T_");
         const isAwayThird = calcMatch.a?.startsWith("T_");
 
-        const finalHome = isHomeThird && dbHome ? dbHome : calcHome;
-        const finalAway = isAwayThird && dbAway ? dbAway : calcAway;
+        // 🧠 LÓGICA BLINDADA: Automatización + Control Manual
+        let finalHome = calcHome;
+        if (isHomeThird) {
+          // ¿El equipo que está en la BD es un tercero válido actualmente?
+          const isDbHomeValidThird = availableThirds.some(
+            (t) => t.id === dbHome,
+          );
+
+          if (isDbHomeValidThird) {
+            finalHome = dbHome; // Respetamos la BD (Permite su selección manual de Colombia)
+          } else {
+            finalHome = calcHome; // La BD tiene un eliminado (Canada), usamos el cálculo (Catar)
+          }
+        }
+
+        let finalAway = calcAway;
+        if (isAwayThird) {
+          const isDbAwayValidThird = availableThirds.some(
+            (t) => t.id === dbAway,
+          );
+
+          if (isDbAwayValidThird) {
+            finalAway = dbAway; // Respetamos la BD
+          } else {
+            finalAway = calcAway; // Usamos el cálculo automático
+          }
+        }
 
         if (dbHome !== finalHome || dbAway !== finalAway) {
+          console.log(
+            `📝 Llave ${calcMatch.id} necesita cambio: DB [${dbHome} vs ${dbAway}] ➡️ NUEVO [${finalHome} vs ${finalAway}]`,
+          );
           updates.push({
             matchId: Number(calcMatch.id),
             homeTeamId: finalHome,
@@ -149,12 +171,15 @@ export const AdminKnockoutBoard = ({
       }
     });
 
+    console.log("📦 Paquete final a enviar a la BD:", updates);
+
     if (updates.length > 0) {
+      console.log("🚀 Disparando acción de guardado al servidor...");
       syncBracketTeamsAction(updates)
         .then(() => {
+          console.log("✅ Servidor respondió OK. Actualizando vista local...");
           setLocalMatches((prev) =>
             prev.map((m) => {
-              // 🚀 BALA DE PLATA: Actualizar en memoria buscando por match_number o id
               const upd = updates.find(
                 (u) =>
                   u.matchId.toString() === m.match_number?.toString() ||
@@ -171,7 +196,9 @@ export const AdminKnockoutBoard = ({
             }),
           );
         })
-        .catch((err) => console.error("Error en auto-sync:", err));
+        .catch((err) => console.error("❌ Error en auto-sync:", err));
+    } else {
+      console.log("🛑 No hay cambios nuevos para guardar en la BD.");
     }
   }, [officialStandings, knockoutWinners, localMatches]);
 

@@ -168,6 +168,7 @@ export const saveOfficialScoreAction = async (
 };
 
 // 🔄 Sincronizador de Llaves (Bracket) Blindado
+// 🔄 Sincronizador de Llaves (Bracket) Blindado
 export const syncBracketTeamsAction = async (
   updates: {
     matchId: number;
@@ -175,6 +176,9 @@ export const syncBracketTeamsAction = async (
     awayTeamId: string | null;
   }[],
 ) => {
+  console.log("=== 📡 SERVIDOR: RECIBIENDO UPDATES DEL BRACKET ===");
+  console.log("Datos recibidos:", JSON.stringify(updates, null, 2));
+
   try {
     const supabase = await createClient();
 
@@ -194,14 +198,133 @@ export const syncBracketTeamsAction = async (
           })
           .eq("id", realMatch.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error(
+            `❌ Error BD al actualizar partido ${update.matchId}:`,
+            error,
+          );
+          throw error;
+        } else {
+          console.log(
+            `✅ BD Actualizada -> Partido ${update.matchId}: Local [${update.homeTeamId}] - Visitante [${update.awayTeamId}]`,
+          );
+        }
       }
     }
 
     revalidatePath("/", "layout");
+    console.log("=== 🏁 SERVIDOR: GUARDADO COMPLETADO ===");
     return { success: true };
   } catch (error) {
-    console.error("Error sincronizando los equipos de las llaves:", error);
+    console.error("❌ Error sincronizando los equipos de las llaves:", error);
     throw error;
+  }
+};
+
+// ☢️ RESET NUCLEAR: Simula que el torneo no ha empezado
+export const resetOfficialDataAction = async () => {
+  console.log("=== ☢️ INICIANDO RESET NUCLEAR DE RESULTADOS OFICIALES ===");
+
+  try {
+    const supabase = await createClient();
+
+    // 1. Limpiar todos los marcadores oficiales y el ganador
+    const { error: matchesError } = await supabase
+      .from("matches")
+      .update({
+        home_score: null,
+        away_score: null,
+        winner_id: null,
+      })
+      .not("id", "is", null); // Truco para afectar todas las filas
+
+    if (matchesError) throw matchesError;
+
+    // 2. Limpiar los equipos clasificados a la fase final (Partidos 73 en adelante)
+    const { error: knockoutError } = await supabase
+      .from("matches")
+      .update({
+        home_team_id: null,
+        away_team_id: null,
+      })
+      .gt("match_number", 72);
+
+    if (knockoutError) throw knockoutError;
+
+    // 3. Vaciar completamente la tabla de bonos
+    const { error: bonusError } = await supabase
+      .from("bonus_points")
+      .delete()
+      .not("id", "is", null);
+
+    if (bonusError) throw bonusError;
+
+    // 4. Limpiar los puntos ganados (Pero NO borramos los pronósticos)
+    const { error: predError } = await supabase
+      .from("predictions")
+      .update({ points_won: null })
+      .not("id", "is", null);
+
+    if (predError) throw predError;
+
+    // 5. Dejar a todos los usuarios con 0 puntos en la tabla general
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ total_points: 0 })
+      .not("id", "is", null);
+
+    if (profileError) throw profileError;
+
+    revalidatePath("/", "layout");
+    console.log("=== ☢️ RESET COMPLETADO CON ÉXITO ===");
+    return { success: true };
+  } catch (error) {
+    console.error("❌ Error en el reset nuclear:", error);
+    return { success: false, error };
+  }
+};
+// ==========================================
+// 👥 MODAL DE GESTIÓN DE USUARIOS
+// ==========================================
+
+// 1. Traer todos los usuarios del sistema
+export const getSystemUsersAction = async () => {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("profiles")
+      // 🚀 ¡AQUÍ ESTÁ LA MAGIA! Si falta 'polla_id' aquí, el filtro llega ciego al frontend
+      .select("id, username, sub_date_groups, role, polla_id")
+      .order("username", { ascending: true });
+
+    if (error) throw error;
+
+    // Filtramos para no mostrar superadmins
+    const fans = data.filter((u) => u.role !== "superadmin");
+    return { success: true, data: fans };
+  } catch (error) {
+    console.error("❌ Error obteniendo usuarios:", error);
+    return { success: false, data: [] };
+  }
+};
+// 2. Devolver a Borrador (Quitar candado)
+export const revertUserToDraftAction = async (userId: string) => {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        sub_date_groups: null,
+        champion_pick_1: null, // Borramos su campeón para que lo vuelva a elegir
+      })
+      .eq("id", userId);
+
+    if (error) throw error;
+
+    revalidatePath("/", "layout");
+    return { success: true };
+  } catch (error) {
+    console.error("❌ Error abriendo el candado del usuario:", error);
+    return { success: false };
   }
 };

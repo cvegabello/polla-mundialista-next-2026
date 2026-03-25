@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { UserManagementModal } from "./UserManagementModal";
+import { resetOfficialDataAction } from "@/lib/actions/super-admin-actions";
 import { Settings, Users, AlertOctagon, Lock } from "lucide-react";
 import {
   getAdminPanelDataAction,
@@ -22,9 +24,41 @@ export const SystemConfigPanel = () => {
     setLoading(false);
   };
 
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+
   useEffect(() => {
     loadData();
   }, []);
+
+  const [isResetting, setIsResetting] = useState(false);
+
+  const handleResetData = async () => {
+    // 🛡️ Doble confirmación porque esto es destructivo
+    const confirm1 = window.confirm(
+      "☢️ ¡ALERTA ROJA! ¿Está seguro que desea borrar TODOS los resultados oficiales?",
+    );
+    if (!confirm1) return;
+
+    const confirm2 = window.confirm(
+      "¿Seguro? Esto dejará el torneo en ceros (no borrará pronósticos de usuarios). Esta acción es irreversible.",
+    );
+    if (!confirm2) return;
+
+    setIsResetting(true);
+    try {
+      const res = await resetOfficialDataAction();
+      if (res.success) {
+        alert("✅ Torneo reseteado con éxito. Todo está en ceros.");
+        window.location.reload(); // Recargamos para limpiar toda la memoria
+      } else {
+        alert("❌ Hubo un error al resetear los datos.");
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   const handleTogglePhase = async (column: string, currentValue: boolean) => {
     const newValue = !currentValue;
@@ -193,7 +227,10 @@ export const SystemConfigPanel = () => {
 
         {/* RESTO DE SECCIONES */}
         <div className="flex justify-center mt-8 mb-14 border-b border-white/5 pb-12">
-          <button className="cursor-pointer group relative flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black uppercase tracking-[0.2em] py-4 px-16 rounded-2xl transition-all duration-300 shadow-[0_0_20px_rgba(79,70,229,0.4)] hover:shadow-[0_0_30px_rgba(79,70,229,0.6)] hover:scale-105 border border-blue-400/30">
+          <button
+            onClick={() => setIsUserModalOpen(true)}
+            className="cursor-pointer group relative flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black uppercase tracking-[0.2em] py-4 px-16 rounded-2xl transition-all duration-300 shadow-[0_0_20px_rgba(79,70,229,0.4)] hover:shadow-[0_0_30px_rgba(79,70,229,0.6)] hover:scale-105 border border-blue-400/30"
+          >
             <Users size={24} className="group-hover:animate-bounce" />
             <span>Gestionar Usuarios</span>
             <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
@@ -205,15 +242,26 @@ export const SystemConfigPanel = () => {
             <AlertOctagon size={18} />
             Zona de Peligro
           </div>
-          <button className="cursor-pointer w-full md:w-auto flex items-center justify-center gap-3 bg-red-950/80 hover:bg-red-900 border border-red-800 text-red-300 hover:text-white font-bold uppercase tracking-widest py-4 px-12 rounded-xl transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)] hover:shadow-[0_0_25px_rgba(220,38,38,0.6)]">
+          <button
+            onClick={handleResetData}
+            disabled={isResetting}
+            className="cursor-pointer w-full md:w-auto flex items-center justify-center gap-3 bg-red-950/80 hover:bg-red-900 border border-red-800 text-red-300 hover:text-white font-bold uppercase tracking-widest py-4 px-12 rounded-xl transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)] hover:shadow-[0_0_25px_rgba(220,38,38,0.6)]"
+          >
             <span className="text-xl">☢️</span>
-            Borrar Datos Oficiales (Reset)
+            {isResetting
+              ? "BORRANDO DATOS..."
+              : "BORRAR DATOS OFICIALES (RESET)"}
           </button>
           <p className="text-red-400/60 text-xs mt-4 italic font-medium tracking-wide">
             Solo usar antes del torneo. Borra marcadores y correcciones.
           </p>
         </div>
       </div>
+
+      <UserManagementModal
+        isOpen={isUserModalOpen}
+        onClose={() => setIsUserModalOpen(false)}
+      />
     </div>
   );
 };
