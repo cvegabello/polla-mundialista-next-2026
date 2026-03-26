@@ -1,6 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation"; // 🚀 NUEVO: Importamos el enrutador
 import confetti from "canvas-confetti";
 import {
+  R32_MATCHUPS,
+  R16_MATCHUPS,
+  QF_MATCHUPS,
+  SF_MATCHUPS,
+  F_MATCHUPS,
+} from "@/components/constants/matchups";
+import {
+  saveKnockoutTeamsAction,
   saveKnockoutPredictionAction,
   submitPredictionsAction,
   getUserStandingsAction,
@@ -10,11 +19,21 @@ import {
 } from "@/lib/actions/fan-actions";
 import { resolveBracketMatches } from "@/utils/bracket-resolver";
 
+const ALL_MATCHUPS = [
+  ...R32_MATCHUPS,
+  ...R16_MATCHUPS,
+  ...QF_MATCHUPS,
+  ...SF_MATCHUPS,
+  ...F_MATCHUPS,
+];
+
 export const useFanDashboardLogic = (
   initialPredictions: any[],
   userId: string,
   groupsData: any[] = [],
 ) => {
+  const router = useRouter(); // 🚀 NUEVO: Inicializamos el router
+
   // 💾 MEJORA: Leemos la última pestaña visitada desde la memoria del navegador
   const [currentView, setCurrentView] = useState(() => {
     if (typeof window !== "undefined") {
@@ -30,8 +49,6 @@ export const useFanDashboardLogic = (
   );
   const [showFloating, setShowFloating] = useState(false);
   const [totalGroupMatches, setTotalGroupMatches] = useState(72);
-  const [bracketMatches, setBracketMatches] = useState<any[]>([]);
-  const [isLoadingBracket, setIsLoadingBracket] = useState(false);
   const [knockoutWinners, setKnockoutWinners] = useState<Record<string, any>>(
     {},
   );
@@ -100,57 +117,13 @@ export const useFanDashboardLogic = (
     return () => window.removeEventListener("scroll", handleScroll, true);
   }, []);
 
-  // 🚀 EL CARGADOR DE LLAVES (Con Interruptor Inteligente)
-  useEffect(() => {
-    const loadBracket = async () => {
-      if (currentView === "pred_finals" && userId) {
-        // 1. EL SENSOR: ¿El SuperAdmin ya inyectó equipos oficiales en 16avos?
-        // Buscamos si en las predicciones ya hay equipos con UUID para los partidos 73 al 88 (o 383+).
-        const isBracketSeeded = initialPredictions.some(
-          (p: any) =>
-            (p.match_id?.toString() === "73" ||
-              p.match_id?.toString() === "383" ||
-              Number(p.match_id) >= 73) &&
-            p.pred_home !== undefined &&
-            p.predicted_home_team !== null,
-        );
-
-        if (isBracketSeeded) {
-          // 🏎️ MODO VISTA BRUTA (Turbo): Nos saltamos la base de datos.
-          // Llamamos al resolver con un arreglo vacío solo para que nos escupa el "esqueleto" de los partidos.
-          const emptyStandings: any[] = [];
-          const resolved = resolveBracketMatches(
-            emptyStandings,
-            initialPredictions,
-          );
-          setBracketMatches(resolved);
-          setIsLoadingBracket(false); // Ni siquiera encendemos el letrero
-          return; // Abortamos el resto de la función
-        }
-
-        // 🐢 MODO CALCULADORA (El clásico): Si todavía estamos en Fase de Grupos, hace la matemática.
-        setIsLoadingBracket(true);
-        try {
-          const standings = await getUserStandingsAction(userId);
-          const resolved = resolveBracketMatches(standings, initialPredictions);
-          setBracketMatches(resolved);
-        } catch (error) {
-          console.error("Error cargando el bracket:", error);
-        } finally {
-          setIsLoadingBracket(false);
-        }
-      }
-    };
-    loadBracket();
-  }, [currentView, userId, initialPredictions]);
-
   const handlePredictionChange = useCallback(
     (matchId: string, isComplete: boolean) => {
       setCompletedMatches((prev) => {
         const hasMatch = prev.has(matchId);
-        if (isComplete === hasMatch) return prev; // Ignorar si no hay cambio real
+        if (isComplete === hasMatch) return prev;
 
-        setHasUnsavedChanges(true); // Activar botón solo si hubo cambio
+        setHasUnsavedChanges(true);
 
         const newSet = new Set(prev);
         if (isComplete) newSet.add(matchId);
@@ -187,11 +160,12 @@ export const useFanDashboardLogic = (
     if (isReallyAutoSave) setSystemModal("autosaving");
 
     try {
+      let didUpdateGroups = false;
+
       // 1. Guardar en Base de Datos
       for (const key in unsavedPredictions.current) {
         const data = unsavedPredictions.current[key];
         if (data.isKnockout) {
-          // AJUSTE AQUÍ: Aseguramos que si es undefined o vacío, mande null
           const hScore =
             data.hScore === "" || data.hScore === undefined
               ? null
@@ -225,18 +199,53 @@ export const useFanDashboardLogic = (
           }
           if (data.tableData) {
             await saveGroupStandingsAction(userId, key, data.tableData);
+            didUpdateGroups = true;
           }
         }
       }
 
-      // 2. 🥷 Sincronizar memoria (Tu lógica original intacta)
+      // 🧠 LA MAGIA: Calculamos la llave y la guardamos en BD al instante
+      if (didUpdateGroups) {
+        try {
+          console.log(
+            "⚽ Grupos actualizados. Auto-calculando llaves de fase final...",
+          );
+          const updatedStandings = await getUserStandingsAction(userId);
+          const resolvedMatches = resolveBracketMatches(
+            updatedStandings,
+            knockoutWinners,
+            ALL_MATCHUPS,
+          );
+
+          await saveKnockoutTeamsAction(userId, resolvedMatches);
+
+          resolvedMatches.forEach((rm) => {
+            const existing = initialPredictions.find(
+              (p: any) => p.match_id?.toString() === rm.id?.toString(),
+            );
+            if (existing) {
+              existing.predicted_home_team = rm.home?.id || null;
+              existing.predicted_away_team = rm.away?.id || null;
+            } else {
+              initialPredictions.push({
+                match_id: rm.id,
+                predicted_home_team: rm.home?.id || null,
+                predicted_away_team: rm.away?.id || null,
+              });
+            }
+          });
+        } catch (error) {
+          console.error("❌ Error auto-calculando llaves:", error);
+        }
+      }
+
+      // 2. Sincronizar memoria
       for (const key in unsavedPredictions.current) {
         const data = unsavedPredictions.current[key];
         if (data.isKnockout) {
           const existing = initialPredictions.find(
             (p: any) => p.match_id.toString() === key.toString(),
           );
-          // Usamos la misma lógica de normalización para la memoria local
           const hScore =
             data.hScore === "" || data.hScore === undefined
               ? null
@@ -289,6 +298,9 @@ export const useFanDashboardLogic = (
       unsavedPredictions.current = {};
       setHasUnsavedChanges(false);
 
+      // 🚀 MAGIA #1: Obligamos a Next.js a refrescar los datos silenciosamente
+      router.refresh();
+
       setSystemModal(isReallyAutoSave ? "autosaved" : "success");
       setTimeout(() => setSystemModal("none"), 3000);
     } catch (error) {
@@ -297,8 +309,7 @@ export const useFanDashboardLogic = (
     }
   };
 
-  // 🥷 EL CAMBIO NINJA: Interceptamos el cambio de pestaña para guardar automáticamente
-  // y memorizamos la pestaña en el navegador para que el Refresco no la borre.
+  // 🥷 EL CAMBIO NINJA REFORZADO
   const handleViewChange = async (newView: string) => {
     if (newView !== currentView) {
       if (hasUnsavedChanges) {
@@ -307,6 +318,11 @@ export const useFanDashboardLogic = (
       setCurrentView(newView);
       if (typeof window !== "undefined") {
         sessionStorage.setItem("fanDashboardView", newView);
+      }
+
+      // 🚀 MAGIA #2: Si el usuario entra a "Fase Final", refrescamos la BD en silencio
+      if (newView === "pred_finals" || newView === "res_finals") {
+        router.refresh();
       }
     }
   };
@@ -337,7 +353,6 @@ export const useFanDashboardLogic = (
     return () => clearInterval(autoSaveInterval);
   }, [hasUnsavedChanges]);
 
-  // 🛑 NUEVA FUNCIÓN: La Aduana de Validación
   const validateKnockoutPhase = (
     phase: string,
     phaseMatchIds: (string | number)[],
@@ -385,27 +400,20 @@ export const useFanDashboardLogic = (
     return true;
   };
 
-  // 🚦 LA ADUANA BLINDADA
-  // 🚦 LA ADUANA BLINDADA (V2 - Corregida con IDs Reales)
-  // 🚦 LA ADUANA BLINDADA (V3 - Con Campeón del Mundo)
   const handleSubmit = async (
     phase?: string,
     phaseMatchIds?: (string | number)[],
-    championId?: any, // 👈 Aceptamos el ID del campeón (any para evitar líos de tipos)
+    championId?: any,
   ) => {
-    // Evitamos doble envío
     if (isSubmitting || hasSubmitted) return;
     if (!userId) return alert("Error: No se identifica el usuario.");
 
-    // 1. Guardar cambios pendientes antes de bloquear
     if (hasUnsavedChanges) {
       await handleManualSave(true);
     }
 
     setIsSubmitting(true);
     try {
-      // 🎯 DETERMINAMOS LA COLUMNA DE DESTINO
-      // Si recibimos "r32" (eliminatorias), apuntamos a esa columna, si no, por defecto a grupos.
       const isKnockoutSubmission = phase === "r32";
       const phaseColumn = isKnockoutSubmission
         ? "sub_date_r32"
@@ -415,8 +423,6 @@ export const useFanDashboardLogic = (
         `🚀 Iniciando envío de fase: ${phase || "groups"} en columna: ${phaseColumn}`,
       );
 
-      // 2. Llamamos a la acción del servidor
-      // Pasamos el championId que viene desde el Modal
       const result = await submitPredictionsAction(
         userId,
         phaseColumn,
@@ -427,7 +433,6 @@ export const useFanDashboardLogic = (
         setHasSubmitted(true);
         setHasUnsavedChanges(false);
 
-        // Efecto visual de victoria
         window.scrollTo({ top: 0, behavior: "smooth" });
         confetti({
           particleCount: 150,
@@ -437,7 +442,6 @@ export const useFanDashboardLogic = (
           zIndex: 9999,
         });
 
-        // Refresco para bloquear la UI y cargar nuevos estados
         setTimeout(() => window.location.reload(), 1500);
       } else {
         alert("Error al enviar los pronósticos. Intenta de nuevo.");
@@ -449,17 +453,16 @@ export const useFanDashboardLogic = (
       setIsSubmitting(false);
     }
   };
-  // Busca esta función al final de useFanDashboardLogic.ts
+
   const handleSaveKnockoutPrediction = useCallback(
     async (
       matchId: string | number,
-      hScore: any, // Aceptamos cualquier cosa para limpiar
+      hScore: any,
       aScore: any,
       winnerId: string | null,
     ) => {
       setHasUnsavedChanges(true);
 
-      // ✅ Normalizamos: si borran el input (""), guardamos null
       unsavedPredictions.current[matchId] = {
         isKnockout: true,
         hScore:
@@ -486,7 +489,7 @@ export const useFanDashboardLogic = (
 
   return {
     currentView,
-    setCurrentView: handleViewChange, // 👈 Se reemplaza para interceptar clics
+    setCurrentView: handleViewChange,
     completedMatches,
     progress: completedMatches.size,
     totalMatches: totalGroupMatches,
@@ -497,8 +500,6 @@ export const useFanDashboardLogic = (
     validateKnockoutPhase,
     isSubmitting,
     hasSubmitted,
-    bracketMatches,
-    isLoadingBracket,
     knockoutWinners,
     handleAdvanceTeam,
     handleSaveKnockoutPrediction,

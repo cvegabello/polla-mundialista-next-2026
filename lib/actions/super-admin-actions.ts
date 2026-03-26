@@ -6,6 +6,27 @@ import { calculateMatchPoints, ScoreConfig } from "@/utils/points-engine";
 import { calculateStandings } from "@/utils/standings";
 import { evaluateGroupBonusesAction } from "./bonus-actions";
 
+import {
+  getUserStandingsAction,
+  saveKnockoutTeamsAction,
+} from "@/lib/actions/fan-actions";
+import { resolveBracketMatches } from "@/utils/bracket-resolver";
+import {
+  R32_MATCHUPS,
+  R16_MATCHUPS,
+  QF_MATCHUPS,
+  SF_MATCHUPS,
+  F_MATCHUPS,
+} from "@/components/constants/matchups";
+
+const ALL_MATCHUPS = [
+  ...R32_MATCHUPS,
+  ...R16_MATCHUPS,
+  ...QF_MATCHUPS,
+  ...SF_MATCHUPS,
+  ...F_MATCHUPS,
+];
+
 export const saveOfficialScoreAction = async (
   matchId: number,
   homeScore: any,
@@ -326,5 +347,63 @@ export const revertUserToDraftAction = async (userId: string) => {
   } catch (error) {
     console.error("❌ Error abriendo el candado del usuario:", error);
     return { success: false };
+  }
+};
+
+// ==========================================
+// 🧙‍♂️ BOTÓN MÁGICO: Recalcular llaves de fans
+// ==========================================
+export const forceRecalculateAllBracketsAction = async () => {
+  console.log("=== 🧙‍♂️ INICIANDO RECALCULO MASIVO DE LLAVES ===");
+  try {
+    const supabase = await createClient();
+
+    // 1. Traer todos los fans (Excluimos a los superadmins)
+    const { data: users, error } = await supabase
+      .from("profiles")
+      .select("id, username")
+      .neq("role", "superadmin");
+
+    if (error) throw error;
+
+    let successCount = 0;
+
+    // 2. Iterar sobre cada usuario y calcularle la llave
+    for (const user of users) {
+      try {
+        console.log(`⏳ Procesando usuario: ${user.username}...`);
+
+        // Traemos sus posiciones guardadas (como si el fan acabara de guardar)
+        const standings = await getUserStandingsAction(user.id);
+
+        // Si tiene posiciones (es decir, ya llenó su fase de grupos)
+        if (standings && standings.length > 0) {
+          // Pasamos sus datos por el motor matemático
+          // Nota: pasamos {} en knockoutWinners porque solo nos interesa sembrar los equipos base
+          const resolvedMatches = resolveBracketMatches(
+            standings,
+            {},
+            ALL_MATCHUPS,
+          );
+
+          // Lo clavamos en la base de datos de forma invisible
+          await saveKnockoutTeamsAction(user.id, resolvedMatches);
+          successCount++;
+          console.log(`✅ Llaves de ${user.username} actualizadas.`);
+        } else {
+          console.log(`⏭️ ${user.username} no tiene grupos llenos, saltando.`);
+        }
+      } catch (userError) {
+        console.error(`❌ Error calculando a ${user.username}:`, userError);
+      }
+    }
+
+    console.log(
+      `=== 🧙‍♂️ RECALCULO COMPLETADO: ${successCount} usuarios actualizados ===`,
+    );
+    return { success: true, count: successCount };
+  } catch (error) {
+    console.error("❌ Error en el recálculo masivo:", error);
+    return { success: false, error };
   }
 };

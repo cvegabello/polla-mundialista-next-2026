@@ -2,7 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { UserManagementModal } from "./UserManagementModal";
-import { resetOfficialDataAction } from "@/lib/actions/super-admin-actions";
+import {
+  resetOfficialDataAction,
+  forceRecalculateAllBracketsAction,
+} from "@/lib/actions/super-admin-actions";
 import { Settings, Users, AlertOctagon, Lock } from "lucide-react";
 import {
   getAdminPanelDataAction,
@@ -78,6 +81,31 @@ export const SystemConfigPanel = () => {
 
     const shouldClearPredictions = newValue && column !== "allow_groups";
     await togglePhaseAction(column, newValue, shouldClearPredictions);
+  };
+
+  const [isRecalculating, setIsRecalculating] = useState(false);
+
+  const handleRecalculateBrackets = async () => {
+    const confirm = window.confirm(
+      "🧙‍♂️ ¿Desea forzar el cálculo de las llaves de TODOS los usuarios basado en sus pronósticos actuales? (Ideal para migrar datos viejos)",
+    );
+    if (!confirm) return;
+
+    setIsRecalculating(true);
+    try {
+      const res = await forceRecalculateAllBracketsAction();
+      if (res.success) {
+        alert(
+          `✅ ¡Magia completada! Se actualizaron las llaves de ${res.count} usuarios.`,
+        );
+      } else {
+        alert("❌ Hubo un error al recalcular las llaves.");
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsRecalculating(false);
+    }
   };
 
   if (loading && !panelData) {
@@ -226,13 +254,28 @@ export const SystemConfigPanel = () => {
         </div>
 
         {/* RESTO DE SECCIONES */}
-        <div className="flex justify-center mt-8 mb-14 border-b border-white/5 pb-12">
+        {/* 🛠️ HERRAMIENTAS DE ADMINISTRACIÓN */}
+        <div className="flex flex-col md:flex-row items-center justify-center gap-6 mt-8 mb-14 border-b border-white/5 pb-12">
+          {/* Botón: Gestionar Usuarios */}
           <button
             onClick={() => setIsUserModalOpen(true)}
-            className="cursor-pointer group relative flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black uppercase tracking-[0.2em] py-4 px-16 rounded-2xl transition-all duration-300 shadow-[0_0_20px_rgba(79,70,229,0.4)] hover:shadow-[0_0_30px_rgba(79,70,229,0.6)] hover:scale-105 border border-blue-400/30"
+            className="cursor-pointer group relative flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black uppercase tracking-[0.1em] py-4 px-8 rounded-2xl transition-all duration-300 shadow-[0_0_20px_rgba(79,70,229,0.4)] hover:shadow-[0_0_30px_rgba(79,70,229,0.6)] hover:scale-105 border border-blue-400/30"
           >
             <Users size={24} className="group-hover:animate-bounce" />
             <span>Gestionar Usuarios</span>
+            <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+          </button>
+
+          {/* 🧙‍♂️ Botón Mágico: Recalcular Llaves */}
+          <button
+            onClick={handleRecalculateBrackets}
+            disabled={isRecalculating}
+            className="cursor-pointer group relative flex items-center gap-3 bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white font-black uppercase tracking-[0.1em] py-4 px-8 rounded-2xl transition-all duration-300 shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:shadow-[0_0_30px_rgba(168,85,247,0.6)] hover:scale-105 border border-purple-400/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+          >
+            <span className="text-2xl group-hover:animate-spin">🪄</span>
+            <span>
+              {isRecalculating ? "Calculando..." : "Recalcular Llaves"}
+            </span>
             <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
           </button>
         </div>
