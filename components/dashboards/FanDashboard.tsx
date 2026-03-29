@@ -18,6 +18,9 @@ import { SystemAlerts } from "@/components/shared/SystemAlerts";
 import { OfficialGroupsResults } from "@/components/dashboards/OfficialGroupsResults";
 import { OfficialKnockoutResults } from "@/components/dashboards/OfficialKnockoutResults";
 import { SubmitGroupModal } from "@/components/predictions/SubmitGroupModal";
+import { FanNavigation } from "@/components/fan/header/FanNavigation";
+import { VarReportModal } from "@/components/fan/reportes/VarReportModal"; // Asegúrese de tener esta también
+import { SubmitZone } from "@/components/fan/header/SubmitZone";
 
 import {
   R32_MATCHUPS, // 🚀 Añadimos los 16avos puros
@@ -159,6 +162,7 @@ export const FanDashboard = ({
 
   const [winnerTeam, setWinnerTeam] = useState<any>(null);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
+  const [isVarModalOpen, setIsVarModalOpen] = useState(false);
 
   const safePredictions = userPredictions || [];
   const safeBonuses = userBonuses || [];
@@ -370,657 +374,726 @@ export const FanDashboard = ({
   const calculatedTotalPoints = matchPoints + bonusPoints;
 
   return (
-    <main className="min-h-screen transition-colors duration-300 bg-transparent dark:bg-transparent relative pb-20 overflow-x-hidden">
+    // 👇 Ajustamos el padding izquierdo (pl-16) para que el menú lateral no tape nada
+    <main className="min-h-screen transition-colors duration-300 bg-transparent dark:bg-transparent relative pt-16 md:pl-16 pb-20 overflow-x-hidden">
       <StarBackground />
 
-      <FanHeader
-        userSession={headerSession}
+      {/* 🚀 NUESTRO NUEVO SÚPER MENÚ (TOPBAR + SIDEBAR) */}
+      <FanNavigation
         lang={lang}
-        onLogout={() => handleLogoutAttempt(handleInternalLogout)}
         currentView={currentView}
         onViewChange={setCurrentView}
-        totalPredictions={progress}
-        totalMatches={totalMatches}
-        onSubmitPredictions={(championId) => {
-          handleSubmit("groups", [], championId);
-        }}
+        username={headerSession?.username || "Fan"}
+        pollaName={headerSession?.polla_name}
+        points={calculatedTotalPoints}
+        submissionDate={headerSession?.submission_date}
         hasUnsavedChanges={hasUnsavedChanges}
         onManualSave={handleManualSave}
         onRefresh={handleRefresh}
-        totalPoints={calculatedTotalPoints}
-        isSubmitAllowed={isGroupSubmitAllowed}
+        onLogout={() => handleLogoutAttempt(handleInternalLogout)}
+        onOpenVar={() => setIsVarModalOpen(true)}
       />
 
-      <div className="relative z-10 px-4">
-        {loadingData ? (
-          <div className="text-center text-white animate-pulse mt-12 font-bold tracking-widest">
-            {t.loadingGroups}
-          </div>
-        ) : (
-          <div className="w-full">
-            <div
-              className={`grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 max-w-[1600px] mx-auto justify-items-center ${currentView === "pred_groups" ? "grid" : "hidden"}`}
-            >
-              {safeGroups
-                ?.filter((g) => g.id !== "FI")
-                .map((group) => (
-                  <GroupCard
-                    key={group.id}
-                    group={group}
-                    lang={lang}
-                    initialPredictions={safePredictions}
-                    onPredictionChange={handlePredictionChange}
-                    isLocked={isGroupInputsLocked}
-                    onGroupDirty={handleGroupDataChange}
-                    groupBonus={safeBonuses.find(
-                      (b) => b.bonus_type === `GROUP_${group.id}`,
-                    )}
-                  />
-                ))}
-            </div>
+      {/* ZONA DE CONTENIDO PRINCIPAL */}
+      <div className="relative z-10 px-4 pt-6">
+        {/* TÍTULO PRINCIPAL EN LA PANTALLA */}
+        <div className="mb-6 mt-2 text-center">
+          <h1 className="text-2xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-b from-gray-900 to-orange-600 dark:from-white dark:to-cyan-200 drop-shadow-sm tracking-tighter">
+            {currentView === "pred_groups"
+              ? t.viewPredGroups
+              : currentView === "pred_finals"
+                ? t.viewPredFinals
+                : currentView === "res_groups"
+                  ? t.viewResGroups
+                  : t.viewResFinals}
+          </h1>
+          <div className="h-1 w-16 mx-auto bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full mt-2 opacity-60"></div>
+        </div>
 
-            <div
-              className={`max-w-[1600px] mx-auto mt-4 ${currentView === "pred_finals" ? "block" : "hidden"}`}
-            >
-              {/* 🚀 ELIMINAMOS EL isLoadingBracket - Carga Inmediata */}
-              <BracketContainer
-                footer={
-                  <div className="flex flex-row gap-6">
-                    {[
-                      t.bracketPhaseR32,
-                      t.bracketPhaseR16,
-                      t.bracketPhaseQF,
-                      t.bracketPhaseSF,
-                      t.bracketPhaseF,
-                    ].map((phase, i) => (
-                      <div
-                        key={i}
-                        className="w-[280px] shrink-0 flex justify-center"
-                      >
-                        <FloatingPhase isVisible={showFloating} title={phase} />
-                      </div>
-                    ))}
-                  </div>
-                }
+        {/* LA ZONA DE ENVÍO DE PRONÓSTICOS */}
+        {currentView === "pred_groups" && (
+          <SubmitZone
+            lang={lang}
+            isSubmitted={!!headerSession?.submission_date}
+            isComplete={progress >= totalMatches}
+            progress={progress}
+            total={totalMatches}
+            hasUnsavedChanges={hasUnsavedChanges}
+            onSubmit={(championId) => handleSubmit("groups", [], championId)}
+            isSubmitAllowed={isGroupSubmitAllowed}
+          />
+        )}
+
+        <div className="relative z-10 px-4">
+          {loadingData ? (
+            <div className="text-center text-white animate-pulse mt-12 font-bold tracking-widest">
+              {t.loadingGroups}
+            </div>
+          ) : (
+            <div className="w-full">
+              <div
+                className={`grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 max-w-[1600px] mx-auto justify-items-center ${currentView === "pred_groups" ? "grid" : "hidden"}`}
               >
-                {/* 16AVOS LECTURA PURA DESDE LA DB */}
-                <PhaseColumn
-                  title={t.bracketPhaseR32Full}
-                  isActive={safeConfig?.allow_r32 && !userSession?.sub_date_r32}
-                  isSubmitted={!!userSession?.sub_date_r32}
-                  lang={lang}
-                  showFloating={showFloating}
-                  onAction={() => {
-                    const matchIds = R32_MATCHUPS.map((m: any) =>
-                      getPhysicalMatchId(m.id),
-                    );
-                    handleOpenKnockoutModal("r32", matchIds);
-                  }}
+                {safeGroups
+                  ?.filter((g) => g.id !== "FI")
+                  .map((group) => (
+                    <GroupCard
+                      key={group.id}
+                      group={group}
+                      lang={lang}
+                      initialPredictions={safePredictions}
+                      onPredictionChange={handlePredictionChange}
+                      isLocked={isGroupInputsLocked}
+                      onGroupDirty={handleGroupDataChange}
+                      groupBonus={safeBonuses.find(
+                        (b) => b.bonus_type === `GROUP_${group.id}`,
+                      )}
+                    />
+                  ))}
+              </div>
+
+              <div
+                className={`max-w-[1600px] mx-auto mt-4 ${currentView === "pred_finals" ? "block" : "hidden"}`}
+              >
+                {/* 🚀 ELIMINAMOS EL isLoadingBracket - Carga Inmediata */}
+                <BracketContainer
+                  footer={
+                    <div className="flex flex-row gap-6">
+                      {[
+                        t.bracketPhaseR32,
+                        t.bracketPhaseR16,
+                        t.bracketPhaseQF,
+                        t.bracketPhaseSF,
+                        t.bracketPhaseF,
+                      ].map((phase, i) => (
+                        <div
+                          key={i}
+                          className="w-[280px] shrink-0 flex justify-center"
+                        >
+                          <FloatingPhase
+                            isVisible={showFloating}
+                            title={phase}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  }
                 >
-                  {R32_MATCHUPS.map((match, idx) => {
-                    const physicalId = getPhysicalMatchId(match.id);
-                    const prediction = safePredictions?.find(
-                      (p) =>
-                        p.match_id?.toString() === physicalId?.toString() ||
-                        p.match_id?.toString() === match.id?.toString(),
-                    );
-
-                    const offScore = officialScores?.find(
-                      (m) =>
-                        m.match_number?.toString() === physicalId?.toString() ||
-                        m.id?.toString() === physicalId?.toString(),
-                    );
-                    const officialScoreObj =
-                      offScore &&
-                      offScore.home_score !== null &&
-                      offScore.away_score !== null
-                        ? {
-                            home: offScore.home_score,
-                            away: offScore.away_score,
-                          }
-                        : undefined;
-
-                    const dbHome =
-                      getTeamData(prediction?.predicted_home_team) || {};
-                    const dbAway =
-                      getTeamData(prediction?.predicted_away_team) || {};
-
-                    return (
-                      <BracketMatchCard
-                        key={match.id}
-                        matchId={match.id}
-                        matchCode={
-                          getMatchDateFromSchedule(match.id)
-                            ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
-                            : `M${match.id}`
-                        }
-                        isLocked={!!userSession?.sub_date_r32}
-                        lang={lang}
-                        onAdvanceTeam={handleAdvanceTeam}
-                        style={
-                          idx % 2 !== 0
-                            ? { marginTop: "-8px" }
-                            : { marginTop: "15px" }
-                        }
-                        homeTeam={{
-                          id: dbHome.id || null,
-                          seed: getDisplaySeed(match.h, dbHome), // 👈 LA MAGIA AQUÍ CON dbHome
-                          name: dbHome.name_es
-                            ? lang === "en"
-                              ? dbHome.name_en || dbHome.name_es
-                              : dbHome.name_es
-                            : t.bracketTBD,
-                          name_es: dbHome.name_es,
-                          name_en: dbHome.name_en,
-                          flag: dbHome.flag_code || dbHome.flag || null,
-                          group: dbHome.group || null,
-                        }}
-                        awayTeam={{
-                          id: dbAway.id || null,
-                          seed: getDisplaySeed(match.a, dbAway), // 👈 Y AQUÍ CON dbAway
-                          name: dbAway.name_es
-                            ? lang === "en"
-                              ? dbAway.name_en || dbAway.name_es
-                              : dbAway.name_es
-                            : t.bracketTBD,
-                          name_es: dbAway.name_es,
-                          name_en: dbAway.name_en,
-                          flag: dbAway.flag_code || dbAway.flag || null,
-                          group: dbAway.group || null,
-                        }}
-                        prediction={prediction}
-                        onSavePrediction={handleSaveKnockoutPrediction}
-                        pointsWon={
-                          officialScoreObj ? prediction?.points_won : undefined
-                        }
-                        pointsCondition={
-                          officialScoreObj
-                            ? prediction?.points_condition
-                            : undefined
-                        }
-                        officialScore={officialScoreObj}
-                      />
-                    );
-                  })}
-                </PhaseColumn>
-
-                {/* OCTAVOS */}
-                <PhaseColumn
-                  title={t.bracketPhaseR16Full}
-                  isActive={safeConfig?.allow_r16 && !userSession?.sub_date_r16}
-                  isSubmitted={!!userSession?.sub_date_r16}
-                  lang={lang}
-                  showFloating={showFloating}
-                  onAction={() => {
-                    const matchIds = R16_MATCHUPS.map((m) =>
-                      getPhysicalMatchId(m.id),
-                    );
-                    if (validateKnockoutPhase("r16", matchIds)) {
-                      handleSubmit("r16", matchIds);
+                  {/* 16AVOS LECTURA PURA DESDE LA DB */}
+                  <PhaseColumn
+                    title={t.bracketPhaseR32Full}
+                    isActive={
+                      safeConfig?.allow_r32 && !userSession?.sub_date_r32
                     }
-                  }}
-                >
-                  {R16_MATCHUPS.map((match, idx) => {
-                    const physicalId = getPhysicalMatchId(match.id);
-                    const prediction = safePredictions?.find(
-                      (p) =>
-                        p.match_id?.toString() === physicalId?.toString() ||
-                        p.match_id?.toString() === match.id?.toString(),
-                    );
+                    isSubmitted={!!userSession?.sub_date_r32}
+                    lang={lang}
+                    showFloating={showFloating}
+                    onAction={() => {
+                      const matchIds = R32_MATCHUPS.map((m: any) =>
+                        getPhysicalMatchId(m.id),
+                      );
+                      handleOpenKnockoutModal("r32", matchIds);
+                    }}
+                  >
+                    {R32_MATCHUPS.map((match, idx) => {
+                      const physicalId = getPhysicalMatchId(match.id);
+                      const prediction = safePredictions?.find(
+                        (p) =>
+                          p.match_id?.toString() === physicalId?.toString() ||
+                          p.match_id?.toString() === match.id?.toString(),
+                      );
 
-                    const offScore = officialScores?.find(
-                      (m) =>
-                        m.match_number?.toString() === physicalId?.toString() ||
-                        m.id?.toString() === physicalId?.toString(),
-                    );
-                    const officialScoreObj =
-                      offScore &&
-                      offScore.home_score !== null &&
-                      offScore.away_score !== null
-                        ? {
-                            home: offScore.home_score,
-                            away: offScore.away_score,
+                      const offScore = officialScores?.find(
+                        (m) =>
+                          m.match_number?.toString() ===
+                            physicalId?.toString() ||
+                          m.id?.toString() === physicalId?.toString(),
+                      );
+                      const officialScoreObj =
+                        offScore &&
+                        offScore.home_score !== null &&
+                        offScore.away_score !== null
+                          ? {
+                              home: offScore.home_score,
+                              away: offScore.away_score,
+                            }
+                          : undefined;
+
+                      const dbHome =
+                        getTeamData(prediction?.predicted_home_team) || {};
+                      const dbAway =
+                        getTeamData(prediction?.predicted_away_team) || {};
+
+                      return (
+                        <BracketMatchCard
+                          key={match.id}
+                          matchId={match.id}
+                          matchCode={
+                            getMatchDateFromSchedule(match.id)
+                              ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
+                              : `M${match.id}`
                           }
-                        : undefined;
+                          isLocked={!!userSession?.sub_date_r32}
+                          lang={lang}
+                          onAdvanceTeam={handleAdvanceTeam}
+                          style={
+                            idx % 2 !== 0
+                              ? { marginTop: "-8px" }
+                              : { marginTop: "15px" }
+                          }
+                          homeTeam={{
+                            id: dbHome.id || null,
+                            seed: getDisplaySeed(match.h, dbHome), // 👈 LA MAGIA AQUÍ CON dbHome
+                            name: dbHome.name_es
+                              ? lang === "en"
+                                ? dbHome.name_en || dbHome.name_es
+                                : dbHome.name_es
+                              : t.bracketTBD,
+                            name_es: dbHome.name_es,
+                            name_en: dbHome.name_en,
+                            flag: dbHome.flag_code || dbHome.flag || null,
+                            group: dbHome.group || null,
+                          }}
+                          awayTeam={{
+                            id: dbAway.id || null,
+                            seed: getDisplaySeed(match.a, dbAway), // 👈 Y AQUÍ CON dbAway
+                            name: dbAway.name_es
+                              ? lang === "en"
+                                ? dbAway.name_en || dbAway.name_es
+                                : dbAway.name_es
+                              : t.bracketTBD,
+                            name_es: dbAway.name_es,
+                            name_en: dbAway.name_en,
+                            flag: dbAway.flag_code || dbAway.flag || null,
+                            group: dbAway.group || null,
+                          }}
+                          prediction={prediction}
+                          onSavePrediction={handleSaveKnockoutPrediction}
+                          pointsWon={
+                            officialScoreObj
+                              ? prediction?.points_won
+                              : undefined
+                          }
+                          pointsCondition={
+                            officialScoreObj
+                              ? prediction?.points_condition
+                              : undefined
+                          }
+                          officialScore={officialScoreObj}
+                        />
+                      );
+                    })}
+                  </PhaseColumn>
 
-                    const dbHome = getTeamData(prediction?.predicted_home_team);
-                    const dbAway = getTeamData(prediction?.predicted_away_team);
-                    const simHome = knockoutWinners[match.h.replace("W", "")];
-                    const simAway = knockoutWinners[match.a.replace("W", "")];
-
-                    const finalHome = dbHome || simHome;
-                    const finalAway = dbAway || simAway;
-
-                    return (
-                      <BracketMatchCard
-                        key={match.id}
-                        matchId={match.id}
-                        matchCode={
-                          getMatchDateFromSchedule(match.id)
-                            ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
-                            : `M${match.id}`
-                        }
-                        isLocked={!!userSession?.sub_date_r16}
-                        lang={lang}
-                        onAdvanceTeam={handleAdvanceTeam}
-                        style={
-                          idx % 10 !== 0
-                            ? { marginTop: "185px" }
-                            : { marginTop: "110px" }
-                        }
-                        homeTeam={{
-                          id: finalHome?.id,
-                          seed: match.h,
-                          name: finalHome
-                            ? finalHome.name_es || finalHome.name
-                            : t.bracketTBD,
-                          name_es: finalHome?.name_es,
-                          name_en: finalHome?.name_en,
-                          flag: finalHome
-                            ? finalHome.flag_code || finalHome.flag
-                            : null,
-                        }}
-                        awayTeam={{
-                          id: finalAway?.id,
-                          seed: match.a,
-                          name: finalAway
-                            ? finalAway.name_es || finalAway.name
-                            : t.bracketTBD,
-                          name_es: finalAway?.name_es,
-                          name_en: finalAway?.name_en,
-                          flag: finalAway
-                            ? finalAway.flag_code || finalAway.flag
-                            : null,
-                        }}
-                        prediction={prediction}
-                        onSavePrediction={handleSaveKnockoutPrediction}
-                        pointsWon={
-                          officialScoreObj ? prediction?.points_won : undefined
-                        }
-                        pointsCondition={
-                          officialScoreObj
-                            ? prediction?.points_condition
-                            : undefined
-                        }
-                        officialScore={officialScoreObj}
-                      />
-                    );
-                  })}
-                </PhaseColumn>
-
-                {/* CUARTOS */}
-                <PhaseColumn
-                  title={t.bracketPhaseQFFull}
-                  isActive={safeConfig?.allow_qf && !userSession?.sub_date_qf}
-                  isSubmitted={!!userSession?.sub_date_qf}
-                  lang={lang}
-                  showFloating={showFloating}
-                  onAction={() => {
-                    const matchIds = QF_MATCHUPS.map((m) =>
-                      getPhysicalMatchId(m.id),
-                    );
-                    if (validateKnockoutPhase("qf", matchIds)) {
-                      handleSubmit("qf", matchIds);
+                  {/* OCTAVOS */}
+                  <PhaseColumn
+                    title={t.bracketPhaseR16Full}
+                    isActive={
+                      safeConfig?.allow_r16 && !userSession?.sub_date_r16
                     }
-                  }}
-                >
-                  {QF_MATCHUPS.map((match, idx) => {
-                    const physicalId = getPhysicalMatchId(match.id);
-                    const prediction = safePredictions?.find(
-                      (p) =>
-                        p.match_id?.toString() === physicalId?.toString() ||
-                        p.match_id?.toString() === match.id?.toString(),
-                    );
+                    isSubmitted={!!userSession?.sub_date_r16}
+                    lang={lang}
+                    showFloating={showFloating}
+                    onAction={() => {
+                      const matchIds = R16_MATCHUPS.map((m) =>
+                        getPhysicalMatchId(m.id),
+                      );
+                      if (validateKnockoutPhase("r16", matchIds)) {
+                        handleSubmit("r16", matchIds);
+                      }
+                    }}
+                  >
+                    {R16_MATCHUPS.map((match, idx) => {
+                      const physicalId = getPhysicalMatchId(match.id);
+                      const prediction = safePredictions?.find(
+                        (p) =>
+                          p.match_id?.toString() === physicalId?.toString() ||
+                          p.match_id?.toString() === match.id?.toString(),
+                      );
 
-                    const offScore = officialScores?.find(
-                      (m) =>
-                        m.match_number?.toString() === physicalId?.toString() ||
-                        m.id?.toString() === physicalId?.toString(),
-                    );
-                    const officialScoreObj =
-                      offScore &&
-                      offScore.home_score !== null &&
-                      offScore.away_score !== null
-                        ? {
-                            home: offScore.home_score,
-                            away: offScore.away_score,
+                      const offScore = officialScores?.find(
+                        (m) =>
+                          m.match_number?.toString() ===
+                            physicalId?.toString() ||
+                          m.id?.toString() === physicalId?.toString(),
+                      );
+                      const officialScoreObj =
+                        offScore &&
+                        offScore.home_score !== null &&
+                        offScore.away_score !== null
+                          ? {
+                              home: offScore.home_score,
+                              away: offScore.away_score,
+                            }
+                          : undefined;
+
+                      const dbHome = getTeamData(
+                        prediction?.predicted_home_team,
+                      );
+                      const dbAway = getTeamData(
+                        prediction?.predicted_away_team,
+                      );
+                      const simHome = knockoutWinners[match.h.replace("W", "")];
+                      const simAway = knockoutWinners[match.a.replace("W", "")];
+
+                      const finalHome = dbHome || simHome;
+                      const finalAway = dbAway || simAway;
+
+                      return (
+                        <BracketMatchCard
+                          key={match.id}
+                          matchId={match.id}
+                          matchCode={
+                            getMatchDateFromSchedule(match.id)
+                              ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
+                              : `M${match.id}`
                           }
-                        : undefined;
+                          isLocked={!!userSession?.sub_date_r16}
+                          lang={lang}
+                          onAdvanceTeam={handleAdvanceTeam}
+                          style={
+                            idx % 10 !== 0
+                              ? { marginTop: "185px" }
+                              : { marginTop: "110px" }
+                          }
+                          homeTeam={{
+                            id: finalHome?.id,
+                            seed: match.h,
+                            name: finalHome
+                              ? finalHome.name_es || finalHome.name
+                              : t.bracketTBD,
+                            name_es: finalHome?.name_es,
+                            name_en: finalHome?.name_en,
+                            flag: finalHome
+                              ? finalHome.flag_code || finalHome.flag
+                              : null,
+                          }}
+                          awayTeam={{
+                            id: finalAway?.id,
+                            seed: match.a,
+                            name: finalAway
+                              ? finalAway.name_es || finalAway.name
+                              : t.bracketTBD,
+                            name_es: finalAway?.name_es,
+                            name_en: finalAway?.name_en,
+                            flag: finalAway
+                              ? finalAway.flag_code || finalAway.flag
+                              : null,
+                          }}
+                          prediction={prediction}
+                          onSavePrediction={handleSaveKnockoutPrediction}
+                          pointsWon={
+                            officialScoreObj
+                              ? prediction?.points_won
+                              : undefined
+                          }
+                          pointsCondition={
+                            officialScoreObj
+                              ? prediction?.points_condition
+                              : undefined
+                          }
+                          officialScore={officialScoreObj}
+                        />
+                      );
+                    })}
+                  </PhaseColumn>
 
-                    const dbHome = getTeamData(prediction?.predicted_home_team);
-                    const dbAway = getTeamData(prediction?.predicted_away_team);
-                    const simHome = knockoutWinners[match.h.replace("W", "")];
-                    const simAway = knockoutWinners[match.a.replace("W", "")];
+                  {/* CUARTOS */}
+                  <PhaseColumn
+                    title={t.bracketPhaseQFFull}
+                    isActive={safeConfig?.allow_qf && !userSession?.sub_date_qf}
+                    isSubmitted={!!userSession?.sub_date_qf}
+                    lang={lang}
+                    showFloating={showFloating}
+                    onAction={() => {
+                      const matchIds = QF_MATCHUPS.map((m) =>
+                        getPhysicalMatchId(m.id),
+                      );
+                      if (validateKnockoutPhase("qf", matchIds)) {
+                        handleSubmit("qf", matchIds);
+                      }
+                    }}
+                  >
+                    {QF_MATCHUPS.map((match, idx) => {
+                      const physicalId = getPhysicalMatchId(match.id);
+                      const prediction = safePredictions?.find(
+                        (p) =>
+                          p.match_id?.toString() === physicalId?.toString() ||
+                          p.match_id?.toString() === match.id?.toString(),
+                      );
 
-                    const finalHome = dbHome || simHome;
-                    const finalAway = dbAway || simAway;
+                      const offScore = officialScores?.find(
+                        (m) =>
+                          m.match_number?.toString() ===
+                            physicalId?.toString() ||
+                          m.id?.toString() === physicalId?.toString(),
+                      );
+                      const officialScoreObj =
+                        offScore &&
+                        offScore.home_score !== null &&
+                        offScore.away_score !== null
+                          ? {
+                              home: offScore.home_score,
+                              away: offScore.away_score,
+                            }
+                          : undefined;
 
-                    return (
-                      <BracketMatchCard
-                        key={match.id}
-                        matchId={match.id}
-                        matchCode={
-                          getMatchDateFromSchedule(match.id)
-                            ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
-                            : `M${match.id}`
-                        }
-                        isLocked={!!userSession?.sub_date_qf}
-                        lang={lang}
-                        onAdvanceTeam={handleAdvanceTeam}
-                        style={
-                          idx % 10 !== 0
-                            ? { marginTop: "550px" }
-                            : { marginTop: "296px" }
-                        }
-                        homeTeam={{
-                          id: finalHome?.id,
-                          seed: match.h,
-                          name: finalHome
-                            ? finalHome.name_es || finalHome.name
-                            : t.bracketTBD,
-                          name_es: finalHome?.name_es,
-                          name_en: finalHome?.name_en,
-                          flag: finalHome
-                            ? finalHome.flag_code || finalHome.flag
-                            : null,
-                        }}
-                        awayTeam={{
-                          id: finalAway?.id,
-                          seed: match.a,
-                          name: finalAway
-                            ? finalAway.name_es || finalAway.name
-                            : t.bracketTBD,
-                          name_es: finalAway?.name_es,
-                          name_en: finalAway?.name_en,
-                          flag: finalAway
-                            ? finalAway.flag_code || finalAway.flag
-                            : null,
-                        }}
-                        prediction={prediction}
-                        onSavePrediction={handleSaveKnockoutPrediction}
-                        pointsWon={
-                          officialScoreObj ? prediction?.points_won : undefined
-                        }
-                        pointsCondition={
-                          officialScoreObj
-                            ? prediction?.points_condition
-                            : undefined
-                        }
-                        officialScore={officialScoreObj}
-                      />
-                    );
-                  })}
-                </PhaseColumn>
+                      const dbHome = getTeamData(
+                        prediction?.predicted_home_team,
+                      );
+                      const dbAway = getTeamData(
+                        prediction?.predicted_away_team,
+                      );
+                      const simHome = knockoutWinners[match.h.replace("W", "")];
+                      const simAway = knockoutWinners[match.a.replace("W", "")];
 
-                {/* SEMIS */}
-                <PhaseColumn
-                  title={t.bracketPhaseSFFull}
-                  isActive={safeConfig?.allow_sf && !userSession?.sub_date_sf}
-                  isSubmitted={!!userSession?.sub_date_sf}
+                      const finalHome = dbHome || simHome;
+                      const finalAway = dbAway || simAway;
+
+                      return (
+                        <BracketMatchCard
+                          key={match.id}
+                          matchId={match.id}
+                          matchCode={
+                            getMatchDateFromSchedule(match.id)
+                              ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
+                              : `M${match.id}`
+                          }
+                          isLocked={!!userSession?.sub_date_qf}
+                          lang={lang}
+                          onAdvanceTeam={handleAdvanceTeam}
+                          style={
+                            idx % 10 !== 0
+                              ? { marginTop: "550px" }
+                              : { marginTop: "296px" }
+                          }
+                          homeTeam={{
+                            id: finalHome?.id,
+                            seed: match.h,
+                            name: finalHome
+                              ? finalHome.name_es || finalHome.name
+                              : t.bracketTBD,
+                            name_es: finalHome?.name_es,
+                            name_en: finalHome?.name_en,
+                            flag: finalHome
+                              ? finalHome.flag_code || finalHome.flag
+                              : null,
+                          }}
+                          awayTeam={{
+                            id: finalAway?.id,
+                            seed: match.a,
+                            name: finalAway
+                              ? finalAway.name_es || finalAway.name
+                              : t.bracketTBD,
+                            name_es: finalAway?.name_es,
+                            name_en: finalAway?.name_en,
+                            flag: finalAway
+                              ? finalAway.flag_code || finalAway.flag
+                              : null,
+                          }}
+                          prediction={prediction}
+                          onSavePrediction={handleSaveKnockoutPrediction}
+                          pointsWon={
+                            officialScoreObj
+                              ? prediction?.points_won
+                              : undefined
+                          }
+                          pointsCondition={
+                            officialScoreObj
+                              ? prediction?.points_condition
+                              : undefined
+                          }
+                          officialScore={officialScoreObj}
+                        />
+                      );
+                    })}
+                  </PhaseColumn>
+
+                  {/* SEMIS */}
+                  <PhaseColumn
+                    title={t.bracketPhaseSFFull}
+                    isActive={safeConfig?.allow_sf && !userSession?.sub_date_sf}
+                    isSubmitted={!!userSession?.sub_date_sf}
+                    lang={lang}
+                    showFloating={showFloating}
+                    onAction={() => {
+                      const matchIds = SF_MATCHUPS.map((m) =>
+                        getPhysicalMatchId(m.id),
+                      );
+                      if (validateKnockoutPhase("sf", matchIds)) {
+                        handleSubmit("sf", matchIds);
+                      }
+                    }}
+                  >
+                    {SF_MATCHUPS.map((match, idx) => {
+                      const physicalId = getPhysicalMatchId(match.id);
+                      const prediction = safePredictions?.find(
+                        (p) =>
+                          p.match_id?.toString() === physicalId?.toString() ||
+                          p.match_id?.toString() === match.id?.toString(),
+                      );
+
+                      const offScore = officialScores?.find(
+                        (m) =>
+                          m.match_number?.toString() ===
+                            physicalId?.toString() ||
+                          m.id?.toString() === physicalId?.toString(),
+                      );
+                      const officialScoreObj =
+                        offScore &&
+                        offScore.home_score !== null &&
+                        offScore.away_score !== null
+                          ? {
+                              home: offScore.home_score,
+                              away: offScore.away_score,
+                            }
+                          : undefined;
+
+                      const dbHome = getTeamData(
+                        prediction?.predicted_home_team,
+                      );
+                      const dbAway = getTeamData(
+                        prediction?.predicted_away_team,
+                      );
+                      const simHome = knockoutWinners[match.h.replace("W", "")];
+                      const simAway = knockoutWinners[match.a.replace("W", "")];
+
+                      const finalHome = dbHome || simHome;
+                      const finalAway = dbAway || simAway;
+
+                      return (
+                        <BracketMatchCard
+                          key={match.id}
+                          matchId={match.id}
+                          matchCode={
+                            getMatchDateFromSchedule(match.id)
+                              ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
+                              : `M${match.id}`
+                          }
+                          isLocked={!!userSession?.sub_date_sf}
+                          lang={lang}
+                          onAdvanceTeam={handleAdvanceTeam}
+                          style={
+                            idx % 10 !== 0
+                              ? { marginTop: "550px" }
+                              : { marginTop: "650px" }
+                          }
+                          homeTeam={{
+                            id: finalHome?.id,
+                            seed: match.h,
+                            name: finalHome
+                              ? finalHome.name_es || finalHome.name
+                              : t.bracketTBD,
+                            name_es: finalHome?.name_es,
+                            name_en: finalHome?.name_en,
+                            flag: finalHome
+                              ? finalHome.flag_code || finalHome.flag
+                              : null,
+                          }}
+                          awayTeam={{
+                            id: finalAway?.id,
+                            seed: match.a,
+                            name: finalAway
+                              ? finalAway.name_es || finalAway.name
+                              : t.bracketTBD,
+                            name_es: finalAway?.name_es,
+                            name_en: finalAway?.name_en,
+                            flag: finalAway
+                              ? finalAway.flag_code || finalAway.flag
+                              : null,
+                          }}
+                          prediction={prediction}
+                          onSavePrediction={handleSaveKnockoutPrediction}
+                          pointsWon={
+                            officialScoreObj
+                              ? prediction?.points_won
+                              : undefined
+                          }
+                          pointsCondition={
+                            officialScoreObj
+                              ? prediction?.points_condition
+                              : undefined
+                          }
+                          officialScore={officialScoreObj}
+                        />
+                      );
+                    })}
+                  </PhaseColumn>
+
+                  {/* FINAL */}
+                  <PhaseColumn
+                    title={t.bracketPhaseFTitle}
+                    isActive={safeConfig?.allow_f && !userSession?.sub_date_f}
+                    isSubmitted={!!userSession?.sub_date_f}
+                    lang={lang}
+                    showFloating={showFloating}
+                    onAction={() => {
+                      const matchIds = F_MATCHUPS.map((m) =>
+                        getPhysicalMatchId(m.id),
+                      );
+                      if (validateKnockoutPhase("f", matchIds)) {
+                        handleSubmit("f", matchIds);
+                      }
+                    }}
+                  >
+                    {resolveBracketMatches(
+                      safeGroups,
+                      knockoutWinners,
+                      F_MATCHUPS,
+                    ).map((match, idx) => {
+                      const isFinal = idx === 0;
+                      const physicalId = getPhysicalMatchId(match.id);
+                      const prediction = safePredictions?.find(
+                        (p) =>
+                          p.match_id?.toString() === physicalId?.toString() ||
+                          p.match_id?.toString() === match.id?.toString(),
+                      );
+
+                      const offScore = officialScores?.find(
+                        (m) =>
+                          m.match_number?.toString() ===
+                            physicalId?.toString() ||
+                          m.id?.toString() === physicalId?.toString(),
+                      );
+                      const officialScoreObj =
+                        offScore &&
+                        offScore.home_score !== null &&
+                        offScore.away_score !== null
+                          ? {
+                              home: offScore.home_score,
+                              away: offScore.away_score,
+                            }
+                          : undefined;
+
+                      const dbHome = getTeamData(
+                        prediction?.predicted_home_team,
+                      );
+                      const dbAway = getTeamData(
+                        prediction?.predicted_away_team,
+                      );
+                      const finalHome = dbHome || match.home;
+                      const finalAway = dbAway || match.away;
+
+                      return (
+                        <BracketMatchCard
+                          key={match.id}
+                          matchId={match.id}
+                          matchCode={
+                            getMatchDateFromSchedule(match.id)
+                              ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
+                              : `M${match.id}`
+                          }
+                          isLocked={!!userSession?.sub_date_f}
+                          lang={lang}
+                          onAdvanceTeam={(id, w, isManual) =>
+                            handleFinalAdvance(id, w, isFinal, isManual)
+                          }
+                          isFinal={isFinal}
+                          style={
+                            idx % 2 !== 0
+                              ? { marginTop: "60px" }
+                              : { marginTop: "15px" }
+                          }
+                          homeTeam={{
+                            ...finalHome,
+                            seed: match.h,
+                            name: finalHome?.id
+                              ? lang === "en"
+                                ? finalHome.name_en || finalHome.name_es
+                                : finalHome.name_es
+                              : t.bracketTBD,
+                          }}
+                          awayTeam={{
+                            ...finalAway,
+                            seed: match.a,
+                            name: finalAway?.id
+                              ? lang === "en"
+                                ? finalAway.name_en || finalAway.name_es
+                                : finalAway.name_es
+                              : t.bracketTBD,
+                          }}
+                          prediction={prediction}
+                          onSavePrediction={handleSaveKnockoutPrediction}
+                          pointsWon={
+                            officialScoreObj
+                              ? prediction?.points_won
+                              : undefined
+                          }
+                          pointsCondition={
+                            officialScoreObj
+                              ? prediction?.points_condition
+                              : undefined
+                          }
+                          officialScore={officialScoreObj}
+                        />
+                      );
+                    })}
+                  </PhaseColumn>
+                </BracketContainer>
+              </div>
+              {currentView === "res_groups" && (
+                <OfficialGroupsResults groupsData={safeGroups} lang={lang} />
+              )}
+              {currentView === "res_finals" && (
+                <OfficialKnockoutResults
+                  groupsData={safeGroups}
+                  officialWinners={officialWinners || {}}
+                  officialScores={officialScores || []}
                   lang={lang}
-                  showFloating={showFloating}
-                  onAction={() => {
-                    const matchIds = SF_MATCHUPS.map((m) =>
-                      getPhysicalMatchId(m.id),
-                    );
-                    if (validateKnockoutPhase("sf", matchIds)) {
-                      handleSubmit("sf", matchIds);
-                    }
-                  }}
-                >
-                  {SF_MATCHUPS.map((match, idx) => {
-                    const physicalId = getPhysicalMatchId(match.id);
-                    const prediction = safePredictions?.find(
-                      (p) =>
-                        p.match_id?.toString() === physicalId?.toString() ||
-                        p.match_id?.toString() === match.id?.toString(),
-                    );
-
-                    const offScore = officialScores?.find(
-                      (m) =>
-                        m.match_number?.toString() === physicalId?.toString() ||
-                        m.id?.toString() === physicalId?.toString(),
-                    );
-                    const officialScoreObj =
-                      offScore &&
-                      offScore.home_score !== null &&
-                      offScore.away_score !== null
-                        ? {
-                            home: offScore.home_score,
-                            away: offScore.away_score,
-                          }
-                        : undefined;
-
-                    const dbHome = getTeamData(prediction?.predicted_home_team);
-                    const dbAway = getTeamData(prediction?.predicted_away_team);
-                    const simHome = knockoutWinners[match.h.replace("W", "")];
-                    const simAway = knockoutWinners[match.a.replace("W", "")];
-
-                    const finalHome = dbHome || simHome;
-                    const finalAway = dbAway || simAway;
-
-                    return (
-                      <BracketMatchCard
-                        key={match.id}
-                        matchId={match.id}
-                        matchCode={
-                          getMatchDateFromSchedule(match.id)
-                            ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
-                            : `M${match.id}`
-                        }
-                        isLocked={!!userSession?.sub_date_sf}
-                        lang={lang}
-                        onAdvanceTeam={handleAdvanceTeam}
-                        style={
-                          idx % 10 !== 0
-                            ? { marginTop: "550px" }
-                            : { marginTop: "650px" }
-                        }
-                        homeTeam={{
-                          id: finalHome?.id,
-                          seed: match.h,
-                          name: finalHome
-                            ? finalHome.name_es || finalHome.name
-                            : t.bracketTBD,
-                          name_es: finalHome?.name_es,
-                          name_en: finalHome?.name_en,
-                          flag: finalHome
-                            ? finalHome.flag_code || finalHome.flag
-                            : null,
-                        }}
-                        awayTeam={{
-                          id: finalAway?.id,
-                          seed: match.a,
-                          name: finalAway
-                            ? finalAway.name_es || finalAway.name
-                            : t.bracketTBD,
-                          name_es: finalAway?.name_es,
-                          name_en: finalAway?.name_en,
-                          flag: finalAway
-                            ? finalAway.flag_code || finalAway.flag
-                            : null,
-                        }}
-                        prediction={prediction}
-                        onSavePrediction={handleSaveKnockoutPrediction}
-                        pointsWon={
-                          officialScoreObj ? prediction?.points_won : undefined
-                        }
-                        pointsCondition={
-                          officialScoreObj
-                            ? prediction?.points_condition
-                            : undefined
-                        }
-                        officialScore={officialScoreObj}
-                      />
-                    );
-                  })}
-                </PhaseColumn>
-
-                {/* FINAL */}
-                <PhaseColumn
-                  title={t.bracketPhaseFTitle}
-                  isActive={safeConfig?.allow_f && !userSession?.sub_date_f}
-                  isSubmitted={!!userSession?.sub_date_f}
-                  lang={lang}
-                  showFloating={showFloating}
-                  onAction={() => {
-                    const matchIds = F_MATCHUPS.map((m) =>
-                      getPhysicalMatchId(m.id),
-                    );
-                    if (validateKnockoutPhase("f", matchIds)) {
-                      handleSubmit("f", matchIds);
-                    }
-                  }}
-                >
-                  {resolveBracketMatches(
-                    safeGroups,
-                    knockoutWinners,
-                    F_MATCHUPS,
-                  ).map((match, idx) => {
-                    const isFinal = idx === 0;
-                    const physicalId = getPhysicalMatchId(match.id);
-                    const prediction = safePredictions?.find(
-                      (p) =>
-                        p.match_id?.toString() === physicalId?.toString() ||
-                        p.match_id?.toString() === match.id?.toString(),
-                    );
-
-                    const offScore = officialScores?.find(
-                      (m) =>
-                        m.match_number?.toString() === physicalId?.toString() ||
-                        m.id?.toString() === physicalId?.toString(),
-                    );
-                    const officialScoreObj =
-                      offScore &&
-                      offScore.home_score !== null &&
-                      offScore.away_score !== null
-                        ? {
-                            home: offScore.home_score,
-                            away: offScore.away_score,
-                          }
-                        : undefined;
-
-                    const dbHome = getTeamData(prediction?.predicted_home_team);
-                    const dbAway = getTeamData(prediction?.predicted_away_team);
-                    const finalHome = dbHome || match.home;
-                    const finalAway = dbAway || match.away;
-
-                    return (
-                      <BracketMatchCard
-                        key={match.id}
-                        matchId={match.id}
-                        matchCode={
-                          getMatchDateFromSchedule(match.id)
-                            ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
-                            : `M${match.id}`
-                        }
-                        isLocked={!!userSession?.sub_date_f}
-                        lang={lang}
-                        onAdvanceTeam={(id, w, isManual) =>
-                          handleFinalAdvance(id, w, isFinal, isManual)
-                        }
-                        isFinal={isFinal}
-                        style={
-                          idx % 2 !== 0
-                            ? { marginTop: "60px" }
-                            : { marginTop: "15px" }
-                        }
-                        homeTeam={{
-                          ...finalHome,
-                          seed: match.h,
-                          name: finalHome?.id
-                            ? lang === "en"
-                              ? finalHome.name_en || finalHome.name_es
-                              : finalHome.name_es
-                            : t.bracketTBD,
-                        }}
-                        awayTeam={{
-                          ...finalAway,
-                          seed: match.a,
-                          name: finalAway?.id
-                            ? lang === "en"
-                              ? finalAway.name_en || finalAway.name_es
-                              : finalAway.name_es
-                            : t.bracketTBD,
-                        }}
-                        prediction={prediction}
-                        onSavePrediction={handleSaveKnockoutPrediction}
-                        pointsWon={
-                          officialScoreObj ? prediction?.points_won : undefined
-                        }
-                        pointsCondition={
-                          officialScoreObj
-                            ? prediction?.points_condition
-                            : undefined
-                        }
-                        officialScore={officialScoreObj}
-                      />
-                    );
-                  })}
-                </PhaseColumn>
-              </BracketContainer>
+                />
+              )}
             </div>
-            {currentView === "res_groups" && (
-              <OfficialGroupsResults groupsData={safeGroups} lang={lang} />
-            )}
-            {currentView === "res_finals" && (
-              <OfficialKnockoutResults
-                groupsData={safeGroups}
-                officialWinners={officialWinners || {}}
-                officialScores={officialScores || []}
-                lang={lang}
-              />
-            )}
+          )}
+        </div>
+
+        {currentView === "pred_groups" && !isSubmissionLocked && (
+          <FloatingProgress
+            current={progress}
+            total={totalMatches}
+            isVisible={showFloating}
+            lang={lang}
+          />
+        )}
+
+        {showWinnerModal && winnerTeam && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+            <div className="relative bg-slate-900 border-2 border-amber-400/50 rounded-3xl p-8 max-w-sm w-full text-center shadow-[0_0_50px_rgba(251,191,36,0.4)]">
+              <button
+                onClick={() => setShowWinnerModal(false)}
+                className="absolute top-4 right-4 text-white/50 hover:text-white"
+              >
+                ✕
+              </button>
+              <div className="text-6xl mb-4 drop-shadow-lg">🏆</div>
+              <h2 className="text-amber-400 font-black text-2xl tracking-tighter mb-2 italic">
+                {t.bracketChampionTitle}
+              </h2>
+              <div className="bg-white/5 rounded-2xl py-6 border border-white/10 mb-6 flex flex-col items-center gap-3">
+                {getFlagUrl(winnerTeam.flag_code || winnerTeam.flag) && (
+                  <img
+                    src={getFlagUrl(winnerTeam.flag_code || winnerTeam.flag)!}
+                    alt={winnerTeam.name}
+                    className="w-24 h-16 object-cover rounded-lg shadow-lg border border-white/20"
+                  />
+                )}
+                <p className="text-white text-3xl font-bold uppercase tracking-widest">
+                  {lang === "en"
+                    ? winnerTeam.name_en ||
+                      winnerTeam.name_es ||
+                      winnerTeam.name
+                    : winnerTeam.name_es}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowWinnerModal(false)}
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold py-3 rounded-xl shadow-lg hover:scale-105 transition-transform"
+              >
+                {t.bracketChampionBtn}
+              </button>
+            </div>
           </div>
         )}
       </div>
-
-      {currentView === "pred_groups" && !isSubmissionLocked && (
-        <FloatingProgress
-          current={progress}
-          total={totalMatches}
-          isVisible={showFloating}
-          lang={lang}
-        />
-      )}
-
-      {showWinnerModal && winnerTeam && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="relative bg-slate-900 border-2 border-amber-400/50 rounded-3xl p-8 max-w-sm w-full text-center shadow-[0_0_50px_rgba(251,191,36,0.4)]">
-            <button
-              onClick={() => setShowWinnerModal(false)}
-              className="absolute top-4 right-4 text-white/50 hover:text-white"
-            >
-              ✕
-            </button>
-            <div className="text-6xl mb-4 drop-shadow-lg">🏆</div>
-            <h2 className="text-amber-400 font-black text-2xl tracking-tighter mb-2 italic">
-              {t.bracketChampionTitle}
-            </h2>
-            <div className="bg-white/5 rounded-2xl py-6 border border-white/10 mb-6 flex flex-col items-center gap-3">
-              {getFlagUrl(winnerTeam.flag_code || winnerTeam.flag) && (
-                <img
-                  src={getFlagUrl(winnerTeam.flag_code || winnerTeam.flag)!}
-                  alt={winnerTeam.name}
-                  className="w-24 h-16 object-cover rounded-lg shadow-lg border border-white/20"
-                />
-              )}
-              <p className="text-white text-3xl font-bold uppercase tracking-widest">
-                {lang === "en"
-                  ? winnerTeam.name_en || winnerTeam.name_es || winnerTeam.name
-                  : winnerTeam.name_es}
-              </p>
-            </div>
-            <button
-              onClick={() => setShowWinnerModal(false)}
-              className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold py-3 rounded-xl shadow-lg hover:scale-105 transition-transform"
-            >
-              {t.bracketChampionBtn}
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* 🏆 MODAL DE CAMPEÓN PARA 16AVOS */}
       <SubmitGroupModal
         isOpen={isKnockoutModalOpen}
@@ -1036,6 +1109,12 @@ export const FanDashboard = ({
           );
           setIsKnockoutModalOpen(false);
         }}
+      />
+
+      <VarReportModal
+        isOpen={isVarModalOpen}
+        onClose={() => setIsVarModalOpen(false)}
+        lang={lang}
       />
 
       <SystemAlerts

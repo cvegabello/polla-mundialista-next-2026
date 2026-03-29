@@ -25,7 +25,7 @@ body {
   /* AQUÍ ESTÁ LA MAGIA DEL FONDO: */
   /* Si es de día: Degradado Celeste (Cyan a Azulito) */
   /* Si es de noche: Transparente (para ver estrellas) */
-  background: #3d4e6d;
+  background: #99a2b4;
 
   color: var(--foreground);
   min-height: 100vh;
