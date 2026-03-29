@@ -658,6 +658,14 @@ export const VarReportModal = ({
                                       ? `+${user.champPts}`
                                       : "-"}
                                   </td>
+
+                                  {/* 🚀 AQUÍ ESTÁN LAS DOS CELDAS QUE FALTABAN */}
+                                  <td className="px-2 py-2 border-l border-orange-800/50 text-center font-black text-gray-300 align-middle">
+                                    {matchPoints}
+                                  </td>
+                                  <td className="px-2 py-2 border-l border-r border-orange-800/50 text-center font-black text-cyan-400 align-middle">
+                                    {userBonus > 0 ? `+${userBonus}` : "-"}
+                                  </td>
                                 </>
                               )}
 

@@ -188,7 +188,7 @@ export const FanDashboard = ({
     confirmRefresh,
     proceedWithLogout,
     handleLogoutAttempt,
-  } = useFanDashboardLogic(safePredictions, userSession?.id, safeGroups);
+  } = useFanDashboardLogic(safePredictions, userSession?.id, safeGroups, lang);
 
   const getPhysicalMatchId = (matchId: string | number) => {
     if (!officialScores) return matchId;
@@ -198,6 +198,28 @@ export const FanDashboard = ({
         m.id?.toString() === matchId.toString(),
     );
     return match ? match.id : matchId;
+  };
+  const formatMatchDate = (dateString?: string) => {
+    if (!dateString) return "";
+    const locale = lang === "es" ? "es-ES" : "en-US";
+    return new Date(dateString).toLocaleDateString(locale, {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  // Buscador de fechas en la programación oficial (Grupo FI)
+  const getMatchDateFromSchedule = (matchId: string | number) => {
+    const physicalId = getPhysicalMatchId(matchId);
+    const fiGroup = safeGroups?.find((g: any) => g.id === "FI");
+    const matchInfo = fiGroup?.matches?.find(
+      (m: any) =>
+        m.match_number?.toString() === physicalId?.toString() ||
+        m.id?.toString() === physicalId?.toString(),
+    );
+    return matchInfo?.match_date;
   };
 
   // 1. Buscador de Equipos Mejorado (Ahora atrapa la letra del Grupo)
@@ -467,7 +489,11 @@ export const FanDashboard = ({
                       <BracketMatchCard
                         key={match.id}
                         matchId={match.id}
-                        matchCode={`M${match.id}`}
+                        matchCode={
+                          getMatchDateFromSchedule(match.id)
+                            ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
+                            : `M${match.id}`
+                        }
                         isLocked={!!userSession?.sub_date_r32}
                         lang={lang}
                         onAdvanceTeam={handleAdvanceTeam}
@@ -504,8 +530,14 @@ export const FanDashboard = ({
                         }}
                         prediction={prediction}
                         onSavePrediction={handleSaveKnockoutPrediction}
-                        pointsWon={prediction?.points_won}
-                        pointsCondition={prediction?.points_condition}
+                        pointsWon={
+                          officialScoreObj ? prediction?.points_won : undefined
+                        }
+                        pointsCondition={
+                          officialScoreObj
+                            ? prediction?.points_condition
+                            : undefined
+                        }
                         officialScore={officialScoreObj}
                       />
                     );
@@ -519,12 +551,14 @@ export const FanDashboard = ({
                   isSubmitted={!!userSession?.sub_date_r16}
                   lang={lang}
                   showFloating={showFloating}
-                  onAction={() =>
-                    handleSubmit(
-                      "r16",
-                      R16_MATCHUPS.map((m) => getPhysicalMatchId(m.id)),
-                    )
-                  }
+                  onAction={() => {
+                    const matchIds = R16_MATCHUPS.map((m) =>
+                      getPhysicalMatchId(m.id),
+                    );
+                    if (validateKnockoutPhase("r16", matchIds)) {
+                      handleSubmit("r16", matchIds);
+                    }
+                  }}
                 >
                   {R16_MATCHUPS.map((match, idx) => {
                     const physicalId = getPhysicalMatchId(match.id);
@@ -561,14 +595,18 @@ export const FanDashboard = ({
                       <BracketMatchCard
                         key={match.id}
                         matchId={match.id}
-                        matchCode={`M${match.id}`}
+                        matchCode={
+                          getMatchDateFromSchedule(match.id)
+                            ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
+                            : `M${match.id}`
+                        }
                         isLocked={!!userSession?.sub_date_r16}
                         lang={lang}
                         onAdvanceTeam={handleAdvanceTeam}
                         style={
                           idx % 10 !== 0
-                            ? { marginTop: "125px" }
-                            : { marginTop: "65px" }
+                            ? { marginTop: "185px" }
+                            : { marginTop: "110px" }
                         }
                         homeTeam={{
                           id: finalHome?.id,
@@ -596,8 +634,14 @@ export const FanDashboard = ({
                         }}
                         prediction={prediction}
                         onSavePrediction={handleSaveKnockoutPrediction}
-                        pointsWon={prediction?.points_won}
-                        pointsCondition={prediction?.points_condition}
+                        pointsWon={
+                          officialScoreObj ? prediction?.points_won : undefined
+                        }
+                        pointsCondition={
+                          officialScoreObj
+                            ? prediction?.points_condition
+                            : undefined
+                        }
                         officialScore={officialScoreObj}
                       />
                     );
@@ -611,12 +655,14 @@ export const FanDashboard = ({
                   isSubmitted={!!userSession?.sub_date_qf}
                   lang={lang}
                   showFloating={showFloating}
-                  onAction={() =>
-                    handleSubmit(
-                      "qf",
-                      QF_MATCHUPS.map((m) => getPhysicalMatchId(m.id)),
-                    )
-                  }
+                  onAction={() => {
+                    const matchIds = QF_MATCHUPS.map((m) =>
+                      getPhysicalMatchId(m.id),
+                    );
+                    if (validateKnockoutPhase("qf", matchIds)) {
+                      handleSubmit("qf", matchIds);
+                    }
+                  }}
                 >
                   {QF_MATCHUPS.map((match, idx) => {
                     const physicalId = getPhysicalMatchId(match.id);
@@ -653,14 +699,18 @@ export const FanDashboard = ({
                       <BracketMatchCard
                         key={match.id}
                         matchId={match.id}
-                        matchCode={`M${match.id}`}
+                        matchCode={
+                          getMatchDateFromSchedule(match.id)
+                            ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
+                            : `M${match.id}`
+                        }
                         isLocked={!!userSession?.sub_date_qf}
                         lang={lang}
                         onAdvanceTeam={handleAdvanceTeam}
                         style={
                           idx % 10 !== 0
-                            ? { marginTop: "360px" }
-                            : { marginTop: "200px" }
+                            ? { marginTop: "550px" }
+                            : { marginTop: "296px" }
                         }
                         homeTeam={{
                           id: finalHome?.id,
@@ -688,8 +738,14 @@ export const FanDashboard = ({
                         }}
                         prediction={prediction}
                         onSavePrediction={handleSaveKnockoutPrediction}
-                        pointsWon={prediction?.points_won}
-                        pointsCondition={prediction?.points_condition}
+                        pointsWon={
+                          officialScoreObj ? prediction?.points_won : undefined
+                        }
+                        pointsCondition={
+                          officialScoreObj
+                            ? prediction?.points_condition
+                            : undefined
+                        }
                         officialScore={officialScoreObj}
                       />
                     );
@@ -703,12 +759,14 @@ export const FanDashboard = ({
                   isSubmitted={!!userSession?.sub_date_sf}
                   lang={lang}
                   showFloating={showFloating}
-                  onAction={() =>
-                    handleSubmit(
-                      "sf",
-                      SF_MATCHUPS.map((m) => getPhysicalMatchId(m.id)),
-                    )
-                  }
+                  onAction={() => {
+                    const matchIds = SF_MATCHUPS.map((m) =>
+                      getPhysicalMatchId(m.id),
+                    );
+                    if (validateKnockoutPhase("sf", matchIds)) {
+                      handleSubmit("sf", matchIds);
+                    }
+                  }}
                 >
                   {SF_MATCHUPS.map((match, idx) => {
                     const physicalId = getPhysicalMatchId(match.id);
@@ -745,14 +803,18 @@ export const FanDashboard = ({
                       <BracketMatchCard
                         key={match.id}
                         matchId={match.id}
-                        matchCode={`M${match.id}`}
+                        matchCode={
+                          getMatchDateFromSchedule(match.id)
+                            ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
+                            : `M${match.id}`
+                        }
                         isLocked={!!userSession?.sub_date_sf}
                         lang={lang}
                         onAdvanceTeam={handleAdvanceTeam}
                         style={
                           idx % 10 !== 0
-                            ? { marginTop: "850px" }
-                            : { marginTop: "450px" }
+                            ? { marginTop: "550px" }
+                            : { marginTop: "650px" }
                         }
                         homeTeam={{
                           id: finalHome?.id,
@@ -780,8 +842,14 @@ export const FanDashboard = ({
                         }}
                         prediction={prediction}
                         onSavePrediction={handleSaveKnockoutPrediction}
-                        pointsWon={prediction?.points_won}
-                        pointsCondition={prediction?.points_condition}
+                        pointsWon={
+                          officialScoreObj ? prediction?.points_won : undefined
+                        }
+                        pointsCondition={
+                          officialScoreObj
+                            ? prediction?.points_condition
+                            : undefined
+                        }
                         officialScore={officialScoreObj}
                       />
                     );
@@ -795,12 +863,14 @@ export const FanDashboard = ({
                   isSubmitted={!!userSession?.sub_date_f}
                   lang={lang}
                   showFloating={showFloating}
-                  onAction={() =>
-                    handleSubmit(
-                      "f",
-                      F_MATCHUPS.map((m) => getPhysicalMatchId(m.id)),
-                    )
-                  }
+                  onAction={() => {
+                    const matchIds = F_MATCHUPS.map((m) =>
+                      getPhysicalMatchId(m.id),
+                    );
+                    if (validateKnockoutPhase("f", matchIds)) {
+                      handleSubmit("f", matchIds);
+                    }
+                  }}
                 >
                   {resolveBracketMatches(
                     safeGroups,
@@ -839,7 +909,11 @@ export const FanDashboard = ({
                       <BracketMatchCard
                         key={match.id}
                         matchId={match.id}
-                        matchCode={`M${match.id}`}
+                        matchCode={
+                          getMatchDateFromSchedule(match.id)
+                            ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
+                            : `M${match.id}`
+                        }
                         isLocked={!!userSession?.sub_date_f}
                         lang={lang}
                         onAdvanceTeam={(id, w, isManual) =>
@@ -871,8 +945,14 @@ export const FanDashboard = ({
                         }}
                         prediction={prediction}
                         onSavePrediction={handleSaveKnockoutPrediction}
-                        pointsWon={prediction?.points_won}
-                        pointsCondition={prediction?.points_condition}
+                        pointsWon={
+                          officialScoreObj ? prediction?.points_won : undefined
+                        }
+                        pointsCondition={
+                          officialScoreObj
+                            ? prediction?.points_condition
+                            : undefined
+                        }
                         officialScore={officialScoreObj}
                       />
                     );

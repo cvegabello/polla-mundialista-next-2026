@@ -201,19 +201,27 @@ export const BracketMatchCard = ({
     ? "bg-gradient-to-b from-amber-200 via-yellow-500 to-orange-500"
     : "bg-gradient-to-b from-cyan-400 via-purple-500 to-pink-500";
 
-  // 👇 PASTILLA DE PUNTOS BLINDADA E INTELIGENTE 👇
+  // 👇 PASTILLA DE PUNTOS REDUCIDA, ESTILIZADA Y CON PLACEHOLDER 👇
   const getPointsTag = () => {
-    if (pointsWon === undefined || pointsWon === null) return null;
+    // Si no hay puntos todavía, mostramos el Placeholder gris
+    if (pointsWon === undefined || pointsWon === null) {
+      return (
+        <div
+          className="flex items-center justify-center gap-1 px-1.5 py-[2px] rounded border bg-white/5 border-white/10 text-white/40 text-[9px] font-black tracking-widest uppercase shadow-md"
+          style={{ width: "80px" }} // Ancho fijo para el placeholder
+        >
+          <span>PTS: -</span>
+        </div>
+      );
+    }
 
     const isSuccess = pointsWon > 0;
 
-    // Colores obligados en Hexadecimal para que el navegador no los borre
     const bg = isSuccess
       ? "bg-[#0f172a] border-[#10b981] text-yellow-500"
       : "bg-[#0f172a] border-[#ef4444] text-red-500";
     const icon = isSuccess ? "✅" : "❌";
 
-    // Deducción automática: Si no llega texto, usamos los puntos para adivinar
     let label = "";
     if (isSuccess) {
       const cond = (pointsCondition || "").toUpperCase();
@@ -236,7 +244,8 @@ export const BracketMatchCard = ({
 
     return (
       <div
-        className={`flex items-center gap-1.5 px-2 py-0.5 rounded border ${bg} text-[11px] font-black tracking-widest uppercase z-50 shadow-md opacity-100`}
+        className={`flex items-center gap-1 px-1.5 py-[2px] rounded border ${bg} text-[9px] font-black tracking-widest uppercase z-50 shadow-md`}
+        style={{ width: "110px" }} // Ancho fijo para mantener simetría
       >
         <span>
           {icon} {label} {displayPoints}
@@ -248,61 +257,71 @@ export const BracketMatchCard = ({
   return (
     <div
       style={style}
-      className={`shrink-0 group relative flex flex-col w-full bg-black/90 backdrop-blur-lg rounded-2xl border overflow-hidden transition-all duration-300 ${containerClasses} pb-1.5`}
+      className={`shrink-0 group relative flex flex-col w-full bg-black/90 backdrop-blur-lg rounded-2xl border overflow-hidden transition-all duration-300 ${containerClasses} pb-2`}
     >
       <div
         className={`absolute left-0 top-0 bottom-0 w-1 ${accentLineClasses}`}
       />
 
-      {/* HEADER: Con MXXX y la Pastilla Inteligente */}
-      <div className="flex items-center justify-between px-3 py-1.5 bg-gray-600/20 border-b border-white/20">
+      {/* HEADER: Limpio y Centrado */}
+      <div className="flex items-center justify-center px-3 py-1.5 bg-gray-600/20 border-b border-white/20">
         <div
-          className={`px-1.5 py-0.5 rounded-md ${isFinal ? "bg-amber-500/20" : "bg-gray-400"}`}
+          className={`px-1.5 py-0.5 rounded-md ${isFinal ? "bg-amber-500/20" : "bg-blue-300"}`}
         >
           <span
-            className={`text-[11px] font-bold tracking-[0.30em] ${isFinal ? "text-amber-200 drop-shadow-[0_0_5px_rgba(251,191,36,0.2)]" : "text-orange-800 drop-shadow-[0_0_5px_rgba(251,191,36,0.8)]"}`}
+            className={`text-[11px] font-bold tracking-[0.30em] ${isFinal ? "text-amber-200 drop-shadow-[0_0_5px_rgba(251,191,36,0.2)]" : "text-red-700"}`}
           >
             {isFinal ? `🏆 ${matchCode}` : matchCode}
           </span>
         </div>
-        {getPointsTag()}
       </div>
 
-      <div className="flex flex-col px-2 py-2 gap-0">
-        <BracketMatchRow
-          seed={getDisplaySeed(homeTeam) || "1A"}
-          teamName={getName(homeTeam) || homeTeam.name}
-          score={homeScore}
-          isWinner={homeWinner}
-          isLocked={isLocked}
-          onScoreChange={handleUserHomeScore}
-          onWinnerChange={handleUserHomeWin}
-          isTie={isTie}
-        />
+      <div className="flex flex-col px-2 py-2 gap-0 flex-grow justify-between">
+        <div>
+          <BracketMatchRow
+            seed={getDisplaySeed(homeTeam) || "1A"}
+            teamName={getName(homeTeam) || homeTeam.name}
+            score={homeScore}
+            isWinner={homeWinner}
+            isLocked={isLocked}
+            onScoreChange={handleUserHomeScore}
+            onWinnerChange={handleUserHomeWin}
+            isTie={isTie}
+          />
 
-        <div className="h-px w-full bg-white/10 my-1" />
+          <div className="h-px w-full bg-white/10 my-1" />
 
-        <BracketMatchRow
-          seed={getDisplaySeed(awayTeam) || "2B"}
-          teamName={getName(awayTeam) || awayTeam.name}
-          score={awayScore}
-          isWinner={awayWinner}
-          isLocked={isLocked}
-          onScoreChange={handleUserAwayScore}
-          onWinnerChange={handleUserAwayWin}
-          isTie={isTie}
-        />
+          <BracketMatchRow
+            seed={getDisplaySeed(awayTeam) || "2B"}
+            teamName={getName(awayTeam) || awayTeam.name}
+            score={awayScore}
+            isWinner={awayWinner}
+            isLocked={isLocked}
+            onScoreChange={handleUserAwayScore}
+            onWinnerChange={handleUserAwayWin}
+            isTie={isTie}
+          />
+        </div>
 
-        {/* 👇 MARCADOR OFICIAL PEQUEÑO, ELEGANTE Y ESTILO FASE DE GRUPOS 👇 */}
-        {officialScore && (
-          <div className="flex justify-center mt-2">
-            <div className="px-2 py-[2px] rounded bg-[#eb380c] border border-white shadow-md">
-              <span className="text-[11px] font-bold text-slate-300 tracking-wider">
+        {/* 👇 MARCADOR OFICIAL Y PASTILLA DE PUNTOS EN LA MISMA FILA 👇 */}
+        <div className="flex justify-center items-center gap-2 mt-2 h-[24px]">
+          {officialScore ? (
+            <div className="px-2 py-px rounded bg-[#8b4432] border border-white/50 shadow-md">
+              <span className="text-[10px] font-bold text-white tracking-wider ">
                 OFICIAL: {officialScore.home} - {officialScore.away}
               </span>
             </div>
-          </div>
-        )}
+          ) : (
+            // Placeholder para Marcador Oficial (Visible y elegante)
+            <div className="px-2 py-[2px] rounded bg-white/5 border border-white/10">
+              <span className="text-[10px] font-bold text-white/40 tracking-wider">
+                OFICIAL: -
+              </span>
+            </div>
+          )}
+
+          {getPointsTag()}
+        </div>
       </div>
     </div>
   );

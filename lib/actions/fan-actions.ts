@@ -292,6 +292,9 @@ export async function submitKnockoutPhaseAction(userId: string, phase: string) {
       );
     }
 
+    // 🚀 MAGIA PURA: Obligamos a Next.js a refrescar el dashboard con el candado cerrado
+    revalidatePath("/", "layout");
+
     return { success: true };
   } catch (error: any) {
     console.error(`Error sellando la fase ${phase}:`, error);

@@ -1,5 +1,3 @@
-// src/utils/points-engine.ts
-
 // 1. Definimos la estructura de nuestra configuración (Espejo de su base de datos)
 export interface ScoreConfig {
   exact_score: number; // Ej: 5
@@ -13,8 +11,8 @@ export interface ScoreConfig {
 }
 
 /**
- * ⚽ MOTOR DE PARTIDOS: Calcula los puntos de un partido individual
- * Aplica la jerarquía excluyente: EXACTO > DIF. GOL > GANADOR > FALLO
+ * ⚽ MOTOR DE PARTIDOS (LA LÓGICA MAESTRA): Calcula los puntos de un partido individual.
+ * Evalúa los 90/120 minutos (el marcador puro) de forma independiente a los penaltis.
  */
 export const calculateMatchPoints = (
   predHomeScore: number | null,
@@ -35,47 +33,45 @@ export const calculateMatchPoints = (
     return 0;
   }
 
-  // 🧠 FUNCIÓN INTERNA: Determina el desenlace real del partido
-  const getResult = (h: number, a: number, wId: string | null | undefined) => {
-    if (h > a) return "HOME_WIN";
-    if (a > h) return "AWAY_WIN";
-    // Si es empate, verificamos si hubo penales (winnerId). Si no, es un empate normal de fase de grupos.
-    return wId ? `TIE_WON_BY_${wId}` : "TIE";
-  };
-
-  const predResult = getResult(predHomeScore, predAwayScore, predWinnerId);
-  const offResult = getResult(offHomeScore, offAwayScore, offWinnerId);
-
-  // ¿Acertó quién ganó (o si fue empate)?
-  const hitResult = predResult === offResult;
-
-  // ¿Acertó la diferencia de goles?
+  // 🧠 1. EVALUAMOS EL MARCADOR (Independiente de los penaltis)
   const predDiff = predHomeScore - predAwayScore;
   const offDiff = offHomeScore - offAwayScore;
+
+  // ¿Quién ganó en cancha? (o si fue empate)
+  const predBaseOutcome =
+    predDiff > 0 ? "HOME_WIN" : predDiff < 0 ? "AWAY_WIN" : "TIE";
+  const offBaseOutcome =
+    offDiff > 0 ? "HOME_WIN" : offDiff < 0 ? "AWAY_WIN" : "TIE";
+
+  // ¿Acertó quién ganó o si fue empate en el tiempo de juego?
+  const hitBaseOutcome = predBaseOutcome === offBaseOutcome;
+
+  // ¿Acertó la diferencia de goles?
   const hitDiff = predDiff === offDiff;
 
   // ¿Acertó los goles exactos?
   const hitExactScores =
     predHomeScore === offHomeScore && predAwayScore === offAwayScore;
-  // Para que sea "EXACTO", debe acertar los goles Y el ganador (vital en finales por los penales)
-  const hitExact = hitExactScores && hitResult;
 
-  // 🏆 APLICAMOS LA JERARQUÍA ESTRICTA
-  if (hitExact) {
+  // 🏆 APLICAMOS LA JERARQUÍA JUSTA (El marcador manda)
+
+  if (hitExactScores) {
+    // 🎉 ¡PLENO! Le atinó al marcador. Se lleva todos los puntos, sin importar los penaltis.
     return config.exact_score; // +5 Puntos
-  } else if (hitResult && hitDiff) {
-    return config.goal_diff; // +3 Puntos (Cubre el empate ej: Dijo 1-1, quedó 2-2)
-  } else if (hitResult) {
+  } else if (hitBaseOutcome && hitDiff) {
+    // ⭐ DIFERENCIA: Le atinó a la diferencia de gol y al ganador/empate en cancha.
+    return config.goal_diff; // +3 Puntos
+  } else if (hitBaseOutcome) {
+    // ✅ GANADOR: Solo le atinó a quién ganó en los 90/120 mins.
     return config.winner_only; // +1 Punto
   }
 
-  // Fallo total
+  // Fallo total en el marcador
   return 0;
 };
 
 /**
  * 🏆 MOTOR DE GRUPOS: Calcula los bonos por acertar los clasificados de un grupo
- * Retorna los puntos y el tipo de acierto para mostrar en la interfaz.
  */
 export const calculateGroupBonusPoints = (
   predFirstId: string | null | undefined,
@@ -89,17 +85,17 @@ export const calculateGroupBonusPoints = (
     return { points: 0, type: "NONE" };
   }
 
-  // 🥇 REY DE GRUPO (+10): Acierta 1ro y 2do en el orden exacto
+  // 🥇 REY DE GRUPO (+10)
   if (predFirstId === offFirstId && predSecondId === offSecondId) {
     return { points: config.group_perfect || 0, type: "PERFECT" };
   }
 
-  // 🥈 CLASIFICADOS INV (+5): Acierta los dos, pero al revés
+  // 🥈 CLASIFICADOS INV (+5)
   if (predFirstId === offSecondId && predSecondId === offFirstId) {
     return { points: config.group_inverse || 0, type: "INVERSE" };
   }
 
-  // 🥉 1 ACIERTO (+2): Pega solo uno de los dos clasificados (en cualquier posición)
+  // 🥉 1 ACIERTO (+2)
   let hits = 0;
   if (predFirstId === offFirstId || predFirstId === offSecondId) hits++;
   if (predSecondId === offFirstId || predSecondId === offSecondId) hits++;
@@ -108,6 +104,6 @@ export const calculateGroupBonusPoints = (
     return { points: config.group_single || 0, type: "SINGLE" };
   }
 
-  // ❌ NADA: No le atinó a ninguno de los dos que pasaron
+  // ❌ NADA
   return { points: 0, type: "NONE" };
 };

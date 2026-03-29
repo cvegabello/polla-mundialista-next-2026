@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation"; // 🚀 NUEVO: Importamos el enrutador
+import { useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
+import { DICTIONARY, Language } from "@/components/constants/dictionary"; // 👈 NUEVO: Importamos el diccionario
 import {
   R32_MATCHUPS,
   R16_MATCHUPS,
@@ -27,14 +28,15 @@ const ALL_MATCHUPS = [
   ...F_MATCHUPS,
 ];
 
+// 👈 NUEVO: Añadimos 'lang' como 4to parámetro (con valor por defecto "es" para no romper nada)
 export const useFanDashboardLogic = (
   initialPredictions: any[],
   userId: string,
   groupsData: any[] = [],
+  lang: Language = "es",
 ) => {
-  const router = useRouter(); // 🚀 NUEVO: Inicializamos el router
+  const router = useRouter();
 
-  // 💾 MEJORA: Leemos la última pestaña visitada desde la memoria del navegador
   const [currentView, setCurrentView] = useState(() => {
     if (typeof window !== "undefined") {
       return sessionStorage.getItem("fanDashboardView") || "pred_groups";
@@ -162,7 +164,6 @@ export const useFanDashboardLogic = (
     try {
       let didUpdateGroups = false;
 
-      // 1. Guardar en Base de Datos
       for (const key in unsavedPredictions.current) {
         const data = unsavedPredictions.current[key];
         if (data.isKnockout) {
@@ -204,20 +205,20 @@ export const useFanDashboardLogic = (
         }
       }
 
-      // 🧠 LA MAGIA: Calculamos la llave y la guardamos en BD al instante
       if (didUpdateGroups) {
         try {
-          console.log(
-            "⚽ Grupos actualizados. Auto-calculando llaves de fase final...",
-          );
           const updatedStandings = await getUserStandingsAction(userId);
+
           const resolvedMatches = resolveBracketMatches(
             updatedStandings,
             knockoutWinners,
             ALL_MATCHUPS,
           );
 
-          await saveKnockoutTeamsAction(userId, resolvedMatches);
+          const saveResult = await saveKnockoutTeamsAction(
+            userId,
+            resolvedMatches,
+          );
 
           resolvedMatches.forEach((rm) => {
             const existing = initialPredictions.find(
@@ -235,11 +236,10 @@ export const useFanDashboardLogic = (
             }
           });
         } catch (error) {
-          console.error("❌ Error auto-calculando llaves:", error);
+          console.error("🚨 ERROR FATAL CALCULANDO O GUARDANDO LLAVES:", error);
         }
       }
 
-      // 2. Sincronizar memoria
       for (const key in unsavedPredictions.current) {
         const data = unsavedPredictions.current[key];
         if (data.isKnockout) {
@@ -298,7 +298,6 @@ export const useFanDashboardLogic = (
       unsavedPredictions.current = {};
       setHasUnsavedChanges(false);
 
-      // 🚀 MAGIA #1: Obligamos a Next.js a refrescar los datos silenciosamente
       router.refresh();
 
       setSystemModal(isReallyAutoSave ? "autosaved" : "success");
@@ -309,7 +308,6 @@ export const useFanDashboardLogic = (
     }
   };
 
-  // 🥷 EL CAMBIO NINJA REFORZADO
   const handleViewChange = async (newView: string) => {
     if (newView !== currentView) {
       if (hasUnsavedChanges) {
@@ -320,7 +318,6 @@ export const useFanDashboardLogic = (
         sessionStorage.setItem("fanDashboardView", newView);
       }
 
-      // 🚀 MAGIA #2: Si el usuario entra a "Fase Final", refrescamos la BD en silencio
       if (newView === "pred_finals" || newView === "res_finals") {
         router.refresh();
       }
@@ -353,18 +350,14 @@ export const useFanDashboardLogic = (
     return () => clearInterval(autoSaveInterval);
   }, [hasUnsavedChanges]);
 
+  // 🚀 LÓGICA DE VALIDACIÓN MEJORADA Y BILINGÜE 🚀
   const validateKnockoutPhase = (
     phase: string,
     phaseMatchIds: (string | number)[],
   ) => {
-    let phaseName = "";
-    if (phase === "r32") phaseName = "16avos de Final";
-    else if (phase === "r16") phaseName = "Octavos de Final";
-    else if (phase === "qf") phaseName = "Cuartos de Final";
-    else if (phase === "sf") phaseName = "Semifinales";
-    else if (phase === "f") phaseName = "Finales";
-
+    const t = DICTIONARY[lang] as any; // Casteamos a any para evitar alertas de TS si no ha puesto la variable aún
     let missing = 0;
+
     for (const mId of phaseMatchIds) {
       const pred = initialPredictions.find(
         (p: any) => p.match_id?.toString() === mId.toString(),
@@ -392,9 +385,39 @@ export const useFanDashboardLogic = (
     }
 
     if (missing > 0) {
-      alert(
-        `⚠️ ADUANA: Te faltan ${missing} partidos por llenar en los ${phaseName}. Complétalos todos antes de enviar.`,
-      );
+      const phaseNames = {
+        es: {
+          r32: "los 16avos de Final",
+          r16: "los Octavos de Final",
+          qf: "los Cuartos de Final",
+          sf: "las Semifinales",
+          f: "la Gran Final",
+        },
+        en: {
+          r32: "the Round of 32",
+          r16: "the Round of 16",
+          qf: "the Quarterfinals",
+          sf: "the Semifinals",
+          f: "the Grand Final",
+        },
+      };
+
+      const phaseName =
+        phaseNames[lang as keyof typeof phaseNames]?.[
+          phase as keyof (typeof phaseNames)["es"]
+        ] || phase;
+
+      const baseMessage =
+        t.incompletePhaseMsg ||
+        (lang === "en"
+          ? "⚠️ CUSTOMS: You are missing {count} matches to fill in {phase}. Complete them all before submitting."
+          : "⚠️ ADUANA: Te faltan {count} partidos por llenar en {phase}. Complétalos todos antes de enviar.");
+
+      const finalMessage = baseMessage
+        .replace("{count}", missing.toString())
+        .replace("{phase}", phaseName);
+
+      alert(finalMessage);
       return false;
     }
     return true;
@@ -414,10 +437,11 @@ export const useFanDashboardLogic = (
 
     setIsSubmitting(true);
     try {
-      const isKnockoutSubmission = phase === "r32";
-      const phaseColumn = isKnockoutSubmission
-        ? "sub_date_r32"
-        : "sub_date_groups";
+      // Asignación dinámica de la columna en Supabase según la fase que nos pasen
+      let phaseColumn = "sub_date_groups";
+      if (phase && phase !== "groups") {
+        phaseColumn = `sub_date_${phase}`;
+      }
 
       console.log(
         `🚀 Iniciando envío de fase: ${phase || "groups"} en columna: ${phaseColumn}`,
