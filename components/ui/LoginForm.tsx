@@ -4,7 +4,6 @@ import React from "react";
 import {
   User,
   Lock,
-  Users,
   Globe,
   ArrowRight,
   Loader2,
@@ -13,16 +12,10 @@ import {
 import { CustomSelect } from "@/components/ui/CustomSelect";
 
 interface LoginFormProps {
-  group: string;
-  setGroup: (value: string) => void;
   language: string;
   setLanguage: (value: string) => void;
-  isGroupOpen: boolean;
-  setIsGroupOpen: (value: boolean) => void;
   isLangOpen: boolean;
   setIsLangOpen: (value: boolean) => void;
-  poolOptions: { value: string; label: string }[];
-  isLoadingPools: boolean;
   username: string;
   setUsername: (value: string) => void;
   pin: string;
@@ -33,16 +26,10 @@ interface LoginFormProps {
 }
 
 export const LoginForm = ({
-  group,
-  setGroup,
   language,
   setLanguage,
-  isGroupOpen,
-  setIsGroupOpen,
   isLangOpen,
   setIsLangOpen,
-  poolOptions,
-  isLoadingPools,
   username,
   setUsername,
   pin,
@@ -56,11 +43,9 @@ export const LoginForm = ({
     { value: "en", label: "English" },
   ];
 
-  // 👇 NUEVA FUNCIÓN INTERMEDIA
-  // Esta función atrapa el evento "Enter" o el Click del botón
   const onFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault(); // Evita que la página se recargue (comportamiento por defecto de HTML)
-    handleLogin(); // Llama a nuestra lógica de Login
+    e.preventDefault();
+    handleLogin();
   };
 
   return (
@@ -77,39 +62,8 @@ export const LoginForm = ({
           </p>
         </div>
 
-        {/* 👇 AQUÍ CONECTAMOS EL EVENTO 'onSubmit' AL FORMULARIO */}
         <form className="space-y-6" onSubmit={onFormSubmit}>
-          {/* 1. SELECCIÓN DE POLLA */}
-          <div className="relative z-30">
-            <CustomSelect
-              icon={Users}
-              value={group}
-              onChange={setGroup}
-              options={
-                isLoadingPools
-                  ? [
-                      {
-                        value: "",
-                        label: language === "es" ? "Cargando..." : "Loading...",
-                      },
-                    ]
-                  : poolOptions
-              }
-              placeholder={
-                language === "es" ? "Selecciona tu Polla..." : "Select Pool..."
-              }
-              isOpen={isGroupOpen}
-              setIsOpen={(val: boolean) => {
-                if (!isLoadingPools) {
-                  setIsGroupOpen(val);
-                  setIsLangOpen(false);
-                }
-              }}
-              disabled={isLoadingPools || loading}
-            />
-          </div>
-
-          {/* 2. USUARIO */}
+          {/* 1. USUARIO */}
           <div className="relative group z-10">
             <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10">
               <User className="h-5 w-5 text-gray-400 group-hover:text-gray-300 transition-colors duration-300" />
@@ -117,14 +71,14 @@ export const LoginForm = ({
             <input
               type="text"
               value={username}
-              onChange={(e) => setUsername(e.target.value.toUpperCase())} // Mantenemos mayúsculas
+              onChange={(e) => setUsername(e.target.value.toUpperCase())}
               disabled={loading}
               placeholder={language === "es" ? "USUARIO" : "USERNAME"}
               className="w-full pl-12 pr-5 py-3.5 rounded-full text-sm shadow-sm outline-none block transition-all duration-300 bg-black/40 text-gray-300 ring-1 ring-blue-500/20 placeholder:text-gray-500 hover:bg-black/60 hover:ring-blue-400/50 hover:text-white focus:bg-black/80 focus:ring-2 focus:ring-cyan-500 focus:text-white disabled:opacity-50 uppercase"
             />
           </div>
 
-          {/* 3. PIN */}
+          {/* 2. PIN */}
           <div className="relative group z-10">
             <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10">
               <Lock className="h-5 w-5 text-gray-400 group-hover:text-gray-300 transition-colors duration-300" />
@@ -160,17 +114,15 @@ export const LoginForm = ({
                 isOpen={isLangOpen}
                 setIsOpen={(val: boolean) => {
                   setIsLangOpen(val);
-                  setIsGroupOpen(false);
                 }}
                 disabled={loading}
               />
             </div>
           </div>
 
-          {/* BOTÓN (CAMBIO A TYPE SUBMIT) */}
+          {/* BOTÓN */}
           <button
-            type="submit" // 👈 CAMBIO CLAVE: Ahora es un botón de envío real
-            // onClick={handleLogin} 👈 ELIMINAMOS ESTO (ya lo maneja el form)
+            type="submit"
             disabled={loading}
             className={`
               group relative w-full py-4 px-4 rounded-full 

@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { getActivePollas } from "@/services/pollaService";
 import { loginOrRegister } from "@/services/authService";
 import { LoginForm } from "@/components/ui/LoginForm";
 import { LoginImageCard } from "@/components/ui/LoginImageCard";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation"; // 👈 Importamos useSearchParams
 
 interface LoginMockupProps {
   onLoginSuccess: () => void;
@@ -13,13 +12,13 @@ interface LoginMockupProps {
 
 export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
   const router = useRouter();
-  const [language, setLanguage] = useState("es");
-  const [group, setGroup] = useState("");
-  const [isGroupOpen, setIsGroupOpen] = useState(false);
-  const [isLangOpen, setIsLangOpen] = useState(false);
-  const [poolOptions, setPoolOptions] = useState<any[]>([]);
-  const [isLoadingPools, setIsLoadingPools] = useState(true);
 
+  // 👇 Activamos el radar para leer la URL
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get("invite") || ""; // Si no hay, queda vacío
+
+  const [language, setLanguage] = useState("es");
+  const [isLangOpen, setIsLangOpen] = useState(false);
   const [username, setUsername] = useState("");
   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,8 +27,7 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
   useEffect(() => {
     const savedLang = localStorage.getItem("polla_lang");
     if (savedLang) setLanguage(savedLang);
-    const lastPolla = localStorage.getItem("last_selected_polla");
-    if (lastPolla) setGroup(lastPolla);
+    // Borramos lo de localStorage de pollas porque ya no lo necesitamos
   }, []);
 
   const handleLanguageChange = (val: string) => {
@@ -37,35 +35,9 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
     localStorage.setItem("polla_lang", val);
   };
 
-  useEffect(() => {
-    const loadPollas = async () => {
-      try {
-        setIsLoadingPools(true);
-        const params = new URLSearchParams(window.location.search);
-        const isAdminMode = params.get("admin") === "true";
-
-        const pollas = await getActivePollas(isAdminMode);
-        setPoolOptions(pollas);
-      } catch (err) {
-        console.error("Error cargando pollas:", err);
-      } finally {
-        setIsLoadingPools(false);
-      }
-    };
-    loadPollas();
-  }, []);
-
-  useEffect(() => {
-    if (group) localStorage.setItem("last_selected_polla", group);
-  }, [group]);
-
   const handleLogin = async () => {
     setErrorMsg("");
 
-    if (!group) {
-      setErrorMsg(language === "es" ? "Selecciona una Polla" : "Select a Pool");
-      return;
-    }
     if (!username.trim() || pin.length < 4) {
       setErrorMsg(language === "es" ? "Datos incompletos" : "Incomplete data");
       return;
@@ -74,14 +46,19 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
     setLoading(true);
 
     try {
-      const selectedPool = poolOptions.find((p) => p.value === group);
-      const isMantenimiento = selectedPool?.label === "Mantenimiento";
-
-      // 1. Intentamos el ingreso
-      const result = await loginOrRegister(username, pin, group);
+      // 🚀 ATENCIÓN AL PASE: Ahora mandamos el inviteToken en vez del ID de la polla
+      const result = await loginOrRegister(
+        username,
+        pin,
+        inviteToken,
+        language,
+      );
 
       if (result.success && result.user) {
         const userRole = result.user.role;
+        // Asumimos que su backend nos devolverá el nombre de la polla si lo necesitamos
+        const pollaName = result.user.polla_name || "";
+        const isMantenimiento = pollaName === "Mantenimiento";
 
         if (isMantenimiento && userRole !== "SUPER-ADMIN") {
           setErrorMsg(
@@ -91,22 +68,19 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
           return;
         }
 
-        // 🚀 LA JUGADA MAESTRA: Metemos todas las fechas en la "maleta" de sesión
         const sessionData = {
           id: result.user.id,
           username: result.user.username,
           role: userRole,
           polla_id: result.user.polla_id,
-          polla_name: selectedPool?.label ?? "",
+          polla_name: pollaName,
           lang: language,
-          // Inyectamos las 6 fechas dinámicas
           sub_date_groups: result.user.sub_date_groups || null,
           sub_date_r32: result.user.sub_date_r32 || null,
           sub_date_r16: result.user.sub_date_r16 || null,
           sub_date_qf: result.user.sub_date_qf || null,
           sub_date_sf: result.user.sub_date_sf || null,
           sub_date_f: result.user.sub_date_f || null,
-          // Mantenemos la vieja por compatibilidad, apuntando a la de grupos
           submission_date:
             result.user.sub_date_groups || result.user.submission_date || null,
         };
@@ -141,12 +115,6 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
           <LoginForm
             language={language}
             setLanguage={handleLanguageChange}
-            poolOptions={poolOptions}
-            isLoadingPools={isLoadingPools}
-            group={group}
-            setGroup={setGroup}
-            isGroupOpen={isGroupOpen}
-            setIsGroupOpen={setIsGroupOpen}
             isLangOpen={isLangOpen}
             setIsLangOpen={setIsLangOpen}
             username={username}

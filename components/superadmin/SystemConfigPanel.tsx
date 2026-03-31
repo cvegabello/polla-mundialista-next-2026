@@ -2,11 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import { UserManagementModal } from "./UserManagementModal";
+
+// Agregue la importación de nuestro nuevo modal (como están en la misma carpeta, la ruta es directa)
+import CreatePollaModal from "./CreatePollaModal";
+
 import {
   resetOfficialDataAction,
   forceRecalculateAllBracketsAction,
 } from "@/lib/actions/super-admin-actions";
-import { Settings, Users, AlertOctagon, Lock } from "lucide-react";
+import { Settings, Users, AlertOctagon, Lock, Trophy } from "lucide-react";
 import {
   getAdminPanelDataAction,
   togglePhaseAction,
@@ -28,6 +32,9 @@ export const SystemConfigPanel = () => {
   };
 
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+
+  // 👇 NUEVO ESTADO PARA EL MODAL DE CREACIÓN
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -253,9 +260,18 @@ export const SystemConfigPanel = () => {
           </div>
         </div>
 
-        {/* RESTO DE SECCIONES */}
         {/* 🛠️ HERRAMIENTAS DE ADMINISTRACIÓN */}
-        <div className="flex flex-col md:flex-row items-center justify-center gap-6 mt-8 mb-14 border-b border-white/5 pb-12">
+        <div className="flex flex-col md:flex-row items-center justify-center gap-6 mt-8 mb-14 border-b border-white/5 pb-12 flex-wrap">
+          {/* 🏆 NUEVO BOTÓN: Crear Polla */}
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="cursor-pointer group relative flex items-center gap-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-black uppercase tracking-[0.1em] py-4 px-8 rounded-2xl transition-all duration-300 shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:shadow-[0_0_30px_rgba(16,185,129,0.6)] hover:scale-105 border border-emerald-400/30"
+          >
+            <Trophy size={24} className="group-hover:animate-bounce" />
+            <span>Crear Polla</span>
+            <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+          </button>
+
           {/* Botón: Gestionar Usuarios */}
           <button
             onClick={() => setIsUserModalOpen(true)}
@@ -304,6 +320,11 @@ export const SystemConfigPanel = () => {
       <UserManagementModal
         isOpen={isUserModalOpen}
         onClose={() => setIsUserModalOpen(false)}
+      />
+      {/* 👇 NUESTRO NUEVO MODAL 👇 */}
+      <CreatePollaModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
       />
     </div>
   );

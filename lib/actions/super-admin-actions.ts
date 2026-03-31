@@ -407,3 +407,33 @@ export const forceRecalculateAllBracketsAction = async () => {
     return { success: false, error };
   }
 };
+
+// Reemplace la función anterior por esta:
+export async function createPollaOnly(pollaName: string) {
+  try {
+    const { createClient } = await import("@/utils/supabase/server");
+    const supabase = await createClient();
+
+    // Generar código mágico
+    const prefix = pollaName
+      .substring(0, 6)
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "");
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const inviteCode = `${prefix}-${random}`;
+
+    // Solo creamos la polla, no creamos ningún usuario aquí
+    const { data: pollaData, error: pollaError } = await supabase
+      .from("pollas")
+      .insert([{ name: pollaName, invite_code: inviteCode }])
+      .select()
+      .single();
+
+    if (pollaError)
+      throw new Error("Error al crear la polla: " + pollaError.message);
+
+    return { success: true, inviteCode, pollaName };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
