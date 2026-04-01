@@ -483,3 +483,47 @@ export async function getVarReportDataAction(userId: string) {
     return { success: false, error: error.message };
   }
 }
+
+// 🚀 NUEVA ACCIÓN: Buscar el código (y crearlo si la polla es vieja y dice NULL)
+export const getInviteCodeAction = async (pollaId: string) => {
+  try {
+    const supabase = await createClient();
+
+    // 1. Buscamos el código y el nombre de la polla
+    const { data, error } = await supabase
+      .from("pollas")
+      .select("name, invite_code")
+      .eq("id", pollaId)
+      .single();
+
+    if (error) throw error;
+
+    let finalCode = data.invite_code;
+
+    // 2. Si la polla es vieja y el código es NULL, se lo generamos automáticamente
+    if (!finalCode) {
+      // Creamos un código usando las primeras 5 letras del nombre + 4 letras random
+      const prefix = data.name
+        .substring(0, 5)
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "POL");
+      const randomPart = Math.random()
+        .toString(36)
+        .substring(2, 6)
+        .toUpperCase();
+      finalCode = `${prefix}-${randomPart}`;
+
+      // 3. Actualizamos la base de datos silenciosamente
+      await supabase
+        .from("pollas")
+        .update({ invite_code: finalCode })
+        .eq("id", pollaId);
+    }
+
+    // 4. Devolvemos el código listo para usar
+    return { success: true, inviteCode: finalCode };
+  } catch (error: any) {
+    console.error("Error obteniendo/creando código de invitación:", error);
+    return { success: false, error: error.message };
+  }
+};

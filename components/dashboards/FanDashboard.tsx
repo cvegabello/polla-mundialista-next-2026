@@ -385,6 +385,7 @@ export const FanDashboard = ({
         onViewChange={setCurrentView}
         username={headerSession?.username || "Fan"}
         pollaName={headerSession?.polla_name}
+        pollaId={headerSession?.polla_id}
         points={calculatedTotalPoints}
         submissionDate={headerSession?.submission_date}
         hasUnsavedChanges={hasUnsavedChanges}

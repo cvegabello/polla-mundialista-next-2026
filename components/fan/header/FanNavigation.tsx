@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import Image from "next/image"; // 👈 IMPORTANTE: Para optimizar el logo
+import React, { useState } from "react";
+import Image from "next/image";
 import { DICTIONARY, Language } from "@/components/constants/dictionary";
 import {
   LayoutDashboard,
@@ -12,15 +12,19 @@ import {
   Save,
   RefreshCw,
   LogOut,
-  ChevronRight,
+  Share2, // 👈 Importamos el icono de Compartir
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
+
+// 👇 IMPORTANTE: Ajuste esta ruta según dónde haya guardado el modal que creamos en el paso anterior
+import { FanInviteModal } from "@/components/fan/modals/FanInviteModal";
 
 interface FanNavigationProps {
   lang: Language;
   currentView: string;
   onViewChange: (view: string) => void;
   username: string;
+  pollaId: string; // 👈 NUEVO: Necesitamos el ID para buscar el link
   pollaName?: string;
   points: number;
   submissionDate: string | null;
@@ -36,6 +40,7 @@ export const FanNavigation = ({
   currentView,
   onViewChange,
   username,
+  pollaId, // 👈 Lo recibimos aquí
   pollaName,
   points,
   submissionDate,
@@ -48,8 +53,10 @@ export const FanNavigation = ({
   const t = DICTIONARY[lang];
   const isOfficial = !!submissionDate;
 
+  // 🚀 ESTADO PARA EL MODAL DE INVITACIÓN
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+
   // 📂 ESTRUCTURA AGRUPADA DEL MENÚ
-  // 📂 ESTRUCTURA AGRUPADA DEL MENÚ (Con tipado estricto para que TS no llore)
   const menuGroups: {
     title: string;
     items: {
@@ -57,7 +64,7 @@ export const FanNavigation = ({
       label: string;
       icon: React.ReactNode;
       isAction?: boolean;
-    }[]; // 👈 El "?" lo hace opcional
+    }[];
   }[] = [
     {
       title: lang === "en" ? "My Predictions" : "Mis Pronósticos",
@@ -109,22 +116,18 @@ export const FanNavigation = ({
       {/* ========================================= */}
       <header className="fixed top-0 left-0 w-full h-16 bg-[#0a0b10]/95 backdrop-blur-md border-b border-orange-500/20 z-50 flex items-center justify-between px-4 shadow-lg">
         {/* IZQUIERDA: Logo del Mundial + Título */}
-        {/* 👇 NUEVA SECCIÓN DEL LOGO 👇 */}
-        {/* 👇 Ajustamos w-auto en celular y w-[300px] en PC */}
         <div className="flex items-center gap-2 md:gap-3 w-auto md:w-[300px] shrink-0">
           <Image
             src="/images/wc-log.webp"
             alt="FIFA World Cup 2026 Logo"
             width={60}
             height={60}
-            // 👇 MAGIA RESPONSIVA: h-7 en celular, h-10 en PC (md) 👇
             className="h-9 md:h-10 w-10 md:w-auto object-contain invert brightness-110 drop-shadow-[0_0_12px_rgba(255,255,255,0.3)] filter-none"
           />
           <span className="text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-500 drop-shadow-[0_0_10px_rgba(249,115,22,0.3)]">
             {lang === "en" ? "WORLD CUP 26" : "COPA MUNDIAL 26"}
           </span>
         </div>
-        {/* 👆 FIN SECCIÓN DEL LOGO 👆 */}
 
         {/* CENTRO: La Pastilla de Usuario (Estrecha y Elegante) */}
         <div className="hidden md:flex flex-1 justify-center">
@@ -169,9 +172,21 @@ export const FanNavigation = ({
         </div>
 
         {/* DERECHA: Acciones (Refrescar, Guardar, Salir) */}
-        {/* DERECHA: Acciones (Refrescar, Guardar, Salir) */}
         <div className="flex items-center gap-1 sm:gap-3 w-auto justify-end shrink-0">
           <ThemeToggle />
+
+          {/* 👇 NUEVO BOTÓN DE INVITAR (Elegante y Discreto) 👇 */}
+          <button
+            onClick={() => setIsInviteModalOpen(true)}
+            className="cursor-pointer p-2 sm:px-3 sm:py-1.5 flex items-center gap-2 text-emerald-400 hover:bg-emerald-950/50 rounded-lg transition-colors border border-transparent hover:border-emerald-900"
+            title={lang === "en" ? "Invite Friends" : "Invitar Amigos"}
+          >
+            <Share2 size={16} />
+            <span className="hidden sm:block text-xs font-bold uppercase">
+              {lang === "en" ? "Invite" : "Invitar"}
+            </span>
+          </button>
+          {/* 👆 FIN NUEVO BOTÓN 👆 */}
 
           <button
             onClick={onRefresh}
@@ -223,12 +238,10 @@ export const FanNavigation = ({
         <div className="flex flex-col gap-6 w-64 px-3">
           {menuGroups.map((group, gIdx) => (
             <div key={gIdx} className="flex flex-col gap-1">
-              {/* Título de Categoría (Se revela al hacer hover) */}
               <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-3 mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 {group.title}
               </span>
 
-              {/* Items de la Categoría */}
               {group.items.map((item) => {
                 const isActive = currentView === item.id;
                 return (
@@ -237,7 +250,7 @@ export const FanNavigation = ({
                     onClick={() =>
                       item.isAction ? onOpenVar() : onViewChange(item.id)
                     }
-                    title={item.label} // Tooltip nativo para cuando está colapsado
+                    title={item.label}
                     className={`flex items-center w-[232px] h-10 rounded-xl transition-all duration-300 relative cursor-pointer ${
                       isActive && !item.isAction
                         ? "bg-gradient-to-r from-cyan-600/20 to-blue-600/10 text-cyan-400 border border-cyan-500/30"
@@ -246,17 +259,14 @@ export const FanNavigation = ({
                           : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
                     }`}
                   >
-                    {/* Indicador activo lateral */}
                     {isActive && !item.isAction && (
                       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-cyan-400 rounded-r-full shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
                     )}
 
-                    {/* Ícono siempre visible */}
                     <div className="w-10 flex justify-center shrink-0">
                       {item.icon}
                     </div>
 
-                    {/* Etiqueta visible al expandir */}
                     <span className="text-sm font-bold tracking-wide opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
                       {item.label}
                     </span>
@@ -267,7 +277,6 @@ export const FanNavigation = ({
           ))}
         </div>
 
-        {/* Decoración inferior */}
         <div className="mt-auto px-3 w-64 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <div className="p-4 rounded-xl bg-gradient-to-br from-orange-500/10 to-amber-500/5 border border-orange-500/20 flex items-center gap-3">
             <div className="p-2 bg-orange-500/20 rounded-lg text-orange-400">
@@ -312,6 +321,15 @@ export const FanNavigation = ({
             </button>
           ))}
       </nav>
+
+      {/* 🚀 MODAL DE INVITACIÓN INCRUSTADO AQUÍ */}
+      <FanInviteModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        pollaId={pollaId}
+        pollaName={pollaName || ""}
+        initialLang={lang}
+      />
     </>
   );
 };

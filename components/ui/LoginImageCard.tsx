@@ -7,6 +7,7 @@ export const LoginImageCard = () => {
 
   // DEFINICIÓN DE IMÁGENES (Ahora viven aquí adentro)
   const backgrounds = [
+    "/login/FIFAWCup-26.avif",
     "/login/fondo1.avif",
     "/login/fondo2.avif",
     "/login/fondo3.png",
