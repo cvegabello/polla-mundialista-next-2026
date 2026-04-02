@@ -19,11 +19,11 @@ import { OfficialGroupsResults } from "@/components/dashboards/OfficialGroupsRes
 import { OfficialKnockoutResults } from "@/components/dashboards/OfficialKnockoutResults";
 import { SubmitGroupModal } from "@/components/predictions/SubmitGroupModal";
 import { FanNavigation } from "@/components/fan/header/FanNavigation";
-import { VarReportModal } from "@/components/fan/reportes/VarReportModal"; // Asegúrese de tener esta también
+import { VarReportModal } from "@/components/fan/reportes/VarReportModal";
 import { SubmitZone } from "@/components/fan/header/SubmitZone";
 
 import {
-  R32_MATCHUPS, // 🚀 Añadimos los 16avos puros
+  R32_MATCHUPS,
   R16_MATCHUPS,
   QF_MATCHUPS,
   SF_MATCHUPS,
@@ -105,10 +105,36 @@ export const FanDashboard = ({
   globalConfig = {},
 }: FanDashboardProps) => {
   const [isMounted, setIsMounted] = useState(false);
+  const [fetchedChampPts, setFetchedChampPts] = useState(0); // 🚀 NUEVO ESTADO: Los puntos rescatados del VAR
 
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+
+    // 🚀 TÁCTICA DE RECUPERACIÓN: Si el componente padre no mandó los puntos, los extraemos del mismísimo VAR
+    const fetchExtraPoints = async () => {
+      if (!userSession?.id) return;
+      try {
+        const { getVarReportDataAction } =
+          await import("@/lib/actions/fan-actions");
+        const result = await getVarReportDataAction(userSession.id);
+
+        if (result.success && result.data?.participants) {
+          const myData = result.data.participants.find(
+            (p: any) => p.id === userSession.id,
+          );
+          if (myData && myData.champPts) {
+            setFetchedChampPts(myData.champPts);
+          }
+        }
+      } catch (error) {
+        console.error("Error trayendo puntos del campeón:", error);
+      }
+    };
+
+    if (!userSession?.champPts && !userSession?.champ_pts) {
+      fetchExtraPoints();
+    }
+  }, [userSession?.id, userSession?.champPts, userSession?.champ_pts]);
 
   const t = DICTIONARY[lang];
 
@@ -203,6 +229,7 @@ export const FanDashboard = ({
     );
     return match ? match.id : matchId;
   };
+
   const formatMatchDate = (dateString?: string) => {
     if (!dateString) return "";
     const locale = lang === "es" ? "es-ES" : "en-US";
@@ -226,7 +253,6 @@ export const FanDashboard = ({
     return matchInfo?.match_date;
   };
 
-  // 1. Buscador de Equipos Mejorado (Ahora atrapa la letra del Grupo)
   // 1. Buscador de Equipos BLINDADO (Garantiza atrapar la letra del Grupo)
   const getTeamData = (teamId: string | null | undefined) => {
     if (!teamId) return null;
@@ -305,6 +331,7 @@ export const FanDashboard = ({
 
     return seed;
   };
+
   const handleFinalAdvance = (
     matchId: string | number,
     winner: any,
@@ -371,10 +398,13 @@ export const FanDashboard = ({
     (acc, bonus) => acc + (bonus.points_won || 0),
     0,
   );
-  const calculatedTotalPoints = matchPoints + bonusPoints;
+
+  // 👇 EL ARREGLO MÁGICO 2.0: Sumamos los puntos del componente papá, o si no los mandó, los que rescatamos del VAR
+  const champPoints =
+    userSession?.champPts || userSession?.champ_pts || fetchedChampPts || 0;
+  const calculatedTotalPoints = matchPoints + bonusPoints + champPoints;
 
   return (
-    // 👇 Ajustamos el padding izquierdo (pl-16) para que el menú lateral no tape nada
     <main className="min-h-screen transition-colors duration-300 bg-transparent dark:bg-transparent relative pt-16 md:pl-16 pb-20 overflow-x-hidden">
       <StarBackground />
 

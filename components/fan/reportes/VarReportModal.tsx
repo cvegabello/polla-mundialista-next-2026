@@ -40,11 +40,10 @@ export const VarReportModal = ({
   const todayIso = getLocalYYYYMMDD();
   const [selectedDate, setSelectedDate] = useState<string>(todayIso);
 
-  // 🚩 FUNCIÓN BANDERAS BLINDADA: Ignora la URL mala de la BD y usa el diccionario
+  // 🚩 FUNCIÓN BANDERAS BLINDADA
   const getFlagUrl = (teamOrCode?: any) => {
     if (!teamOrCode) return null;
 
-    // Extraemos el código de 3 letras (o el nombre si no hay código)
     let code3 =
       typeof teamOrCode === "string"
         ? teamOrCode
@@ -101,14 +100,12 @@ export const VarReportModal = ({
 
     if (code3.includes("_rep_")) return null;
 
-    // Buscamos en el diccionario. Si no existe, POR DEFECTO toma las primeras 2 letras
     const normalizedCode = code3.toLowerCase().substring(0, 3);
     const code2 =
       map[normalizedCode] ||
       map[code3.toLowerCase()] ||
       code3.slice(0, 2).toLowerCase();
 
-    // Retornamos SIEMPRE la URL armada por nosotros
     return `https://flagcdn.com/w80/${code2}.png`;
   };
 
@@ -220,7 +217,7 @@ export const VarReportModal = ({
     });
   }, [data]);
 
-  // 🚀 CEREBRO UNIFICADO: Ordena AMBAS tablas según la fecha seleccionada
+  // 🚀 CEREBRO UNIFICADO
   const sortedParticipants = useMemo(() => {
     if (selectedDate === "all") {
       return [...leaderboard];
@@ -362,17 +359,17 @@ export const VarReportModal = ({
 
         <div className="relative z-10 flex flex-col h-full w-full">
           {isNoneExpanded && (
-            <div className="flex flex-col md:flex-row md:justify-between items-center p-4 pt-16 md:p-5 md:pt-5 border-b border-orange-600 bg-[#050200]/80 backdrop-blur-sm shrink-0 gap-4 md:gap-0 relative z-10">
-              <div className="flex flex-col items-center md:items-start text-center md:text-left shrink-0">
+            <div className="flex flex-col lg:flex-row lg:justify-between items-center p-4 pt-16 lg:p-5 lg:pt-5 border-b border-orange-600 bg-[#050200]/80 backdrop-blur-sm shrink-0 gap-4 lg:gap-0 relative z-10">
+              <div className="flex flex-col items-center lg:items-start text-center lg:text-left shrink-0">
                 <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-500 tracking-tighter uppercase flex items-center gap-2 drop-shadow-[0_2px_10px_rgba(249,115,22,0.5)] whitespace-nowrap">
                   {t.varTitle}
                 </h2>
-                <p className="hidden md:block text-xs text-orange-300 mt-0.5 tracking-widest uppercase font-semibold whitespace-nowrap">
+                <p className="hidden lg:block text-xs text-orange-300 mt-0.5 tracking-widest uppercase font-semibold whitespace-nowrap">
                   {t.varSubtitle}
                 </p>
 
                 {data?.pollaName && (
-                  <div className="mt-2 md:hidden">
+                  <div className="mt-2 lg:hidden">
                     <span className="bg-[#1a0a00]/80 text-amber-500 border border-amber-600/50 px-4 py-1 rounded-full text-[10px] font-black tracking-widest uppercase shadow-[0_0_10px_rgba(249,115,22,0.3)] inline-block truncate max-w-[200px]">
                       🏆 {data.pollaName}
                     </span>
@@ -381,7 +378,7 @@ export const VarReportModal = ({
               </div>
 
               {data?.pollaName && (
-                <div className="hidden md:flex flex-1 justify-center px-4">
+                <div className="hidden lg:flex flex-1 justify-center px-4">
                   <span className="bg-gradient-to-r from-[#1a0a00]/80 to-black/80 text-amber-500 border border-amber-600/50 px-8 py-2 rounded-full text-sm font-black tracking-widest uppercase shadow-[0_0_15px_rgba(249,115,22,0.2)] flex items-center gap-2">
                     🏆 {data.pollaName}
                   </span>
@@ -409,7 +406,8 @@ export const VarReportModal = ({
                 </button>
               </div>
 
-              <div className="absolute top-4 right-4 md:static md:top-auto md:right-auto flex justify-end gap-2 shrink-0 md:ml-4">
+              {/* 👇 AQUI TAMBIEN: Cambiamos md: por lg: para los botones flotantes 👇 */}
+              <div className="absolute top-4 right-4 lg:static lg:top-auto lg:right-auto flex justify-end gap-2 shrink-0 lg:ml-4">
                 <button
                   onClick={() => loadData(false)}
                   disabled={isRefreshing}
@@ -648,7 +646,6 @@ export const VarReportModal = ({
                             0,
                           );
 
-                          // 👇 AQUI CALCULAMOS EL TOTAL VISUAL DEPENDIENDO DEL FILTRO
                           let userBonus = 0;
                           let champPts = 0;
 
@@ -665,7 +662,6 @@ export const VarReportModal = ({
                             }
                           }
 
-                          // Si estamos en un día, solo muestra los puntos de los partidos. Si no, muestra todo.
                           const rowTotalPoints =
                             matchPoints + userBonus + champPts;
 
@@ -714,7 +710,6 @@ export const VarReportModal = ({
                                     <td className="px-1 py-2 border-l border-orange-800/50 bg-[#0a150a]/40 text-center min-w-[60px] align-middle">
                                       {user.champion1 ? (
                                         <div className="flex flex-col items-center justify-center gap-1">
-                                          {/* 🚩 AQUI APLICAMOS LA MAGIA DE LA BANDERA 1 */}
                                           <img
                                             src={
                                               getFlagUrl(user.champion1) ||
@@ -741,7 +736,6 @@ export const VarReportModal = ({
                                     <td className="px-1 py-2 border-l border-orange-800/50 bg-[#0a150a]/40 text-center min-w-[60px] align-middle">
                                       {user.champion2 ? (
                                         <div className="flex flex-col items-center justify-center gap-1">
-                                          {/* 🚩 AQUI APLICAMOS LA MAGIA DE LA BANDERA 2 */}
                                           <img
                                             src={
                                               getFlagUrl(user.champion2) ||
@@ -793,7 +787,7 @@ export const VarReportModal = ({
                   </div>
                 </div>
 
-                {/* 🟧 COLUMNA DERECHA: LEADERBOARD - INTACTA - 100% SU CÓDIGO */}
+                {/* 🟧 COLUMNA DERECHA: LEADERBOARD */}
                 <div
                   className={`${positionsMobileClass} ${positionsDesktopClass} ${positionsSpanClass} bg-black/80 backdrop-blur-sm border border-orange-600/50 rounded-xl flex-col shadow-2xl overflow-hidden xl:h-full`}
                 >
