@@ -21,6 +21,7 @@ import { SubmitGroupModal } from "@/components/predictions/SubmitGroupModal";
 import { FanNavigation } from "@/components/fan/header/FanNavigation";
 import { VarReportModal } from "@/components/fan/reportes/VarReportModal";
 import { SubmitZone } from "@/components/fan/header/SubmitZone";
+import { AppFooter } from "@/components/shared/AppFooter";
 
 import {
   R32_MATCHUPS,
@@ -1155,6 +1156,7 @@ export const FanDashboard = ({
         proceedWithLogout={proceedWithLogout}
         lang={lang}
       />
+      <AppFooter lang={lang} />
     </main>
   );
 };

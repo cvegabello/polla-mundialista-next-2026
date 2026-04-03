@@ -1,7 +1,7 @@
 "use client";
 
 import { LoginMockup } from "@/components/auth/LoginMockup";
-
+import { AppFooter } from "@/components/shared/AppFooter";
 export default function LoginPage() {
   const handleLoginSuccess = () => {
     // Cuando el login sea exitoso, mandamos a la raíz

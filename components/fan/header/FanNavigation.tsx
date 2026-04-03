@@ -128,16 +128,16 @@ export const FanNavigation = ({
       {/* ========================================= */}
       <header className="fixed top-0 left-0 w-full h-16 bg-[#0a0b10]/95 backdrop-blur-md border-b border-orange-500/20 z-40 flex items-center justify-between px-2 lg:px-4 shadow-lg bg-[url('/images/headers/FanNavigationHeader_FIFACup_NewYorkNewJersey.webp')] bg-cover bg-center">
         {/* IZQUIERDA: Logo del Mundial */}
-        <div className="flex items-center gap-2 w-[60px] md:w-[140px] lg:w-[300px] shrink-0 md:pl-10">
+        <div className="flex items-center gap-2 w-[80px] md:w-[140px] lg:w-[300px] shrink-0 md:pl-1">
           <Image
             src="/images/wc-log.webp"
             alt="FIFA World Cup 2026 Logo"
-            width={60}
-            height={60}
-            className="h-8 md:h-16 lg:h-10 w-10 md:w-16 lg:w-auto object-contain invert brightness-110 drop-shadow-[0_0_12px_rgba(255,255,255,0.3)] filter-none"
+            width={80}
+            height={80}
+            className="h-20 ml-2 md:h-20 lg:ml-10 lg:h-50 w-10 md:w-16 lg:w-10 object-contain invert brightness-110 drop-shadow-[0_0_12px_rgba(255,255,255,0.3)] filter-none"
           />
-          <span className="hidden lg:block text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-500 drop-shadow-[0_0_10px_rgba(249,115,22,0.3)]">
-            {lang === "en" ? "WORLD CUP 26" : "COPA MUNDIAL 26"}
+          <span className="hidden lg:block lg:ml-6 text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-500 drop-shadow-[0_0_10px_rgba(249,115,22,0.3)]">
+            {lang === "en" ? "TiqueBet" : "TiqueBet"}
           </span>
         </div>
 

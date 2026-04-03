@@ -10,6 +10,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { CustomSelect } from "@/components/ui/CustomSelect";
+import { AppFooter } from "../shared/AppFooter";
 
 interface LoginFormProps {
   language: string;
@@ -155,10 +156,10 @@ export const LoginForm = ({
             )}
           </button>
         </form>
-
-        <p className="text-center text-gray-600 text-[10px] mt-8 uppercase tracking-widest opacity-40">
+        <AppFooter lang={language as "es" | "en"} />
+        {/* <p className="text-center text-gray-600 text-[10px] mt-8 uppercase tracking-widest opacity-40">
           FIFA World Cup 2026
-        </p>
+        </p> */}
       </div>
     </div>
   );

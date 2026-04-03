@@ -39,11 +39,11 @@ export async function GET(request: NextRequest) {
       { id: "J", name: "Grupo J" },
       { id: "K", name: "Grupo K" },
       { id: "L", name: "Grupo L" },
-      { id: "FI", name: "Fases Finales" }, // 👈 El grupo para el Fan
+      { id: "FI", name: "Fases Finales" },
     ];
     await supabase.from("groups").upsert(groupsData);
 
-    // 4. LOS 48 EQUIPOS
+    // 4. LOS 48 EQUIPOS (OFICIALES Y CLASIFICADOS)
     const teamsData = [
       // GRUPO A
       { name_es: "México", name_en: "Mexico", flag_code: "mex", group_id: "A" },
@@ -60,17 +60,17 @@ export async function GET(request: NextRequest) {
         group_id: "A",
       },
       {
-        name_es: "Repechaje UEFA D",
-        name_en: "Playoff UEFA D",
-        flag_code: "uefa_rep_d",
+        name_es: "República Checa",
+        name_en: "Czech Republic",
+        flag_code: "cze",
         group_id: "A",
       },
       // GRUPO B
       { name_es: "Canadá", name_en: "Canada", flag_code: "can", group_id: "B" },
       {
-        name_es: "Repechaje UEFA A",
-        name_en: "Playoff UEFA A",
-        flag_code: "uefa_rep_a",
+        name_es: "Bosnia y Herzegovina",
+        name_en: "Bosnia and Herzegovina",
+        flag_code: "bih",
         group_id: "B",
       },
       { name_es: "Catar", name_en: "Qatar", flag_code: "qat", group_id: "B" },
@@ -115,9 +115,9 @@ export async function GET(request: NextRequest) {
         group_id: "D",
       },
       {
-        name_es: "Repechaje UEFA C",
-        name_en: "Playoff UEFA C",
-        flag_code: "uefa_rep_c",
+        name_es: "Turquía",
+        name_en: "Turkey",
+        flag_code: "tur",
         group_id: "D",
       },
       // GRUPO E
@@ -153,12 +153,7 @@ export async function GET(request: NextRequest) {
         group_id: "F",
       },
       { name_es: "Japón", name_en: "Japan", flag_code: "jpn", group_id: "F" },
-      {
-        name_es: "Repechaje UEFA B",
-        name_en: "Playoff UEFA B",
-        flag_code: "uefa_rep_b",
-        group_id: "F",
-      },
+      { name_es: "Suecia", name_en: "Sweden", flag_code: "swe", group_id: "F" },
       { name_es: "Túnez", name_en: "Tunisia", flag_code: "tun", group_id: "F" },
       // GRUPO G
       {
@@ -208,12 +203,7 @@ export async function GET(request: NextRequest) {
         flag_code: "sen",
         group_id: "I",
       },
-      {
-        name_es: "Repechaje FIFA 2",
-        name_en: "Playoff FIFA 2",
-        flag_code: "fifa_rep_2",
-        group_id: "I",
-      },
+      { name_es: "Irak", name_en: "Iraq", flag_code: "irq", group_id: "I" },
       {
         name_es: "Noruega",
         name_en: "Norway",
@@ -253,9 +243,9 @@ export async function GET(request: NextRequest) {
         group_id: "K",
       },
       {
-        name_es: "Repechaje FIFA 1",
-        name_en: "Playoff FIFA 1",
-        flag_code: "fifa_rep_1",
+        name_es: "RD Congo",
+        name_en: "DR Congo",
+        flag_code: "cod",
         group_id: "K",
       },
       {
@@ -315,14 +305,14 @@ export async function GET(request: NextRequest) {
       {
         group_id: "A",
         home_team_id: getID("kor"),
-        away_team_id: getID("uefa_rep_d"),
+        away_team_id: getID("cze"),
         match_date: "2026-06-12T02:00:00+00:00",
         stadium: "Estadio Akron",
         city: "Zapopan",
       },
       {
         group_id: "A",
-        home_team_id: getID("uefa_rep_d"),
+        home_team_id: getID("cze"),
         away_team_id: getID("rsa"),
         match_date: "2026-06-18T20:00:00+00:00",
         stadium: "Mercedes-Benz Stadium",
@@ -338,7 +328,7 @@ export async function GET(request: NextRequest) {
       },
       {
         group_id: "A",
-        home_team_id: getID("uefa_rep_d"),
+        home_team_id: getID("cze"),
         away_team_id: getID("mex"),
         match_date: "2026-06-25T01:00:00+00:00",
         stadium: "Estadio Azteca",
@@ -357,7 +347,7 @@ export async function GET(request: NextRequest) {
       {
         group_id: "B",
         home_team_id: getID("can"),
-        away_team_id: getID("uefa_rep_a"),
+        away_team_id: getID("bih"),
         match_date: "2026-06-12T23:00:00+00:00",
         stadium: "BMO Field",
         city: "Toronto",
@@ -373,7 +363,7 @@ export async function GET(request: NextRequest) {
       {
         group_id: "B",
         home_team_id: getID("sui"),
-        away_team_id: getID("uefa_rep_a"),
+        away_team_id: getID("bih"),
         match_date: "2026-06-18T19:00:00+00:00",
         stadium: "SoFi Stadium",
         city: "Inglewood",
@@ -396,7 +386,7 @@ export async function GET(request: NextRequest) {
       },
       {
         group_id: "B",
-        home_team_id: getID("uefa_rep_a"),
+        home_team_id: getID("bih"),
         away_team_id: getID("qat"),
         match_date: "2026-06-24T19:00:00+00:00",
         stadium: "Lumen Field",
@@ -465,14 +455,14 @@ export async function GET(request: NextRequest) {
       {
         group_id: "D",
         home_team_id: getID("aus"),
-        away_team_id: getID("uefa_rep_c"),
+        away_team_id: getID("tur"),
         match_date: "2026-06-13T04:00:00+00:00",
         stadium: "BC Place",
         city: "Vancouver",
       },
       {
         group_id: "D",
-        home_team_id: getID("uefa_rep_c"),
+        home_team_id: getID("tur"),
         away_team_id: getID("par"),
         match_date: "2026-06-19T04:00:00+00:00",
         stadium: "Levi's Stadium",
@@ -488,7 +478,7 @@ export async function GET(request: NextRequest) {
       },
       {
         group_id: "D",
-        home_team_id: getID("uefa_rep_c"),
+        home_team_id: getID("tur"),
         away_team_id: getID("usa"),
         match_date: "2026-06-26T02:00:00+00:00",
         stadium: "SoFi Stadium",
@@ -564,7 +554,7 @@ export async function GET(request: NextRequest) {
       },
       {
         group_id: "F",
-        home_team_id: getID("uefa_rep_b"),
+        home_team_id: getID("swe"),
         away_team_id: getID("tun"),
         match_date: "2026-06-15T02:00:00+00:00",
         stadium: "Estadio BBVA",
@@ -573,7 +563,7 @@ export async function GET(request: NextRequest) {
       {
         group_id: "F",
         home_team_id: getID("ned"),
-        away_team_id: getID("uefa_rep_b"),
+        away_team_id: getID("swe"),
         match_date: "2026-06-20T17:00:00+00:00",
         stadium: "NRG Stadium",
         city: "Houston",
@@ -589,7 +579,7 @@ export async function GET(request: NextRequest) {
       {
         group_id: "F",
         home_team_id: getID("jpn"),
-        away_team_id: getID("uefa_rep_b"),
+        away_team_id: getID("swe"),
         match_date: "2026-06-25T23:00:00+00:00",
         stadium: "AT&T Stadium",
         city: "Arlington",
@@ -714,7 +704,7 @@ export async function GET(request: NextRequest) {
       },
       {
         group_id: "I",
-        home_team_id: getID("fifa_rep_2"),
+        home_team_id: getID("irq"),
         away_team_id: getID("nor"),
         match_date: "2026-06-16T22:00:00+00:00",
         stadium: "Gillette Stadium",
@@ -723,7 +713,7 @@ export async function GET(request: NextRequest) {
       {
         group_id: "I",
         home_team_id: getID("fra"),
-        away_team_id: getID("fifa_rep_2"),
+        away_team_id: getID("irq"),
         match_date: "2026-06-22T21:00:00+00:00",
         stadium: "Lincoln Financial Field",
         city: "Philadelphia",
@@ -747,7 +737,7 @@ export async function GET(request: NextRequest) {
       {
         group_id: "I",
         home_team_id: getID("sen"),
-        away_team_id: getID("fifa_rep_2"),
+        away_team_id: getID("irq"),
         match_date: "2026-06-26T19:00:00+00:00",
         stadium: "BMO Field",
         city: "Toronto",
@@ -807,7 +797,7 @@ export async function GET(request: NextRequest) {
       {
         group_id: "K",
         home_team_id: getID("por"),
-        away_team_id: getID("fifa_rep_1"),
+        away_team_id: getID("cod"),
         match_date: "2026-06-17T17:00:00+00:00",
         stadium: "NRG Stadium",
         city: "Houston",
@@ -831,7 +821,7 @@ export async function GET(request: NextRequest) {
       {
         group_id: "K",
         home_team_id: getID("col"),
-        away_team_id: getID("fifa_rep_1"),
+        away_team_id: getID("cod"),
         match_date: "2026-06-24T02:00:00+00:00",
         stadium: "Estadio Akron",
         city: "Zapopan",
@@ -846,7 +836,7 @@ export async function GET(request: NextRequest) {
       },
       {
         group_id: "K",
-        home_team_id: getID("fifa_rep_1"),
+        home_team_id: getID("cod"),
         away_team_id: getID("uzb"),
         match_date: "2026-06-27T23:30:00+00:00",
         stadium: "Mercedes-Benz Stadium",
@@ -912,12 +902,11 @@ export async function GET(request: NextRequest) {
 
     const matchesWithNumber = sortedMatches.map((match, index) => ({
       ...match,
-      match_number: index + 1, // 👈 Numeración oficial FIFA
+      match_number: index + 1,
     }));
 
-    // 🏆 7. LOS 32 PARTIDOS DE FASES FINALES OFICIALES (Fechas y Sedes FIFA 2026)
+    // 🏆 7. LOS 32 PARTIDOS DE FASES FINALES OFICIALES (Intactos)
     const knockoutMatches = [
-      // 16avos de Final
       {
         match_number: 73,
         group_id: "FI",
@@ -1062,8 +1051,7 @@ export async function GET(request: NextRequest) {
         stadium: "AT&T Stadium",
         city: "Dallas",
       },
-
-      // Octavos de Final
+      // Octavos
       {
         match_number: 89,
         group_id: "FI",
@@ -1136,8 +1124,7 @@ export async function GET(request: NextRequest) {
         stadium: "BC Place",
         city: "Vancouver",
       },
-
-      // Cuartos de Final
+      // Cuartos
       {
         match_number: 97,
         group_id: "FI",
@@ -1174,8 +1161,7 @@ export async function GET(request: NextRequest) {
         stadium: "Arrowhead Stadium",
         city: "Kansas City",
       },
-
-      // Semifinales
+      // Semis
       {
         match_number: 101,
         group_id: "FI",
@@ -1194,7 +1180,6 @@ export async function GET(request: NextRequest) {
         stadium: "Mercedes-Benz Stadium",
         city: "Atlanta",
       },
-
       // 3er Puesto
       {
         match_number: 103,
@@ -1205,8 +1190,7 @@ export async function GET(request: NextRequest) {
         stadium: "Hard Rock Stadium",
         city: "Miami",
       },
-
-      // Gran Final
+      // Final
       {
         match_number: 104,
         group_id: "FI",
@@ -1218,10 +1202,8 @@ export async function GET(request: NextRequest) {
       },
     ];
 
-    // 🤝 Juntamos los 72 de grupos + 32 de finales = 104 Partidos Completos
     const all104Matches = [...matchesWithNumber, ...knockoutMatches];
 
-    // 8. Inserción Masiva de los 104 partidos
     const { error: matchesError } = await supabase
       .from("matches")
       .insert(all104Matches);
@@ -1234,7 +1216,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       message:
-        "✅ ¡Operación Exitosa! Semilla recargada con los 104 partidos del Mundial numerados cronológicamente y Fases Finales listas.",
+        "✅ ¡Operación Exitosa! Semilla recargada con los 48 equipos clasificados y 104 partidos.",
       matches_loaded: all104Matches.length,
     });
   } catch (error: any) {

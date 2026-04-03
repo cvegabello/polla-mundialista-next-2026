@@ -26,7 +26,7 @@ export const DICTIONARY = {
     manageGroup: "Gestiona este grupo desde el panel principal.",
     adminView: "Vista de Admin",
 
-    worldCupTitle: "COPA MUNDIAL 2026",
+    worldCupTitle: "TiqueBet",
     statusDraft: "BORRADOR",
     statusOfficial: "OFICIAL",
     points: "Puntos",
@@ -140,7 +140,7 @@ export const DICTIONARY = {
     manageGroup: "Manage this group from the main dashboard.",
     adminView: "Admin View",
 
-    worldCupTitle: "WORLD CUP 2026",
+    worldCupTitle: "TiqueBet",
     statusDraft: "DRAFT",
     statusOfficial: "OFFICIAL",
     points: "Points",

@@ -16,13 +16,13 @@ export const viewport: Viewport = {
 
 // 🚀 2. CONFIGURACIÓN DE LA APP NATIVA (PWA)
 export const metadata: Metadata = {
-  title: "Polla Mundialista 2026",
-  description: "La mejor polla del mundo",
+  title: "TiqueBet",
+  description: "World Cup 2026 Predictions",
   manifest: "/manifest.json", // Conecta con el archivo que creamos
   appleWebApp: {
     capable: true, // Le dice a Apple que se puede instalar como App
     statusBarStyle: "black-translucent", // Barra de estado transparente/negra
-    title: "Polla WC26", // El nombre que saldrá debajo del ícono en el celular
+    title: "TiqueBet", // El nombre que saldrá debajo del ícono en el celular
   },
   icons: {
     apple: "/images/wc-log.webp", // El ícono para los iPhone
