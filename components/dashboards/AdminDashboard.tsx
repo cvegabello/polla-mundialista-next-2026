@@ -31,6 +31,7 @@ export const AdminDashboard = ({
             key={group.id}
             group={group}
             initialPredictions={[]} // El admin no predice aquí
+            onPredictionChange={() => {}}
           />
         ))}
       </div>
