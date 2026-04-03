@@ -1,6 +1,6 @@
 // src/services/groupService.ts
 // 👇 1. Cambiamos el import viejo por el Teléfono Rojo
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/utils/supabase/client";
 
 export const getFullGroupsData = async () => {
   try {
