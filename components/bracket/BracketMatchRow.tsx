@@ -91,7 +91,6 @@ export const BracketMatchRow: React.FC<BracketMatchRowProps> = ({
           }`}
           style={{
             opacity: 1,
-            WebkitOpacity: 1,
             WebkitTextFillColor: isLocked ? "#ffffff" : "#000000",
             color: isLocked ? "#ffffff" : "#000000",
           }}
