@@ -66,7 +66,10 @@ export const AdminGroupCard = ({ group, lang = "es" }: AdminGroupCardProps) => {
         let winnerId = null;
 
         // Solo calculamos el winnerId si hay números válidos
-        if (match.home_score !== null && match.away_score !== null) {
+        if (
+          typeof match.home_score === "number" &&
+          typeof match.away_score === "number"
+        ) {
           if (match.home_score > match.away_score)
             winnerId = match.home_team_id;
           else if (match.away_score > match.home_score)
