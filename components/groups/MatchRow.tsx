@@ -54,55 +54,113 @@ export const MatchRow = ({
     return team.name_es;
   };
 
-  const getFlagUrl = (code3?: string) => {
+  const getFlagUrl = (code?: string | null) => {
+    if (!code) return null;
+
+    // Mapa expandido de códigos FIFA a códigos ISO 3166-1 alpha-2
     const map: Record<string, string> = {
+      // Sudamérica (CONMEBOL)
       col: "co",
+      arg: "ar",
+      bra: "br",
+      uru: "uy",
+      ecu: "ec",
+      chi: "cl",
+      per: "pe",
+      ven: "ve",
+      bol: "bo",
+      par: "py",
+
+      // Norte/Centroamérica (CONCACAF)
       mex: "mx",
       usa: "us",
-      bra: "br",
-      arg: "ar",
-      por: "pt",
+      can: "ca",
+      crc: "cr",
+      pan: "pa",
+      jam: "jm",
+      hon: "hn",
+      slv: "sv",
+      hai: "ht",
+      cuw: "cw",
+      // Europa (UEFA)
       esp: "es",
       fra: "fr",
       ger: "de",
-      eng: "gb",
-      uru: "uy",
-      ecu: "ec",
-      can: "ca",
-      kor: "kr",
-      jpn: "jp",
-      sen: "sn",
+      por: "pt",
       ned: "nl",
       bel: "be",
       cro: "hr",
-      mar: "ma",
       sui: "ch",
-      crc: "cr",
-      irn: "ir",
-      ksa: "sa",
-      aus: "au",
-      tun: "tn",
+      eng: "gb-eng",
       pol: "pl",
+      ita: "it",
+      swe: "se",
+      den: "dk",
+      srb: "rs",
+      ser: "rs",
+      ukr: "ua",
+      tur: "tr",
+      gre: "gr",
+      nor: "no",
+      aut: "at",
+      wal: "gb-wls",
+      sco: "gb-sct",
+      bih: "ba",
+
+      // África (CAF)
+      sen: "sn",
+      mar: "ma",
+      tun: "tn",
       cmr: "cm",
       gha: "gh",
-      hai: "ht",
       civ: "ci",
       alg: "dz",
       egy: "eg",
-      qat: "qa",
-      par: "py",
-      nzl: "nz",
       cpv: "cv",
-      nor: "no",
-      aut: "at",
+      rsa: "za",
+      zaf: "za",
+      mli: "ml",
+      cgo: "cg",
+      cod: "cd",
+
+      // Asia (AFC)
+      kor: "kr",
+      jpn: "jp",
+      irn: "ir",
+      ksa: "sa",
+      aus: "au",
+      qat: "qa",
       jor: "jo",
       uzb: "uz",
-      pan: "pa",
+      chn: "cn",
+      uae: "ae",
+      irq: "iq",
+
+      // Oceanía (OFC)
+      nzl: "nz",
     };
-    if (!code3) return null;
-    if (code3.includes("_rep_")) return null;
-    const code2 = map[code3.toLowerCase()] || code3.slice(0, 2).toLowerCase();
-    return `https://flagcdn.com/w80/${code2}.png`;
+
+    const cleanCode = code.trim().toLowerCase();
+
+    // Si llega algo de repechaje, no mostramos bandera
+    if (cleanCode.includes("_rep_") || cleanCode.includes("tbd")) return null;
+
+    // 1. Buscamos en nuestro diccionario
+    if (map[cleanCode]) {
+      return `https://flagcdn.com/w80/${map[cleanCode]}.png`;
+    }
+
+    // 2. Si es ISO de dos letras directo
+    if (cleanCode.length === 2) {
+      return `https://flagcdn.com/w80/${cleanCode}.png`;
+    }
+
+    // 3. Fallback de emergencia
+    if (cleanCode.length === 3) {
+      return `https://flagcdn.com/w80/${cleanCode.slice(0, 2)}.png`;
+    }
+
+    return null;
   };
 
   const formatMatchInfo = (dateString: string) => {

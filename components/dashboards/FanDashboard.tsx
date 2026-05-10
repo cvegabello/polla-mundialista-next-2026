@@ -43,55 +43,117 @@ interface FanDashboardProps {
   globalConfig?: any;
 }
 
-const getFlagUrl = (code3: string | null | undefined): string | null => {
-  if (!code3) return null;
+const getFlagUrl = (code: string | null | undefined): string | null => {
+  if (!code) return null;
+
+  // Mapa expandido de códigos FIFA a códigos ISO 3166-1 alpha-2
   const map: Record<string, string> = {
+    // Sudamérica (CONMEBOL)
     col: "co",
+    arg: "ar",
+    bra: "br",
+    uru: "uy",
+    ecu: "ec",
+    chi: "cl",
+    per: "pe",
+    ven: "ve",
+    bol: "bo",
+    par: "py",
+
+    // Norte/Centroamérica (CONCACAF)
     mex: "mx",
     usa: "us",
-    bra: "br",
-    arg: "ar",
-    por: "pt",
+    can: "ca",
+    crc: "cr",
+    pan: "pa",
+    jam: "jm",
+    hon: "hn",
+    slv: "sv",
+    hai: "ht",
+    cuw: "cw",
+
+    // Europa (UEFA)
     esp: "es",
     fra: "fr",
     ger: "de",
-    eng: "gb",
-    uru: "uy",
-    ecu: "ec",
-    can: "ca",
-    kor: "kr",
-    jpn: "jp",
-    sen: "sn",
+    por: "pt",
     ned: "nl",
     bel: "be",
     cro: "hr",
-    mar: "ma",
     sui: "ch",
-    crc: "cr",
-    irn: "ir",
-    ksa: "sa",
-    aus: "au",
-    tun: "tn",
+    eng: "gb-eng",
     pol: "pl",
+    ita: "it",
+    swe: "se",
+    den: "dk",
+    srb: "rs",
+    ser: "rs",
+    ukr: "ua",
+    tur: "tr",
+    gre: "gr",
+    nor: "no",
+    aut: "at",
+    wal: "gb-wls",
+    sco: "gb-sct",
+    bih: "ba",
+
+    // África (CAF)
+    sen: "sn",
+    mar: "ma",
+    tun: "tn",
     cmr: "cm",
     gha: "gh",
-    hai: "ht",
     civ: "ci",
     alg: "dz",
     egy: "eg",
-    qat: "qa",
-    par: "py",
-    nzl: "nz",
     cpv: "cv",
-    nor: "no",
-    aut: "at",
+    rsa: "za",
+    zaf: "za",
+    mli: "ml",
+    cgo: "cg",
+    cod: "cd",
+
+    // Asia (AFC)
+    kor: "kr",
+    jpn: "jp",
+    irn: "ir",
+    ksa: "sa",
+    aus: "au",
+    qat: "qa",
     jor: "jo",
     uzb: "uz",
-    pan: "pa",
+    chn: "cn",
+    uae: "ae",
+    irq: "iq",
+
+    // Oceanía (OFC)
+    nzl: "nz",
   };
-  if (code3.includes("_rep_")) return null;
-  const code2 = map[code3.toLowerCase()] || code3.slice(0, 2).toLowerCase();
-  return `https://flagcdn.com/w80/${code2}.png`;
+
+  // Limpiamos espacios en blanco o cosas raras al inicio o final
+  const cleanCode = code.trim().toLowerCase();
+
+  // Si llega algo de repechaje, no mostramos bandera
+  if (cleanCode.includes("_rep_") || cleanCode.includes("tbd")) return null;
+
+  // 1. Buscamos en nuestro diccionario (es lo más seguro)
+  if (map[cleanCode]) {
+    return `https://flagcdn.com/w80/${map[cleanCode]}.png`;
+  }
+
+  // 2. Si el código que llega a la función SÓLO TIENE DOS LETRAS exactas
+  // asumimos que ya viene en formato ISO (ej. le llega "co", "mx", "us")
+  if (cleanCode.length === 2) {
+    return `https://flagcdn.com/w80/${cleanCode}.png`;
+  }
+
+  // 3. Si llega un código de 3 letras que no tenemos mapeado (ej. algún país nuevo)
+  if (cleanCode.length === 3) {
+    return `https://flagcdn.com/w80/${cleanCode.slice(0, 2)}.png`;
+  }
+
+  // Si llega cualquier otra cosa ("colombia", "nombre_largo", undefined), mejor no poner bandera
+  return null;
 };
 
 export const FanDashboard = ({
