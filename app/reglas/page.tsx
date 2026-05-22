@@ -1,56 +1,99 @@
 // app/reglas/page.tsx
-import React from "react";
-import { cookies } from "next/headers";
+"use client"; // 👈 SE VOLVIÓ CLIENT COMPONENT PARA PODER COPIAR AL PORTAPAPELES
+
+import React, { useState, useEffect } from "react";
 import { Language } from "@/components/constants/dictionary";
 import { AppFooter } from "@/components/shared/AppFooter";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Copy, Check } from "lucide-react"; // 👈 NUEVOS ÍCONOS
 
-export const dynamic = "force-dynamic";
+export default function ReglasPage() {
+  const [lang, setLang] = useState<Language>("es");
+  const [hasSession, setHasSession] = useState(false);
+  const [copied, setCopied] = useState(false); // 👈 ESTADO PARA EL EFECTO DE COPIADO
 
-type Props = {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-};
+  // Leer parámetros de la URL y Cookies en el cliente de forma segura
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlLang = urlParams.get("lang");
 
-export default async function ReglasPage({ searchParams }: Props) {
-  const resolvedSearchParams = await searchParams;
-  const urlLang = resolvedSearchParams?.lang;
+      // 1. Revisar si viene idioma por URL
+      if (urlLang === "en" || urlLang === "es") {
+        setLang(urlLang as Language);
+      } else {
+        // 2. Si no hay URL, buscar la cookie de sesión
+        const cookies = document.cookie.split("; ");
+        const sessionCookie = cookies.find((row) =>
+          row.startsWith("polla_session="),
+        );
 
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("polla_session");
-
-  let lang: Language = "es";
-
-  if (urlLang === "en" || urlLang === "es") {
-    lang = urlLang as Language;
-  } else if (sessionCookie) {
-    try {
-      const userSession = JSON.parse(decodeURIComponent(sessionCookie.value));
-      if (userSession.lang === "en" || userSession.lang === "es") {
-        lang = userSession.lang as Language;
+        if (sessionCookie) {
+          setHasSession(true);
+          try {
+            const rawValue = sessionCookie.split("=")[1];
+            const userSession = JSON.parse(decodeURIComponent(rawValue));
+            if (userSession.lang === "en" || userSession.lang === "es") {
+              setLang(userSession.lang as Language);
+            }
+          } catch (e) {
+            console.error("Error parsing session cookie for rules page");
+          }
+        }
       }
-    } catch (e) {
-      console.error("Error parsing session cookie for rules page");
     }
-  }
+  }, []);
 
-  // 👇 VARIABLE CLAVE: Verificamos si hay sesión activa
-  const hasSession = !!sessionCookie;
+  // 🪄 FUNCIÓN MÁGICA PARA COPIAR EL LINK CON EL IDIOMA CORRECTO
+  const handleCopyLink = () => {
+    if (typeof window !== "undefined") {
+      const baseUrl = window.location.origin + window.location.pathname;
+      // Si la página actual está en inglés, le clava de una vez el ?lang=en
+      const linkToCopy = lang === "en" ? `${baseUrl}?lang=en` : baseUrl;
+
+      navigator.clipboard.writeText(linkToCopy).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000); // Vuelve a la normalidad en 2 segundos
+      });
+    }
+  };
 
   return (
     <main className="min-h-screen bg-[#0a0b10] text-gray-200 py-6 px-4 md:py-10 md:px-10 lg:px-20 relative">
-      {/* 👇 EL BOTÓN AHORA SOLO SE MUESTRA SI TIENE SESIÓN */}
-      {hasSession && (
-        <div className="max-w-4xl mx-auto mb-6">
+      {/* SECCIÓN DE BOTONES SUPERIORES */}
+      <div className="max-w-4xl mx-auto mb-6 flex flex-wrap gap-4 items-center justify-between">
+        {/* BOTÓN VOLVER (SOLO SI HAY SESIÓN) */}
+        {hasSession ? (
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-cyan-400 hover:text-cyan-300 font-bold transition-all duration-300 bg-[#0f1016] px-5 py-2.5 rounded-full border border-cyan-500/30 shadow-[0_0_15px_rgba(34,211,238,0.15)] hover:shadow-[0_0_20px_rgba(34,211,238,0.3)] active:scale-95"
+            className="inline-flex items-center gap-2 text-cyan-400 hover:text-cyan-300 font-bold transition-all duration-300 bg-[#0f1016] px-5 py-2.5 rounded-full border border-cyan-500/30 shadow-[0_0_15px_rgba(34,211,238,0.15)] hover:shadow-[0_0_20px_rgba(34,211,238,0.3)] active:scale-95 text-sm"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={18} />
             {lang === "es" ? "Volver al Dashboard" : "Back to Dashboard"}
           </Link>
-        </div>
-      )}
+        ) : (
+          <div /> // Espaciador si no hay sesión
+        )}
+
+        {/* 🆕 BOTÓN DE COPIAR LINK INTELIGENTE */}
+        <button
+          onClick={handleCopyLink}
+          className={`inline-flex items-center gap-2 font-bold transition-all duration-300 px-5 py-2.5 rounded-full border text-sm cursor-pointer active:scale-95 ${
+            copied
+              ? "bg-emerald-600/20 text-emerald-400 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+              : "bg-[#0f1016] text-amber-400 hover:text-amber-300 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.15)] hover:shadow-[0_0_20px_rgba(245,158,11,0.3)]"
+          }`}
+        >
+          {copied ? <Check size={18} /> : <Copy size={18} />}
+          {copied
+            ? lang === "es"
+              ? "¡Link Copiado!"
+              : "Link Copied!"
+            : lang === "es"
+              ? "Copiar Link de Reglas"
+              : "Copy Rules Link"}
+        </button>
+      </div>
 
       <div className="max-w-4xl mx-auto bg-[#0f1016] border border-orange-500/20 rounded-2xl p-6 md:p-12 shadow-2xl shadow-orange-900/20">
         {lang === "es" ? (
@@ -77,8 +120,8 @@ export default async function ReglasPage({ searchParams }: Props) {
                   <span className="text-amber-500 font-bold">
                     1. Simulación vs. Juego Real:
                   </span>{" "}
-                  Puedes jugar y simular los resultados de todo el torneo hasta
-                  la gran final para ver cómo quedarían tus cruces, pero{" "}
+                  Puedes jugar y simular los results de todo el torneo hasta la
+                  gran final para ver cómo quedarían tus cruces, pero{" "}
                   <strong>
                     en la primera etapa solo se jugarán y enviarán oficialmente
                     tus pronósticos de la Fase de Grupos
@@ -181,7 +224,7 @@ export default async function ReglasPage({ searchParams }: Props) {
                   <span className="text-amber-500 font-bold">
                     9. 📱 TiqueBet en tu Celular (Instala la App):
                   </span>{" "}
-                  No necesitas buscar TiqueBet en una tienda de aplicaciones
+                  No necesitas buscar TiqueBet in una tienda de aplicaciones
                   para tenerla en tu teléfono. Puedes instalarla directamente
                   desde tu navegador:
                   <ul className="list-disc pl-6 mt-2 space-y-1 text-gray-400">
