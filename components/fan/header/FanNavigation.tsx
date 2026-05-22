@@ -15,6 +15,7 @@ import {
   Share2,
   Menu,
   X,
+  BookOpen,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
@@ -100,13 +101,20 @@ export const FanNavigation = ({
       ],
     },
     {
-      title: lang === "en" ? "Reports" : "Reportes",
+      title: lang === "en" ? "Reports & Info" : "Reportes e Info",
       items: [
         {
           id: "var",
           label: lang === "en" ? "The VAR" : "El VAR",
           icon: <MonitorPlay size={20} />,
           isAction: true,
+        },
+        {
+          id: "rules",
+          label: t.menuRules || (lang === "en" ? "Rules" : "Reglas"),
+          icon: <BookOpen size={20} />,
+          isLink: true, // 👈 Bandera mágica para saber que es un enlace
+          href: "/reglas", // 👈 Ruta a donde debe ir
         },
       ],
     },
@@ -290,19 +298,39 @@ export const FanNavigation = ({
                     {group.title}
                   </span>
 
-                  {group.items.map((item) => {
+                  {group.items.map((item: any) => {
                     const isActive = currentView === item.id;
+                    const buttonClasses = `flex items-center gap-3 w-full h-12 px-3 rounded-xl transition-all duration-300 relative cursor-pointer ${
+                      isActive && !item.isAction && !item.isLink
+                        ? "bg-gradient-to-r from-cyan-600/20 to-blue-600/10 text-cyan-400 border border-cyan-500/30 font-bold"
+                        : item.isAction || item.isLink
+                          ? "text-yellow-500 hover:bg-yellow-500/10 font-bold"
+                          : "text-gray-300 hover:bg-white/5"
+                    }`;
+
+                    // Si es un link, lo envolvemos en un <a>
+                    if (item.isLink) {
+                      return (
+                        <a
+                          key={item.id}
+                          href={item.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={buttonClasses}
+                        >
+                          <div className="shrink-0">{item.icon}</div>
+                          <span className="text-sm tracking-wide text-left flex-1">
+                            {item.label}
+                          </span>
+                        </a>
+                      );
+                    }
+
                     return (
                       <button
                         key={item.id}
                         onClick={() => handleNavigation(item.id, item.isAction)}
-                        className={`flex items-center gap-3 w-full h-12 px-3 rounded-xl transition-all duration-300 relative cursor-pointer ${
-                          isActive && !item.isAction
-                            ? "bg-gradient-to-r from-cyan-600/20 to-blue-600/10 text-cyan-400 border border-cyan-500/30 font-bold"
-                            : item.isAction
-                              ? "text-yellow-500 hover:bg-yellow-500/10 font-bold"
-                              : "text-gray-300 hover:bg-white/5"
-                        }`}
+                        className={buttonClasses}
                       >
                         {isActive && !item.isAction && (
                           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-cyan-400 rounded-r-full shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
@@ -332,20 +360,42 @@ export const FanNavigation = ({
                 {group.title}
               </span>
 
-              {group.items.map((item) => {
+              {group.items.map((item: any) => {
                 const isActive = currentView === item.id;
+                const buttonClasses = `flex items-center w-[232px] h-10 rounded-xl transition-all duration-300 relative cursor-pointer ${
+                  isActive && !item.isAction && !item.isLink
+                    ? "bg-gradient-to-r from-cyan-600/20 to-blue-600/10 text-cyan-400 border border-cyan-500/30"
+                    : item.isAction || item.isLink
+                      ? "text-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-400"
+                      : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                }`;
+
+                if (item.isLink) {
+                  return (
+                    <a
+                      key={item.id}
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={item.label}
+                      className={buttonClasses}
+                    >
+                      <div className="w-10 flex justify-center shrink-0">
+                        {item.icon}
+                      </div>
+                      <span className="text-sm font-bold tracking-wide opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                        {item.label}
+                      </span>
+                    </a>
+                  );
+                }
+
                 return (
                   <button
                     key={item.id}
                     onClick={() => handleNavigation(item.id, item.isAction)}
                     title={item.label}
-                    className={`flex items-center w-[232px] h-10 rounded-xl transition-all duration-300 relative cursor-pointer ${
-                      isActive && !item.isAction
-                        ? "bg-gradient-to-r from-cyan-600/20 to-blue-600/10 text-cyan-400 border border-cyan-500/30"
-                        : item.isAction
-                          ? "text-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-400"
-                          : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
-                    }`}
+                    className={buttonClasses}
                   >
                     {isActive && !item.isAction && (
                       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-cyan-400 rounded-r-full shadow-[0_0_10px_rgba(34,211,238,0.8)]" />

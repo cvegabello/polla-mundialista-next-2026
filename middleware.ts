@@ -8,14 +8,15 @@ export function middleware(request: NextRequest) {
 
   // 🔑 DEFINIMOS LAS EXCEPCIONES VIP:
   const isSeedPage = pathname.startsWith("/api/seed");
-  const isMockPage = pathname.startsWith("/api/mock-scores"); // 👈 NUEVO PASE VIP AÑADIDO
+  const isMockPage = pathname.startsWith("/api/mock-scores");
+  const isRulesPage = pathname.startsWith("/reglas"); // 👈 NUEVO PASE VIP PARA EL REGLAMENTO
 
-  // Si no hay sesión, NO es el login, NO es el seed, y NO es el mock, ¡pa fuera!
-  if (!session && !isLoginPage && !isSeedPage && !isMockPage) {
+  // Si no hay sesión, NO es el login, NO es el seed, NO es el mock, y NO son las reglas ¡pa fuera!
+  if (!session && !isLoginPage && !isSeedPage && !isMockPage && !isRulesPage) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Si ya tiene sesión y trata de entrar al login, ¡pa dentro!
+  // Si ya tiene sesión y trata de entrar al login, ¡pa dentro al dashboard!
   if (session && isLoginPage) {
     return NextResponse.redirect(new URL("/", request.url));
   }

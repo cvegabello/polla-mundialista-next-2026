@@ -116,6 +116,7 @@ export const DICTIONARY = {
     modalSubmitBtnCancel: "VOLVER",
     incompletePhaseMsg:
       "⚠️ ADUANA: Te faltan {count} partidos por llenar en {phase}. Complétalos todos antes de enviar.",
+    menuRules: "Reglas de Juego",
   },
   en: {
     saving: "Saving...",
@@ -230,5 +231,6 @@ export const DICTIONARY = {
     modalSubmitBtnCancel: "GO BACK",
     incompletePhaseMsg:
       "⚠️ CUSTOMS: You are missing {count} matches to fill in {phase}. Complete them all before submitting.",
+    menuRules: "Game Rules",
   },
 };
