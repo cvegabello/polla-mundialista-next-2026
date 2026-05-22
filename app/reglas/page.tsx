@@ -118,7 +118,59 @@ export default function ReglasPage() {
               <ul className="space-y-3 list-none pl-0">
                 <li>
                   <span className="text-amber-500 font-bold">
-                    1. Simulación vs. Juego Real:
+                    1. 🔐 Cómo crear tu cuenta (El Primer Ingreso):
+                  </span>{" "}
+                  Cuando recibes el link de invitación, ese link ya te conecta
+                  directamente a la polla correcta.{" "}
+                  <strong>Nadie te va a enviar un usuario</strong> — ¡tú mismo
+                  te lo inventas! Al ingresar por primera vez solo necesitas:
+                  <ul className="list-disc pl-6 mt-2 space-y-1 text-gray-400">
+                    <li>
+                      <strong>Elegir tu nombre de usuario</strong> (el apodo
+                      con el que te verán tus rivales). Puede ser cualquier
+                      cosa: tu nombre, apodo, alias...
+                    </li>
+                    <li>
+                      <strong>Asignarte un PIN de 4 dígitos</strong> (tu
+                      contraseña para volver a entrar en el futuro).
+                    </li>
+                  </ul>
+                  <p className="mt-2 text-gray-400">
+                    ⚠️ <strong>Ojo con estos casos:</strong>
+                  </p>
+                  <ul className="list-disc pl-6 mt-1 space-y-1 text-gray-400">
+                    <li>
+                      Si participas en{" "}
+                      <strong>dos o más pollas diferentes</strong>, debes usar
+                      un{" "}
+                      <strong>nombre de usuario distinto en cada una</strong>.
+                    </li>
+                    <li>
+                      Si el sistema te muestra{" "}
+                      <em>
+                        &quot;Contraseña incorrecta o el nombre de usuario ya
+                        está en uso&quot;
+                      </em>
+                      , puede ser una de estas dos situaciones:
+                      <ul className="list-disc pl-6 mt-1 space-y-1">
+                        <li>
+                          <strong>Te equivocaste el PIN:</strong> Intenta de
+                          nuevo con el PIN correcto.
+                        </li>
+                        <li>
+                          <strong>
+                            Ese nombre de usuario ya lo usa otra persona:
+                          </strong>{" "}
+                          Simplemente elige un nombre diferente e intenta de
+                          nuevo.
+                        </li>
+                      </ul>
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <span className="text-amber-500 font-bold">
+                    2. Simulación vs. Juego Real:
                   </span>{" "}
                   Puedes jugar y simular los results de todo el torneo hasta la
                   gran final para ver cómo quedarían tus cruces, pero{" "}
@@ -130,7 +182,7 @@ export default function ReglasPage() {
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    2. Desbloqueo de Fases:
+                    3. Desbloqueo de Fases:
                   </span>{" "}
                   El torneo se juega por etapas. Las fases de eliminación
                   directe se irán desbloqueando unos días antes de su inicio,
@@ -138,7 +190,7 @@ export default function ReglasPage() {
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    3. Actualización del Cuadro (¡Ojo al VAR!):
+                    4. Actualización del Cuadro (¡Ojo al VAR!):
                   </span>{" "}
                   Una vez se confirmen los clasificados reales de cada fase,{" "}
                   <strong>
@@ -150,7 +202,7 @@ export default function ReglasPage() {
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    4. Condición para Enviar:
+                    5. Condición para Enviar:
                   </span>{" "}
                   Para que tus predicciones sean válidas, es obligatorio
                   ingresar los marcadores de <strong>TODOS</strong> los partidos
@@ -159,7 +211,7 @@ export default function ReglasPage() {
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    5. 🏆 Elige a tu Campeón:
+                    6. 🏆 Elige a tu Campeón:
                   </span>{" "}
                   El juego te pedirá que pronostiques quién levantará la copa en{" "}
                   <strong>dos momentos clave</strong>:
@@ -176,14 +228,14 @@ export default function ReglasPage() {
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    6. 🎟️ Pronosticar no es participar:
+                    7. 🎟️ Pronosticar no es participar:
                   </span>{" "}
                   <strong>No entrarás a jugar oficialmente</strong> si no haces
                   clic en el botón de "Enviar Pronósticos".
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    7. 🪄 El Botón Mágico (¡Haz crecer el pozo!):
+                    8. 🪄 El Botón Mágico (¡Haz crecer el pozo!):
                   </span>{" "}
                   Si quieres que el premio final sea una verdadera fortuna,
                   ¡trae a tu gente! En tu panel principal encontrarás un botón
@@ -193,7 +245,7 @@ export default function ReglasPage() {
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    8. 📺 El VAR (Sigue la competencia en vivo):
+                    9. 📺 El VAR (Sigue la competencia en vivo):
                   </span>{" "}
                   El VAR es el corazón de la polla. Desde el menú principal
                   puedes acceder a esta sección para monitorear en tiempo real
@@ -222,7 +274,7 @@ export default function ReglasPage() {
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    9. 📱 TiqueBet en tu Celular (Instala la App):
+                    10. 📱 TiqueBet en tu Celular (Instala la App):
                   </span>{" "}
                   No necesitas buscar TiqueBet in una tienda de aplicaciones
                   para tenerla en tu teléfono. Puedes instalarla directamente
@@ -245,7 +297,7 @@ export default function ReglasPage() {
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    10. 🌐 ¿Prefieres ver TiqueBet en Inglés?
+                    11. 🌐 ¿Prefieres ver TiqueBet en Inglés?
                   </span>{" "}
                   La app está disponible en <strong>español e inglés</strong>.
                   Puedes cambiar el idioma desde la pantalla de inicio de
@@ -419,7 +471,57 @@ export default function ReglasPage() {
               <ul className="space-y-3 list-none pl-0">
                 <li>
                   <span className="text-amber-500 font-bold">
-                    1. Simulation vs. Real Game:
+                    1. 🔐 How to Create Your Account (First Time Login):
+                  </span>{" "}
+                  When you receive the invitation link, it already connects you
+                  directly to the right pool.{" "}
+                  <strong>Nobody will send you a username</strong> — you create
+                  it yourself! The first time you log in, all you need is:
+                  <ul className="list-disc pl-6 mt-2 space-y-1 text-gray-400">
+                    <li>
+                      <strong>Choose a username</strong> (the nickname your
+                      rivals will see). It can be anything: your name, a
+                      nickname, an alias...
+                    </li>
+                    <li>
+                      <strong>Set a 4-digit PIN</strong> (your password for
+                      future logins).
+                    </li>
+                  </ul>
+                  <p className="mt-2 text-gray-400">
+                    ⚠️ <strong>Watch out for these cases:</strong>
+                  </p>
+                  <ul className="list-disc pl-6 mt-1 space-y-1 text-gray-400">
+                    <li>
+                      If you are joining{" "}
+                      <strong>two or more different pools</strong>, you must use
+                      a{" "}
+                      <strong>different username in each one</strong>.
+                    </li>
+                    <li>
+                      If the system shows{" "}
+                      <em>
+                        &quot;Incorrect password or username already taken&quot;
+                      </em>
+                      , it could be one of two things:
+                      <ul className="list-disc pl-6 mt-1 space-y-1">
+                        <li>
+                          <strong>You entered the wrong PIN:</strong> Try again
+                          with the correct PIN.
+                        </li>
+                        <li>
+                          <strong>
+                            That username is already taken by someone else:
+                          </strong>{" "}
+                          Simply choose a different username and try again.
+                        </li>
+                      </ul>
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <span className="text-amber-500 font-bold">
+                    2. Simulation vs. Real Game:
                   </span>{" "}
                   You can play and simulate the results of the entire
                   tournament, but{" "}
@@ -431,14 +533,14 @@ export default function ReglasPage() {
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    2. Unlocking Phases:
+                    3. Unlocking Phases:
                   </span>{" "}
                   The knockout phases will unlock a few days before they start,
                   only after the official real-life matchups are confirmed.
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    3. Bracket Updates (VAR Check!):
+                    4. Bracket Updates (VAR Check!):
                   </span>{" "}
                   Once the real qualified teams are confirmed,{" "}
                   <strong>
@@ -450,14 +552,14 @@ export default function ReglasPage() {
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    4. Submission Rule:
+                    5. Submission Rule:
                   </span>{" "}
                   To make your predictions valid, it is mandatory to enter the
                   scores for <strong>ALL</strong> matches in that round.
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    5. 🏆 Pick Your Champion:
+                    6. 🏆 Pick Your Champion:
                   </span>{" "}
                   The game will ask you to predict who will lift the trophy at{" "}
                   <strong>two key moments</strong>:
@@ -474,14 +576,14 @@ export default function ReglasPage() {
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    6. 🎟️ Predicting isn't participating:
+                    7. 🎟️ Predicting isn't participating:
                   </span>{" "}
                   <strong>You will not officially enter the game</strong> unless
                   you click the "Submit Predictions" button.
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    7. 🪄 The Magic Button:
+                    8. 🪄 The Magic Button:
                   </span>{" "}
                   If you want the final prize to be a true fortune, bring your
                   crew! Use the "Invite" button freely to challenge your friends
@@ -489,7 +591,7 @@ export default function ReglasPage() {
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    8. 📺 The VAR (Follow the live competition):
+                    9. 📺 The VAR (Follow the live competition):
                   </span>{" "}
                   The VAR is the heart of the pool. The VAR features the
                   following tools:
@@ -511,7 +613,7 @@ export default function ReglasPage() {
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    9. 📱 TiqueBet on your Phone (Install the App):
+                    10. 📱 TiqueBet on your Phone (Install the App):
                   </span>{" "}
                   You don't need an app store to have it on your phone. You can
                   install it directly from your browser:
@@ -529,7 +631,7 @@ export default function ReglasPage() {
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    10. 🌐 Prefer TiqueBet in Spanish?
+                    11. 🌐 Prefer TiqueBet in Spanish?
                   </span>{" "}
                   The app is fully available in both <strong>English and Spanish</strong>.
                   You can switch the language from the login screen using the
