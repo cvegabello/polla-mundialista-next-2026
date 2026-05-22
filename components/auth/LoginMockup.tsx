@@ -26,8 +26,17 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
 
   useEffect(() => {
     const savedLang = localStorage.getItem("polla_lang");
-    if (savedLang) setLanguage(savedLang);
-    // Borramos lo de localStorage de pollas porque ya no lo necesitamos
+    if (savedLang) {
+      // El usuario ya eligió un idioma antes → lo respetamos
+      setLanguage(savedLang);
+    } else {
+      // Primera visita: detectamos el idioma configurado en el dispositivo/navegador
+      const browserLang = navigator.language || "es";
+      if (browserLang.startsWith("en")) {
+        setLanguage("en");
+      }
+      // Cualquier otro idioma → queda en "es" (el default del useState)
+    }
   }, []);
 
   const handleLanguageChange = (val: string) => {

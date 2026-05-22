@@ -243,6 +243,20 @@ export default function ReglasPage() {
                     tus otras aplicaciones para entrar con un solo toque.
                   </p>
                 </li>
+                <li>
+                  <span className="text-amber-500 font-bold">
+                    10. 🌐 ¿Prefieres ver TiqueBet en Inglés?
+                  </span>{" "}
+                  La app está disponible en <strong>español e inglés</strong>.
+                  Puedes cambiar el idioma desde la pantalla de inicio de
+                  sesión usando el selector con el ícono de globo{" "}
+                  <span className="inline-flex items-center gap-1 text-cyan-400 font-semibold">
+                    🌐
+                  </span>{" "}
+                  ubicado en el formulario de acceso. La app también detecta
+                  automáticamente el idioma de tu dispositivo la primera vez
+                  que ingresas.
+                </li>
               </ul>
             </section>
 
@@ -512,6 +526,19 @@ export default function ReglasPage() {
                       the share icon, and select "Add to Home Screen".
                     </li>
                   </ul>
+                </li>
+                <li>
+                  <span className="text-amber-500 font-bold">
+                    10. 🌐 Prefer TiqueBet in Spanish?
+                  </span>{" "}
+                  The app is fully available in both <strong>English and Spanish</strong>.
+                  You can switch the language from the login screen using the
+                  globe icon{" "}
+                  <span className="inline-flex items-center gap-1 text-cyan-400 font-semibold">
+                    🌐
+                  </span>{" "}
+                  selector on the login form. The app also automatically detects
+                  your device&apos;s language the first time you log in.
                 </li>
               </ul>
             </section>
