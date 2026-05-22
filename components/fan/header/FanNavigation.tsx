@@ -68,6 +68,8 @@ export const FanNavigation = ({
       label: string;
       icon: React.ReactNode;
       isAction?: boolean;
+      isLink?: boolean;
+      href?: string;
     }[];
   }[] = [
     {
