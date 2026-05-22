@@ -3,6 +3,8 @@ import React from "react";
 import { cookies } from "next/headers";
 import { Language } from "@/components/constants/dictionary";
 import { AppFooter } from "@/components/shared/AppFooter";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -11,21 +13,17 @@ type Props = {
 };
 
 export default async function ReglasPage({ searchParams }: Props) {
-  // Esperamos los parámetros de la URL (Next.js 15)
   const resolvedSearchParams = await searchParams;
   const urlLang = resolvedSearchParams?.lang;
 
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("polla_session");
 
-  let lang: Language = "es"; // Por defecto a español
+  let lang: Language = "es";
 
-  // 1. Verificamos si en la URL nos enviaron un idioma específico (?lang=en)
   if (urlLang === "en" || urlLang === "es") {
     lang = urlLang as Language;
-  }
-  // 2. Si no hay nada en la URL, miramos si el usuario ya tiene sesión guardada
-  else if (sessionCookie) {
+  } else if (sessionCookie) {
     try {
       const userSession = JSON.parse(decodeURIComponent(sessionCookie.value));
       if (userSession.lang === "en" || userSession.lang === "es") {
@@ -36,8 +34,24 @@ export default async function ReglasPage({ searchParams }: Props) {
     }
   }
 
+  // 👇 VARIABLE CLAVE: Verificamos si hay sesión activa
+  const hasSession = !!sessionCookie;
+
   return (
-    <main className="min-h-screen bg-[#0a0b10] text-gray-200 py-10 px-4 md:px-10 lg:px-20">
+    <main className="min-h-screen bg-[#0a0b10] text-gray-200 py-6 px-4 md:py-10 md:px-10 lg:px-20 relative">
+      {/* 👇 EL BOTÓN AHORA SOLO SE MUESTRA SI TIENE SESIÓN */}
+      {hasSession && (
+        <div className="max-w-4xl mx-auto mb-6">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-cyan-400 hover:text-cyan-300 font-bold transition-all duration-300 bg-[#0f1016] px-5 py-2.5 rounded-full border border-cyan-500/30 shadow-[0_0_15px_rgba(34,211,238,0.15)] hover:shadow-[0_0_20px_rgba(34,211,238,0.3)] active:scale-95"
+          >
+            <ArrowLeft size={20} />
+            {lang === "es" ? "Volver al Dashboard" : "Back to Dashboard"}
+          </Link>
+        </div>
+      )}
+
       <div className="max-w-4xl mx-auto bg-[#0f1016] border border-orange-500/20 rounded-2xl p-6 md:p-12 shadow-2xl shadow-orange-900/20">
         {lang === "es" ? (
           // ==============================
@@ -93,7 +107,7 @@ export default async function ReglasPage({ searchParams }: Props) {
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    4. Condition para Enviar:
+                    4. Condición para Enviar:
                   </span>{" "}
                   Para que tus predicciones sean válidas, es obligatorio
                   ingresar los marcadores de <strong>TODOS</strong> los partidos
@@ -146,25 +160,20 @@ export default async function ReglasPage({ searchParams }: Props) {
                     <li>
                       <strong>🏆 Standings (Posiciones):</strong> La tabla
                       general. Aquí ves el ranking oficial, tus puntos totales y
-                      el desglose exacto de dónde salieron esos puntos (cuántos
-                      sumaste por marcadores exactos, cuántos por diferencia de
-                      gol, y los bonos de grupo y de campeón).
+                      el desglose exacto de dónde salieron esos puntos.
                     </li>
                     <li>
                       <strong>📊 Matrix (La Matriz):</strong> ¡Aquí se acaban
                       los secretos! Podrás ver una cuadrícula detallada con
                       todos los participantes y los marcadores exactos que cada
-                      jugador pronosticó para cada partido, comparados con el
-                      resultado oficial de la FIFA.
+                      jugador pronosticó para cada partido.
                     </li>
                     <li>
                       <strong>📅 Filtro de Fechas:</strong> Por defecto, el VAR
                       te mostrará únicamente los partidos que se juegan en el
-                      día actual ("Hoy") para que sigas la acción en vivo. Sin
-                      embargo, cuentas con un menú desplegable donde puedes
-                      seleccionar un día específico del calendario o elegir
-                      "Todas las fechas" para ver el historial completo del
-                      torneo.
+                      día actual ("Hoy"). Sin embargo, cuentas con un menú
+                      desplegable donde puedes seleccionar un día específico o
+                      elegir "Todas las fechas".
                     </li>
                   </ul>
                 </li>
@@ -174,26 +183,21 @@ export default async function ReglasPage({ searchParams }: Props) {
                   </span>{" "}
                   No necesitas buscar TiqueBet en una tienda de aplicaciones
                   para tenerla en tu teléfono. Puedes instalarla directamente
-                  desde tu navegador en 10 segundos para jugar como una app
-                  nativa:
+                  desde tu navegador:
                   <ul className="list-disc pl-6 mt-2 space-y-1 text-gray-400">
                     <li>
-                      <strong>En Android (Chrome):</strong> Abre la página de la
-                      polla, toca el menú de los tres puntitos (arriba a la
-                      derecha) y selecciona "Instalar aplicación" o "Agregar a
-                      la pantalla principal".
+                      <strong>En Android (Chrome):</strong> Abre la página, toca
+                      el menú de los tres puntitos y selecciona "Instalar
+                      aplicación" o "Agregar a la pantalla principal".
                     </li>
                     <li>
-                      <strong>En iPhone (Safari):</strong> Abre la página de la
-                      polla, toca el ícono de compartir (el cuadrito con la
-                      flecha hacia arriba en la parte inferior) y selecciona
-                      "Agregar a Inicio".
+                      <strong>En iPhone (Safari):</strong> Abre la página, toca
+                      el ícono de compartir y selecciona "Agregar a Inicio".
                     </li>
                   </ul>
                   <p className="mt-2 text-gray-400">
                     ¡Listo! Tendrás el escudo de TiqueBet en tu pantalla junto a
-                    tus otras aplicaciones para entrar a pronosticar con un solo
-                    toque.
+                    tus otras aplicaciones para entrar con un solo toque.
                   </p>
                 </li>
               </ul>
@@ -214,7 +218,7 @@ export default async function ReglasPage({ searchParams }: Props) {
                     El valor de la entrada para participar en la polla es de{" "}
                     <strong>[VALOR POR DEFINIR]</strong>. Todo el dinero
                     recaudado irá a una bolsa de premios (el pozo) que se
-                    repartirá al finalizar el torneo. De la siguiente manera: -
+                    repartirá al finalizar el torneo. De la siguiente manera: -{" "}
                     <strong>
                       80% al ganador - 15% al segundo lugar - 5% al tercer
                       lugar.
@@ -257,8 +261,8 @@ export default async function ReglasPage({ searchParams }: Props) {
                     <li>
                       <strong>Diferencia de Goles o Empate No Exacto:</strong>{" "}
                       Si aciertas el ganador y la diferencia exacta de goles, o
-                      si aciertas un empate pero con otros goles, ganas{" "}
-                      <strong>3 puntos</strong>.
+                      un empate con otros goles, ganas <strong>3 puntos</strong>
+                      .
                     </li>
                     <li>
                       <strong>Ganador Correcto:</strong> Si solo aciertas quién
@@ -272,7 +276,7 @@ export default async function ReglasPage({ searchParams }: Props) {
                   <ul className="list-disc pl-5 space-y-1 text-gray-400 mb-4">
                     <li>
                       <strong>Primero y Segundo Exacto:</strong> Si aciertas qué
-                      equipas clasifican como 1° y 2° en su orden correcto,{" "}
+                      equipos clasifican como 1° y 2° en su orden correcto,{" "}
                       <strong>ganas 10 puntos.</strong>
                     </li>
                     <li>
@@ -313,11 +317,10 @@ export default async function ReglasPage({ searchParams }: Props) {
                   <p className="text-gray-400 mt-2">
                     Si al finalizar el torneo dos o más participantes terminan
                     con exactamente la misma cantidad de puntos en el primer
-                    lugar (o en puestos de premiación), el ganador definitivo
-                    será el que haya enviado sus pronósticos de la Fase de
-                    Grupos primero. El sistema registrará la fecha y hora exacta
-                    de tu primer envío oficial antes de que ruede el balón en el
-                    torneo. ¡No dejes tu tiquete para el último minuto!
+                    lugar, el ganador definitivo será el que haya enviado sus
+                    pronósticos de la Fase de Grupos primero. El sistema
+                    registrará la fecha y hora exacta de tu primer envío
+                    oficial.
                   </p>
                 </div>
 
@@ -332,7 +335,7 @@ export default async function ReglasPage({ searchParams }: Props) {
                     el resultado antes de la tanda de penales (es decir, el
                     marcador al término de los 90 minutos reglamentarios más el
                     tiempo extra, si lo hay). Si un partido termina 1-1 y se va
-                    a penales, para el juego el resultado oficial es 1-1.
+                    a penales, el resultado oficial es 1-1.
                   </p>
                 </div>
               </div>
@@ -361,8 +364,8 @@ export default async function ReglasPage({ searchParams }: Props) {
                   <span className="text-amber-500 font-bold">
                     1. Simulation vs. Real Game:
                   </span>{" "}
-                  You can play and simulate the results of the entire tournament
-                  up to the grand final to see how your bracket would look, but{" "}
+                  You can play and simulate the results of the entire
+                  tournament, but{" "}
                   <strong>
                     initially, only your Group Stage predictions will be
                     officially submitted and played
@@ -373,15 +376,14 @@ export default async function ReglasPage({ searchParams }: Props) {
                   <span className="text-amber-500 font-bold">
                     2. Unlocking Phases:
                   </span>{" "}
-                  The tournament is played in stages. The knockout phases will
-                  unlock a few days before they start, only after the official
-                  real-life matchups are confirmed.
+                  The knockout phases will unlock a few days before they start,
+                  only after the official real-life matchups are confirmed.
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
                     3. Bracket Updates (VAR Check!):
                   </span>{" "}
-                  Once the real qualified teams for each phase are confirmed,{" "}
+                  Once the real qualified teams are confirmed,{" "}
                   <strong>
                     any previous simulations you made in the bracket will be
                     wiped clean
@@ -394,8 +396,7 @@ export default async function ReglasPage({ searchParams }: Props) {
                     4. Submission Rule:
                   </span>{" "}
                   To make your predictions valid, it is mandatory to enter the
-                  scores for <strong>ALL</strong> matches in that round. Only
-                  then will the "Submit Predictions" button become enabled.
+                  scores for <strong>ALL</strong> matches in that round.
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
@@ -405,12 +406,12 @@ export default async function ReglasPage({ searchParams }: Props) {
                   <strong>two key moments</strong>:
                   <ul className="list-disc pl-6 mt-2 space-y-1 text-gray-400">
                     <li>
-                      <em>The First Pick (Highest Score):</em> Upon submitting
-                      your Group Stage predictions.
+                      <em>The First Pick:</em> Upon submitting your Group Stage
+                      predictions.
                     </li>
                     <li>
-                      <em>The Second Chance (Round of 32):</em> Before the Round
-                      of 32 matchups begin.
+                      <em>The Second Chance:</em> Before the Round of 32
+                      matchups begin.
                     </li>
                   </ul>
                 </li>
@@ -423,42 +424,31 @@ export default async function ReglasPage({ searchParams }: Props) {
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
-                    7. 🪄 The Magic Button (Grow the Prize Pool!):
+                    7. 🪄 The Magic Button:
                   </span>{" "}
                   If you want the final prize to be a true fortune, bring your
-                  crew! On your main dashboard, you will find an "Invite"
-                  button. Use it freely to challenge your friends or family via
-                  WhatsApp, SMS, or email (in Spanish or English). The more
-                  players that join, the bigger the jackpot!
+                  crew! Use the "Invite" button freely to challenge your friends
+                  via WhatsApp.
                 </li>
                 <li>
                   <span className="text-amber-500 font-bold">
                     8. 📺 The VAR (Follow the live competition):
                   </span>{" "}
-                  The VAR is the heart of the pool. From the main menu, you can
-                  access this section to monitor in real-time how you are doing
-                  against your rivals. The VAR features the following tools:
+                  The VAR is the heart of the pool. The VAR features the
+                  following tools:
                   <ul className="list-disc pl-6 mt-2 space-y-1 text-gray-400">
                     <li>
                       <strong>🏆 Standings:</strong> The overall leaderboard.
-                      Here you see the official ranking, your total points, and
-                      the exact breakdown of where those points came from (how
-                      many you earned from exact scores, goal differences, and
-                      the group and champion bonuses).
+                      Here you see the official ranking and your total points.
                     </li>
                     <li>
-                      <strong>📊 Matrix:</strong> No more secrets here! You will
-                      be able to see a detailed grid with all the participants
-                      and the exact scores each player predicted for every
-                      match, compared with the official FIFA result.
+                      <strong>📊 Matrix:</strong> See a detailed grid with all
+                      participants and the exact scores each player predicted.
                     </li>
                     <li>
                       <strong>📅 Date Filter:</strong> By default, the VAR will
-                      only show you the matches played on the current day
-                      ("Today") so you can follow the live action. However, you
-                      have a dropdown menu where you can select a specific
-                      calendar day or choose "All dates" to view the complete
-                      tournament history.
+                      only show matches played "Today". However, you can select
+                      a specific calendar day or choose "All dates".
                     </li>
                   </ul>
                 </li>
@@ -466,26 +456,19 @@ export default async function ReglasPage({ searchParams }: Props) {
                   <span className="text-amber-500 font-bold">
                     9. 📱 TiqueBet on your Phone (Install the App):
                   </span>{" "}
-                  You don't need to search for TiqueBet in an app store to have
-                  it on your phone. You can install it directly from your
-                  browser in 10 seconds to play like a native app:
+                  You don't need an app store to have it on your phone. You can
+                  install it directly from your browser:
                   <ul className="list-disc pl-6 mt-2 space-y-1 text-gray-400">
                     <li>
-                      <strong>On Android (Chrome):</strong> Open the pool's
-                      webpage, tap the three-dot menu (top right), and select
-                      "Install app" or "Add to Home screen".
+                      <strong>On Android (Chrome):</strong> Open the webpage,
+                      tap the three-dot menu, and select "Install app" or "Add
+                      to Home screen".
                     </li>
                     <li>
-                      <strong>On iPhone (Safari):</strong> Open the pool's
-                      webpage, tap the share icon (the square with an upward
-                      arrow at the bottom), and select "Add to Home Screen".
+                      <strong>On iPhone (Safari):</strong> Open the webpage, tap
+                      the share icon, and select "Add to Home Screen".
                     </li>
                   </ul>
-                  <p className="mt-2 text-gray-400">
-                    That's it! You will have the TiqueBet shield on your home
-                    screen along with your other apps so you can jump in and
-                    predict with a single tap.
-                  </p>
                 </li>
               </ul>
             </section>
@@ -502,10 +485,9 @@ export default async function ReglasPage({ searchParams }: Props) {
                     Bet)
                   </h3>
                   <p className="text-gray-400 mt-2">
-                    The entry fee to participate in the pool is{" "}
-                    <strong>[FEE TO BE DEFINED]</strong>. All collected funds
-                    will go into a prize pool distributed at the end of the
-                    tournament as follows:{" "}
+                    The entry fee is <strong>[FEE TO BE DEFINED]</strong>. All
+                    collected funds will go into a prize pool distributed as
+                    follows:{" "}
                     <strong>
                       - 80% to the winner - 15% to second place - 5% to third
                       place.
@@ -532,8 +514,7 @@ export default async function ReglasPage({ searchParams }: Props) {
                     do you win?)
                   </h3>
                   <p className="text-gray-400 mt-2 mb-3">
-                    Points per match are not cumulative (you will only receive
-                    the highest single score you achieve):
+                    Points per match are not cumulative:
                   </p>
 
                   <h4 className="text-cyan-400 font-bold mb-1">
@@ -542,8 +523,7 @@ export default async function ReglasPage({ searchParams }: Props) {
                   <ul className="list-disc pl-5 space-y-1 text-gray-400 mb-4">
                     <li>
                       <strong>Exact Score:</strong> If you correctly predict the
-                      exact number of goals scored by both teams, you earn{" "}
-                      <strong>5 points</strong>.
+                      exact number of goals, you earn <strong>5 points</strong>.
                     </li>
                     <li>
                       <strong>Goal Difference or Non-Exact Tie:</strong> If you
@@ -562,20 +542,18 @@ export default async function ReglasPage({ searchParams }: Props) {
                   </h4>
                   <ul className="list-disc pl-5 space-y-1 text-gray-400 mb-4">
                     <li>
-                      <strong>Exact First and Second Place:</strong> If you
-                      correctly predict the exact teams that qualify as 1st and
-                      2nd in their correct order,{" "}
+                      <strong>Exact First and Second Place:</strong> Exact teams
+                      in their correct order,{" "}
                       <strong>you earn 10 points.</strong>
                     </li>
                     <li>
-                      <strong>Inverted First and Second Place:</strong> If you
-                      get both qualifying teams right, but in the opposite
-                      order, you earn <strong>5 points.</strong>
+                      <strong>Inverted First and Second Place:</strong> Both
+                      qualifying teams right, opposite order, you earn{" "}
+                      <strong>5 points.</strong>
                     </li>
                     <li>
-                      <strong>Single Qualifier:</strong> If you correctly
-                      predict at least one qualifying team advancing to the next
-                      round, you earn <strong>2 points.</strong>
+                      <strong>Single Qualifier:</strong> At least one qualifying
+                      team, you earn <strong>2 points.</strong>
                     </li>
                   </ul>
 
@@ -584,15 +562,14 @@ export default async function ReglasPage({ searchParams }: Props) {
                   </h4>
                   <ul className="list-disc pl-5 space-y-1 text-gray-400">
                     <li>
-                      <strong>Initial Champion (Group Stage):</strong> If you
-                      predict the champion from your very first pick, you earn{" "}
+                      <strong>Initial Champion:</strong> If you predict the
+                      champion from your first pick, you earn{" "}
                       <strong>15 points.</strong>
                     </li>
                     <li>
-                      <strong>Second Chance Champion (Round of 32):</strong> If
-                      you predict the champion before the Round of 32 starts,
-                      you earn <strong>8 points.</strong> (if it's the same team
-                      as your initial pick, both scores combine!).
+                      <strong>Second Chance Champion:</strong> If you predict
+                      the champion before the Round of 32 starts, you earn{" "}
+                      <strong>8 points.</strong>
                     </li>
                   </ul>
                 </div>
@@ -600,30 +577,23 @@ export default async function ReglasPage({ searchParams }: Props) {
                 <div>
                   <h3 className="text-xl font-bold text-white flex items-center gap-2">
                     <span className="text-2xl">⚖️</span> 4. Tie-breaker Rule
-                    (The early bird gets the worm!)
                   </h3>
                   <p className="text-gray-400 mt-2">
-                    If at the end of the tournament two or more players finish
-                    with the exact same number of points in first place (or in
-                    prize positions), the ultimate winner will be the one who
-                    submitted their Group Stage predictions first. The system
-                    will record the exact system date and time of your first
-                    official submission before the tournament kicks off. Don't
-                    leave your ticket for the last minute!
+                    If players finish with the exact same points, the ultimate
+                    winner will be the one who submitted their Group Stage
+                    predictions first (System Date and Time).
                   </p>
                 </div>
 
                 <div>
                   <h3 className="text-xl font-bold text-white flex items-center gap-2">
                     <span className="text-2xl">🛑</span> 5. Knockout Stage
-                    Golden Rule (Penalty shootouts don't count!)
+                    Golden Rule
                   </h3>
                   <p className="text-gray-400 mt-2">
                     During the knockout stages, the official score the system
                     will use for points is the result before the penalty
-                    shootout (i.e., regular time plus extra time, if played). If
-                    a match ends 1-1 and goes to penalties, the official score
-                    for the game is 1-1.
+                    shootout (i.e., regular time plus extra time).
                   </p>
                 </div>
               </div>
