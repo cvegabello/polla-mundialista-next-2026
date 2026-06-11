@@ -358,17 +358,37 @@ export async function getVarReportDataAction(userId: string) {
     if (participants && participants.length > 0) {
       const participantIds = participants.map((p) => p.id);
 
-      const { data: preds } = await supabase
-        .from("predictions")
-        .select("user_id, match_id, pred_home, pred_away, points_won")
-        .in("user_id", participantIds);
-      predictions = preds || [];
+      // 🐛 FIX MUNDIALISTA: Cortamos en pedazos de 5 usuarios para no estrellarnos 
+      // contra el límite de 1000 filas de Supabase cuando hay muchas predicciones
+      let allPreds: any[] = [];
+      const CHUNK_SIZE = 5;
+      for (let i = 0; i < participantIds.length; i += CHUNK_SIZE) {
+        const chunk = participantIds.slice(i, i + CHUNK_SIZE);
+        const { data: predsChunk, error: chunkErr } = await supabase
+          .from("predictions")
+          .select("user_id, match_id, pred_home, pred_away, points_won")
+          .in("user_id", chunk);
+        
+        if (chunkErr) {
+          console.error("Error trayendo pedazo de predicciones:", chunkErr);
+        } else if (predsChunk) {
+          allPreds = [...allPreds, ...predsChunk];
+        }
+      }
+      predictions = allPreds;
 
-      const { data: bonuses } = await supabase
-        .from("bonus_points")
-        .select("user_id, points_won, bonus_type")
-        .in("user_id", participantIds);
-      bonusPoints = bonuses || [];
+      let allBonuses: any[] = [];
+      for (let i = 0; i < participantIds.length; i += CHUNK_SIZE) {
+        const chunk = participantIds.slice(i, i + CHUNK_SIZE);
+        const { data: bonusesChunk } = await supabase
+          .from("bonus_points")
+          .select("user_id, points_won, bonus_type")
+          .in("user_id", chunk);
+        if (bonusesChunk) {
+          allBonuses = [...allBonuses, ...bonusesChunk];
+        }
+      }
+      bonusPoints = allBonuses;
     }
 
     // 🏆 CAMBIO 2: Buscamos TODOS los equipos campeones elegidos por el grupo

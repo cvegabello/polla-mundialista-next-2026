@@ -1,6 +1,6 @@
 {
-  "name": "tiquebet-wc-2026",
-  "version": "2.3.0",
+  "name": "polla-mundialista-next",
+  "version": "2.4.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
