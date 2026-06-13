@@ -1,10 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { AdminHeaderBar } from "./AdminHeaderBar";
 import { AdminActionMenu } from "./AdminActionMenu";
 import { AdminControlPanel } from "./AdminControlPanel"; // 👈 Importamos el panel
 import { logoutAction } from "@/lib/actions/auth-actions";
+import { SuperAdminVarModal } from "@/components/superadmin/reportes/SuperAdminVarModal";
+import { Trophy } from "lucide-react";
+import { Language } from "@/components/constants/dictionary";
 
 interface SuperAdminHeaderProps {
   lang: string;
@@ -17,11 +20,8 @@ export const SuperAdminHeader = ({
   currentView,
   onViewChange,
 }: SuperAdminHeaderProps) => {
+  const [isVarModalOpen, setIsVarModalOpen] = useState(false);
   const title = lang === "en" ? "WORLD CUP 2026" : "COPA MUNDIAL 2026";
-  const reportsComingSoon =
-    lang === "en"
-      ? "Admin Reports Coming Soon"
-      : "Próximamente Reportes de Admin";
 
   return (
     <header className="w-full pt-6 pb-2 px-4 flex flex-col items-center">
@@ -35,9 +35,16 @@ export const SuperAdminHeader = ({
       <AdminHeaderBar lang={lang} />
 
       <div className="flex flex-col md:flex-row gap-4 mt-4 mb-4 justify-center items-center w-full">
-        <div className="opacity-50 text-[10px] text-gray-500 uppercase font-bold border border-gray-800 px-4 py-2 rounded-lg">
-          {reportsComingSoon}
-        </div>
+        <button
+          onClick={() => setIsVarModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 border border-purple-700 bg-[#1a0f2e] text-purple-300 hover:text-white hover:border-purple-400 hover:shadow-[0_0_15px_rgba(168,85,247,0.4)] cursor-pointer group shadow-sm"
+        >
+          <Trophy
+            size={16}
+            className="text-purple-400 group-hover:scale-110 transition-transform duration-300"
+          />
+          <span>{lang === "en" ? "SUPER VAR" : "SÚPER VAR"}</span>
+        </button>
         <AdminActionMenu lang={lang} onLogout={() => logoutAction()} />
       </div>
 
@@ -46,6 +53,12 @@ export const SuperAdminHeader = ({
         lang={lang}
         currentView={currentView}
         onViewChange={onViewChange}
+      />
+
+      <SuperAdminVarModal 
+        isOpen={isVarModalOpen} 
+        onClose={() => setIsVarModalOpen(false)} 
+        lang={lang as Language} 
       />
     </header>
   );

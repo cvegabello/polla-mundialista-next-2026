@@ -437,3 +437,173 @@ export async function createPollaOnly(pollaName: string) {
     return { success: false, error: error.message };
   }
 }
+
+// ==========================================
+// 🕵️‍♂️ SUPER VAR ACTIONS
+// ==========================================
+
+export async function getAllPollasAction() {
+  const { createClient } = await import("@/utils/supabase/server");
+  const supabase = await createClient();
+
+  try {
+    const { data, error } = await supabase
+      .from("pollas")
+      .select("id, name")
+      .order("name", { ascending: true });
+
+    if (error) throw error;
+    return { success: true, data };
+  } catch (error: any) {
+    console.error("Error obteniendo pollas:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getSuperAdminVarReportAction(pollaId: string) {
+  const { createClient } = await import("@/utils/supabase/server");
+  const supabase = await createClient();
+
+  try {
+    const { data: groupData } = await supabase
+      .from("pollas")
+      .select("name")
+      .eq("id", pollaId)
+      .single();
+    const pollaName = groupData?.name || "GRUPO";
+
+    const { data: scoreConfig } = await supabase
+      .from("score_configs")
+      .select("*")
+      .eq("polla_id", pollaId)
+      .single();
+
+    const { data: participants, error: partErr } = await supabase
+      .from("profiles")
+      .select("id, username, sub_date_groups, champion_pick_1, champion_pick_2")
+      .eq("polla_id", pollaId)
+      .not("sub_date_groups", "is", null);
+
+    if (partErr) throw partErr;
+
+    const { data: matches, error: matchErr } = await supabase
+      .from("matches")
+      .select(
+        `
+        id, match_number, match_date, home_score, away_score, status, winner_id,
+        home:teams!home_team_id(id, name_es, name_en, flag_code),
+        away:teams!away_team_id(id, name_es, name_en, flag_code)
+      `
+      )
+      .order("match_date", { ascending: true });
+
+    if (matchErr) throw matchErr;
+
+    let predictions: any[] = [];
+    let bonusPoints: any[] = [];
+
+    if (participants && participants.length > 0) {
+      const participantIds = participants.map((p) => p.id);
+
+      let allPreds: any[] = [];
+      const CHUNK_SIZE = 5;
+      for (let i = 0; i < participantIds.length; i += CHUNK_SIZE) {
+        const chunk = participantIds.slice(i, i + CHUNK_SIZE);
+        const { data: predsChunk, error: chunkErr } = await supabase
+          .from("predictions")
+          .select("user_id, match_id, pred_home, pred_away, points_won")
+          .in("user_id", chunk);
+        
+        if (chunkErr) {
+          console.error("Error trayendo pedazo de predicciones:", chunkErr);
+        } else if (predsChunk) {
+          allPreds = [...allPreds, ...predsChunk];
+        }
+      }
+      predictions = allPreds;
+
+      let allBonuses: any[] = [];
+      for (let i = 0; i < participantIds.length; i += CHUNK_SIZE) {
+        const chunk = participantIds.slice(i, i + CHUNK_SIZE);
+        const { data: bonusesChunk } = await supabase
+          .from("bonus_points")
+          .select("user_id, points_won, bonus_type")
+          .in("user_id", chunk);
+        if (bonusesChunk) {
+          allBonuses = [...allBonuses, ...bonusesChunk];
+        }
+      }
+      bonusPoints = allBonuses;
+    }
+
+    const allChampIds = new Set();
+    participants?.forEach((p) => {
+      if (p.champion_pick_1) allChampIds.add(p.champion_pick_1);
+      if (p.champion_pick_2) allChampIds.add(p.champion_pick_2);
+    });
+
+    let champTeamsMap: any = {};
+    if (allChampIds.size > 0) {
+      const { data: tData } = await supabase
+        .from("teams")
+        .select("id, name_es, name_en, flag_code")
+        .in("id", Array.from(allChampIds));
+
+      tData?.forEach((t) => {
+        champTeamsMap[t.id] = t;
+      });
+    }
+
+    const getFlagUrl = (code?: string) =>
+      code && !code.includes("_rep_")
+        ? `https://flagcdn.com/w80/${code.substring(0, 2)}.png`
+        : null;
+
+    const finalMatch = matches?.find((m: any) => m.match_number === 104);
+    const officialWorldChampionId = finalMatch?.winner_id || null;
+
+    const enrichedParticipants = participants?.map((p) => {
+      const t1 = p.champion_pick_1 ? champTeamsMap[p.champion_pick_1] : null;
+      const t2 = p.champion_pick_2 ? champTeamsMap[p.champion_pick_2] : null;
+
+      let c1Pts = 0;
+      let c2Pts = 0;
+
+      if (
+        officialWorldChampionId &&
+        p.champion_pick_1 === officialWorldChampionId
+      ) {
+        c1Pts = scoreConfig?.champ_initial || 0;
+      }
+      if (
+        officialWorldChampionId &&
+        p.champion_pick_2 === officialWorldChampionId
+      ) {
+        c2Pts = scoreConfig?.champ_final || 0;
+      }
+
+      return {
+        ...p,
+        champion1: t1 ? { ...t1, flag_url: getFlagUrl(t1.flag_code) } : null,
+        champion2: t2 ? { ...t2, flag_url: getFlagUrl(t2.flag_code) } : null,
+        champPts: c1Pts + c2Pts,
+      };
+    });
+
+    return {
+      success: true,
+      data: {
+        pollaName,
+        participants: enrichedParticipants || [],
+        matches: matches || [],
+        predictions,
+        scoreConfig,
+        bonusPoints,
+        championPicks: null, // Admin doesn't have personal picks
+      },
+    };
+  } catch (error: any) {
+    console.error("❌ Error en getSuperAdminVarReportAction:", error.message);
+    return { success: false, error: error.message };
+  }
+}
