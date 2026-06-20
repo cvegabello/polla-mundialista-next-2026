@@ -1,0 +1,190 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model bonus_points {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String   @db.Uuid
+  bonus_type    String
+  points_won    Int?     @default(0)
+  target_team_1 String?  @db.Uuid
+  target_team_2 String?  @db.Uuid
+  created_at    DateTime @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+
+  @@unique([user_id, bonus_type], map: "unique_user_bonus")
+  @@index([bonus_type], map: "idx_bonus_points_bonus_type")
+  @@index([user_id], map: "idx_bonus_points_user_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model global_config {
+  id                Int      @id @default(1)
+  tournament_status String?  @default("PRE-TORNEO")
+  global_lock       Boolean? @default(false)
+  allow_groups      Boolean? @default(false)
+  allow_r32         Boolean? @default(false)
+  allow_r16         Boolean? @default(false)
+  allow_qf          Boolean? @default(false)
+  allow_sf          Boolean? @default(false)
+  allow_f           Boolean? @default(false)
+  maintenance_mode  Boolean? @default(false)
+}
+
+model groups {
+  id                   String                 @id
+  name                 String
+  matches              matches[]
+  teams                teams[]
+  user_group_standings user_group_standings[]
+}
+
+model matches {
+  id                                Int           @id @unique @default(autoincrement())
+  group_id                          String?
+  match_date                        DateTime?     @db.Timestamptz(6)
+  home_score                        Int?
+  away_score                        Int?
+  status                            String?       @default("PENDIENTE")
+  stadium                           String?
+  city                              String?
+  home_team_id                      String?       @db.Uuid
+  away_team_id                      String?       @db.Uuid
+  placeholder_home                  String?
+  placeholder_away                  String?
+  phase                             String?
+  winner_id                         String?       @db.Uuid
+  match_number                      Int?
+  groups                            groups?       @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_matches_group")
+  teams_matches_winner_idToteams    teams?        @relation("matches_winner_idToteams", fields: [winner_id], references: [id], onUpdate: NoAction, map: "fk_matches_winner")
+  teams_matches_away_team_idToteams teams?        @relation("matches_away_team_idToteams", fields: [away_team_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  teams_matches_home_team_idToteams teams?        @relation("matches_home_team_idToteams", fields: [home_team_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  predictions                       predictions[]
+
+  @@index([away_team_id], map: "idx_matches_away")
+  @@index([match_date], map: "idx_matches_date")
+  @@index([home_team_id], map: "idx_matches_home")
+}
+
+model pollas {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String         @unique
+  created_at    DateTime?      @default(now()) @db.Timestamptz(6)
+  invite_code   String?        @unique
+  profiles      profiles[]
+  score_configs score_configs?
+}
+
+model predictions {
+  id                                           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                                      String?   @db.Uuid
+  match_id                                     Int?
+  pred_home                                    Int?
+  pred_away                                    Int?
+  points_won                                   Int?      @default(0)
+  is_pks_winner_home                           Boolean?
+  predicted_home_team                          String?   @db.Uuid
+  predicted_away_team                          String?   @db.Uuid
+  predicted_winner                             String?   @db.Uuid
+  matches                                      matches?  @relation(fields: [match_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  teams_predictions_predicted_away_teamToteams teams?    @relation("predictions_predicted_away_teamToteams", fields: [predicted_away_team], references: [id], onUpdate: NoAction)
+  teams_predictions_predicted_home_teamToteams teams?    @relation("predictions_predicted_home_teamToteams", fields: [predicted_home_team], references: [id], onUpdate: NoAction)
+  teams_predictions_predicted_winnerToteams    teams?    @relation("predictions_predicted_winnerToteams", fields: [predicted_winner], references: [id], onUpdate: NoAction)
+  profiles                                     profiles? @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, match_id])
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model profiles {
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username             String                 @unique
+  pin                  String
+  role                 String?                @default("FAN")
+  polla_id             String?                @db.Uuid
+  status               String?                @default("BORRADOR")
+  is_paid              Boolean?               @default(false)
+  total_points         Int?                   @default(0)
+  language_pref        String?                @default("es")
+  created_at           DateTime?              @default(now()) @db.Timestamptz(6)
+  sub_date_groups      DateTime?              @db.Timestamptz(6)
+  sub_date_r32         DateTime?              @db.Timestamptz(6)
+  sub_date_r16         DateTime?              @db.Timestamptz(6)
+  sub_date_qf          DateTime?              @db.Timestamptz(6)
+  sub_date_sf          DateTime?              @db.Timestamptz(6)
+  sub_date_f           DateTime?              @db.Timestamptz(6)
+  champion_pick_1      String?
+  champion_pick_2      String?
+  predictions          predictions[]
+  pollas               pollas?                @relation(fields: [polla_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_group_standings user_group_standings[]
+
+  @@unique([username, polla_id])
+}
+
+model score_configs {
+  polla_id      String @id @db.Uuid
+  exact_score   Int?   @default(5)
+  winner_only   Int?   @default(1)
+  goal_diff     Int?   @default(3)
+  group_perfect Int?   @default(10)
+  group_inverse Int?   @default(5)
+  group_single  Int?   @default(2)
+  champ_initial Int?   @default(10)
+  champ_final   Int?   @default(5)
+  pollas        pollas @relation(fields: [polla_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model teams {
+  id                                                 String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name_es                                            String                 @default("")
+  name_en                                            String                 @default("")
+  flag_code                                          String                 @unique(map: "unique_flag_code") @default("")
+  group_id                                           String?                @default("")
+  matches_matches_winner_idToteams                   matches[]              @relation("matches_winner_idToteams")
+  matches_matches_away_team_idToteams                matches[]              @relation("matches_away_team_idToteams")
+  matches_matches_home_team_idToteams                matches[]              @relation("matches_home_team_idToteams")
+  predictions_predictions_predicted_away_teamToteams predictions[]          @relation("predictions_predicted_away_teamToteams")
+  predictions_predictions_predicted_home_teamToteams predictions[]          @relation("predictions_predicted_home_teamToteams")
+  predictions_predictions_predicted_winnerToteams    predictions[]          @relation("predictions_predicted_winnerToteams")
+  groups                                             groups?                @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_group_standings                               user_group_standings[]
+
+  @@index([group_id], map: "idx_teams_group")
+}
+
+model user_group_standings {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String    @db.Uuid
+  group_id   String
+  team_id    String    @db.Uuid
+  position   Int
+  played     Int?      @default(0)
+  won        Int?      @default(0)
+  tied       Int?      @default(0)
+  lost       Int?      @default(0)
+  points     Int?      @default(0)
+  gf         Int?      @default(0)
+  gc         Int?      @default(0)
+  dg         Int?      @default(0)
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
+  groups     groups    @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  teams      teams     @relation(fields: [team_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles   profiles  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, team_id])
+}
+
+model group_tiebreakers {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  group_id     String
+  team_id      String   @db.Uuid
+  official_pos Int
+  created_at   DateTime @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+
+  @@unique([group_id, team_id], map: "unique_group_tiebreaker")
+}

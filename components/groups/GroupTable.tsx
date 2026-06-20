@@ -10,6 +10,8 @@ interface GroupTableProps {
   lang?: Language;
   onTableChange?: (data: TableStats[]) => void;
   variant?: "compact" | "large";
+  onManualTieBreaker?: (teamId: string, pos: number | null) => void;
+  manualTieBreakers?: Record<string, number>;
 }
 
 export const GroupTable = ({
@@ -17,6 +19,8 @@ export const GroupTable = ({
   lang = "es",
   onTableChange,
   variant = "compact",
+  onManualTieBreaker,
+  manualTieBreakers,
 }: GroupTableProps) => {
   const t = DICTIONARY[lang];
   const [displayTeams, setDisplayTeams] = useState<TableStats[]>([]);
@@ -126,13 +130,33 @@ export const GroupTable = ({
         <tbody>
           {displayTeams.map((row) => {
             const isTop2 = row.pos <= 2;
+            const manualPos = manualTieBreakers?.[row.teamId];
             return (
               <tr
                 key={row.teamId}
                 className={`border-b border-slate-300/20 last:border-0 ${isTop2 ? "bg-emerald-500/10" : ""}`}
               >
                 <td className="py-1.5 px-0.5 font-bold text-sm text-slate-500">
-                  {row.pos}
+                  {onManualTieBreaker && row.isTied ? (
+                    <select
+                      value={manualPos || ""}
+                      onChange={(e) =>
+                        onManualTieBreaker(
+                          row.teamId,
+                          e.target.value ? Number(e.target.value) : null,
+                        )
+                      }
+                      className="bg-red-100 dark:bg-red-900/30 border border-red-500 text-red-600 dark:text-red-400 font-black rounded text-center w-full appearance-none cursor-pointer"
+                    >
+                      <option value="">-</option>
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4</option>
+                    </select>
+                  ) : (
+                    row.pos
+                  )}
                 </td>
                 <td className="text-left pl-2 font-bold truncate max-w-[85px] text-[11px] text-slate-700">
                   {row.team}

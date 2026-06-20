@@ -120,7 +120,8 @@ export const saveOfficialScoreAction = async (
         );
 
         if (isGroupComplete) {
-          const officialTable = calculateStandings(groupMatches, "es");
+          const tieBreakers = await getGroupTieBreakersAction(realMatch.group_id);
+          const officialTable = calculateStandings(groupMatches, "es", tieBreakers);
 
           const firstId = officialTable[0]?.teamId;
           const secondId = officialTable[1]?.teamId;
@@ -606,4 +607,80 @@ export async function getSuperAdminVarReportAction(pollaId: string) {
     console.error("❌ Error en getSuperAdminVarReportAction:", error.message);
     return { success: false, error: error.message };
   }
+}
+
+// --- DESEMPATE MANUAL (SÚPER ADMIN) ---
+
+export async function getGroupTieBreakersAction(groupId: string) {
+  const { createClient } = await import("@/utils/supabase/server");
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("group_tiebreakers")
+    .select("team_id, official_pos")
+    .eq("group_id", groupId);
+
+  if (error || !data) return {};
+
+  const map: Record<string, number> = {};
+  data.forEach((row) => {
+    map[row.team_id] = row.official_pos;
+  });
+  return map;
+}
+
+export async function saveManualTieBreakerAction(
+  groupId: string,
+  teamId: string,
+  officialPos: number | null
+) {
+  const { createClient } = await import("@/utils/supabase/server");
+  const { revalidatePath } = await import("next/cache");
+  const supabase = await createClient();
+
+  if (officialPos === null) {
+    const { error } = await supabase
+      .from("group_tiebreakers")
+      .delete()
+      .match({ group_id: groupId, team_id: teamId });
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await supabase.from("group_tiebreakers").upsert(
+      { group_id: groupId, team_id: teamId, official_pos: officialPos },
+      { onConflict: "group_id,team_id" }
+    );
+    if (error) return { error: error.message };
+  }
+
+  // 🌟 RECALCULAR PUNTOS SI EL GRUPO YA TERMINÓ
+  const { data: groupMatches } = await supabase
+    .from("matches")
+    .select("*")
+    .eq("group_id", groupId);
+
+  if (groupMatches && groupMatches.length > 0) {
+    const isComplete = groupMatches.every(
+      (m) => m.home_score !== null && m.away_score !== null
+    );
+
+    if (isComplete) {
+      const tieBreakers = await getGroupTieBreakersAction(groupId);
+      const { calculateStandings } = await import("@/utils/standings");
+      const officialTable = calculateStandings(groupMatches, "es", tieBreakers);
+      const firstId = officialTable[0]?.teamId;
+      const secondId = officialTable[1]?.teamId;
+
+      if (firstId && secondId) {
+        const { evaluateGroupBonusesAction } = await import("./bonus-actions");
+        await evaluateGroupBonusesAction(
+          groupId,
+          groupMatches,
+          firstId,
+          secondId
+        );
+      }
+    }
+  }
+
+  revalidatePath("/admin/dashboard", "layout");
+  return { success: true };
 }

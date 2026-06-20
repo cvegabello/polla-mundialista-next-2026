@@ -35,7 +35,7 @@ export const GroupModal = ({
 
   useEffect(() => {
     setMounted(true); // Evita errores de hidratación en Next.js
-    setLocalTable(calculateStandings(localMatches, lang));
+    setLocalTable(calculateStandings(localMatches, lang, group.tieBreakers));
   }, []);
 
   const handleLocalScoreChange = (
@@ -54,7 +54,7 @@ export const GroupModal = ({
     });
 
     setLocalMatches(updatedMatches);
-    setLocalTable(calculateStandings(updatedMatches, lang));
+    setLocalTable(calculateStandings(updatedMatches, lang, group.tieBreakers));
   };
 
   // 🔥 ESTA ES LA FUNCIÓN QUE CORRIGE EL ERROR DE LA IMAGEN

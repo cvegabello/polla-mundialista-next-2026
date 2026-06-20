@@ -5,7 +5,7 @@ import { AdminMatchRow } from "./AdminMatchRow";
 import { GroupTable } from "@/components/groups/GroupTable";
 import { GroupDataReal } from "@/types";
 import { calculateStandings } from "@/utils/standings";
-import { saveOfficialScoreAction } from "@/lib/actions/super-admin-actions";
+import { saveOfficialScoreAction, getGroupTieBreakersAction, saveManualTieBreakerAction } from "@/lib/actions/super-admin-actions";
 import { Save, Loader2, AlertCircle } from "lucide-react";
 
 interface AdminGroupCardProps {
@@ -16,12 +16,28 @@ interface AdminGroupCardProps {
 export const AdminGroupCard = ({ group, lang = "es" }: AdminGroupCardProps) => {
   const [localMatches, setLocalMatches] = useState(group.matches || []);
   const [tableData, setTableData] = useState<any[]>([]);
+  const [tieBreakers, setTieBreakers] = useState<Record<string, number>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
 
   useEffect(() => {
-    setTableData(calculateStandings(localMatches, lang));
-  }, [localMatches, lang]);
+    if (group.id && group.id !== "FI") {
+      getGroupTieBreakersAction(group.id).then(setTieBreakers);
+    }
+  }, [group.id]);
+
+  useEffect(() => {
+    setTableData(calculateStandings(localMatches, lang, tieBreakers));
+  }, [localMatches, lang, tieBreakers]);
+
+  const handleManualTieBreaker = async (teamId: string, pos: number | null) => {
+    const newTieBreakers = { ...tieBreakers };
+    if (pos === null) delete newTieBreakers[teamId];
+    else newTieBreakers[teamId] = pos;
+    setTieBreakers(newTieBreakers);
+    
+    await saveManualTieBreakerAction(group.id, teamId, pos);
+  };
 
   const handleScoreChange = (
     matchId: number,
@@ -127,7 +143,12 @@ export const AdminGroupCard = ({ group, lang = "es" }: AdminGroupCardProps) => {
             ))}
           </div>
 
-          <GroupTable tableData={tableData} lang={lang} />
+          <GroupTable 
+            tableData={tableData} 
+            lang={lang} 
+            onManualTieBreaker={handleManualTieBreaker}
+            manualTieBreakers={tieBreakers}
+          />
 
           <button
             onClick={handleSaveOfficial}

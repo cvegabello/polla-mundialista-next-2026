@@ -4,6 +4,7 @@ import { MatchReal, TableStats, Team } from "@/types";
 export const calculateStandings = (
   matches: MatchReal[],
   lang: string = "es",
+  tieBreakers?: Record<string, number>
 ): TableStats[] => {
   const stats: Record<string, any> = {};
 
@@ -93,18 +94,33 @@ export const calculateStandings = (
     dg: s.gf - s.gc,
     pos: 0,
     isTied: false,
+    manualPos: tieBreakers?.[s.teamId] || 99,
   }));
 
-  sortedTeams.sort((a, b) => b.pts - a.pts || b.dg - a.dg || b.gf - a.gf);
+  sortedTeams.sort(
+    (a, b) =>
+      b.pts - a.pts ||
+      b.dg - a.dg ||
+      b.gf - a.gf ||
+      a.manualPos - b.manualPos
+  );
 
-  const finalData = sortedTeams.map((item, index, arr) => {
-    const isTied =
-      index > 0 &&
-      arr[index - 1].pts === item.pts &&
-      arr[index - 1].dg === item.dg &&
-      arr[index - 1].gf === item.gf;
-    if (isTied) arr[index - 1].isTied = true;
-    return { ...item, pos: index + 1, isTied: isTied || item.isTied };
+  // Marcar empates absolutos antes del map
+  for (let i = 0; i < sortedTeams.length; i++) {
+    for (let j = i + 1; j < sortedTeams.length; j++) {
+      if (
+        sortedTeams[i].pts === sortedTeams[j].pts &&
+        sortedTeams[i].dg === sortedTeams[j].dg &&
+        sortedTeams[i].gf === sortedTeams[j].gf
+      ) {
+        sortedTeams[i].isTied = true;
+        sortedTeams[j].isTied = true;
+      }
+    }
+  }
+
+  const finalData = sortedTeams.map((item, index) => {
+    return { ...item, pos: index + 1 };
   }) as TableStats[];
 
   return finalData;

@@ -35,6 +35,18 @@ export const getFullGroupsData = async () => {
       return [];
     }
 
+    const { data: tiebreakersData } = await supabase
+      .from("group_tiebreakers")
+      .select("*");
+
+    const tiebreakersMap: Record<string, Record<string, number>> = {};
+    if (tiebreakersData) {
+      tiebreakersData.forEach((row) => {
+        if (!tiebreakersMap[row.group_id]) tiebreakersMap[row.group_id] = {};
+        tiebreakersMap[row.group_id][row.team_id] = row.official_pos;
+      });
+    }
+
     // 2. LÓGICA DE ORDENAMIENTO (INTACTA)
     const groupsSorted = groups?.map((group) => ({
       ...group,
@@ -42,6 +54,7 @@ export const getFullGroupsData = async () => {
         (a: any, b: any) =>
           new Date(a.match_date).getTime() - new Date(b.match_date).getTime(),
       ),
+      tieBreakers: tiebreakersMap[group.id] || {},
     }));
 
     return groupsSorted || [];

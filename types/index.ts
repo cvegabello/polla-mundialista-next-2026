@@ -25,6 +25,7 @@ export interface GroupDataReal {
   id: string;
   name: string;
   matches: MatchReal[];
+  tieBreakers?: Record<string, number>;
 }
 
 export interface TableStats {

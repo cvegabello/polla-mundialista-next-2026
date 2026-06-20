@@ -54,8 +54,8 @@ export const useGroupLogic = (
 
   // Calculamos la tabla al inicio
   useEffect(() => {
-    setTableData(calculateStandings(matches, lang));
-  }, [matches, lang]);
+    setTableData(calculateStandings(matches, lang, group.tieBreakers));
+  }, [matches, lang, group.tieBreakers]);
 
   const handleScoreChange = (
     matchId: number,
@@ -72,7 +72,7 @@ export const useGroupLogic = (
     });
     setMatches(updatedMatches);
 
-    const newTable = calculateStandings(updatedMatches, lang);
+    const newTable = calculateStandings(updatedMatches, lang, group.tieBreakers);
     setTableData(newTable);
 
     // 🚨 Solo avisamos al Header que hay cambios, NO guardamos en BD

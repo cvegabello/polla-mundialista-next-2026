@@ -59,7 +59,7 @@ export const AdminKnockoutBoard = ({
           .replace(/Grupo /i, "")
           .replace(/Group /i, "")
           .trim();
-        const table = calculateStandings(group.matches, lang);
+        const table = calculateStandings(group.matches, lang, group.tieBreakers);
 
         const teamDict: Record<string, any> = {};
         group.matches.forEach((m: any) => {
