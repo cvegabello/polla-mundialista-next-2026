@@ -90,6 +90,8 @@ export const LoginMockup = ({ onLoginSuccess }: LoginMockupProps) => {
           sub_date_qf: result.user.sub_date_qf || null,
           sub_date_sf: result.user.sub_date_sf || null,
           sub_date_f: result.user.sub_date_f || null,
+          champion_pick_1: result.user.champion_pick_1 || null,
+          champion_pick_2: result.user.champion_pick_2 || null,
           submission_date:
             result.user.sub_date_groups || result.user.submission_date || null,
         };

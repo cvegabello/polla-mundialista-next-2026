@@ -36,6 +36,10 @@ interface BracketMatchCardProps {
   pointsWon?: number | null;
   pointsCondition?: string | null;
   officialScore?: { home: number; away: number };
+  hasPrediction?: boolean;
+  isUnlocked?: boolean;
+  onAction?: (hScore: string, aScore: string, winnerId: string | null) => void;
+  hideOfficialAndPoints?: boolean;
 }
 
 export const BracketMatchCard = ({
@@ -53,6 +57,10 @@ export const BracketMatchCard = ({
   pointsWon,
   pointsCondition,
   officialScore,
+  isUnlocked,
+  hasPrediction,
+  onAction,
+  hideOfficialAndPoints,
 }: BracketMatchCardProps) => {
   const getName = (team: TeamProps) => {
     if (lang === "en") return team.name_en || team.name_es || team.name;
@@ -195,7 +203,9 @@ export const BracketMatchCard = ({
 
   const containerClasses = isFinal
     ? "border-amber-400/90 shadow-[0_0_50px_rgba(251,191,36,0.6)] hover:border-amber-300 hover:shadow-[0_0_55px_rgba(251,191,36,0.9)] scale-[1.05] z-10"
-    : "border-white/80 shadow-2xl hover:border-orange-500/80 hover:shadow-[0_0_25px_rgba(249,115,22,0.80)]";
+    : hasPrediction
+      ? "border-amber-500/60 shadow-[0_0_20px_rgba(251,191,36,0.3)] hover:border-amber-400/80 hover:shadow-[0_0_25px_rgba(251,191,36,0.5)]"
+      : "border-white/80 shadow-2xl hover:border-orange-500/80 hover:shadow-[0_0_25px_rgba(249,115,22,0.80)]";
 
   const accentLineClasses = isFinal
     ? "bg-gradient-to-b from-amber-200 via-yellow-500 to-orange-500"
@@ -303,25 +313,61 @@ export const BracketMatchCard = ({
           />
         </div>
 
-        {/* 👇 MARCADOR OFICIAL Y PASTILLA DE PUNTOS EN LA MISMA FILA 👇 */}
-        <div className="flex justify-center items-center gap-2 mt-2 h-[24px]">
-          {officialScore ? (
-            <div className="px-2 py-px rounded bg-[#8b4432] border border-white/50 shadow-md">
-              <span className="text-[10px] font-bold text-white tracking-wider ">
-                OFICIAL: {officialScore.home} - {officialScore.away}
-              </span>
-            </div>
-          ) : (
-            // Placeholder para Marcador Oficial (Visible y elegante)
-            <div className="px-2 py-[2px] rounded bg-white/5 border border-white/10">
-              <span className="text-[10px] font-bold text-white/40 tracking-wider">
-                OFICIAL: -
-              </span>
-            </div>
-          )}
+        {isUnlocked && !hasPrediction && onAction && (
+          <div className="px-2 mt-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const h = parseInt(homeScore);
+                const a = parseInt(awayScore);
+                let currentWinner = null;
+                if (!isNaN(h) && !isNaN(a)) {
+                  if (h > a) currentWinner = homeTeam?.id;
+                  else if (a > h) currentWinner = awayTeam?.id;
+                  else {
+                    if (homeWinner) currentWinner = homeTeam?.id;
+                    if (awayWinner) currentWinner = awayTeam?.id;
+                  }
+                }
+                onAction(homeScore, awayScore, currentWinner || null);
+              }}
+              className="w-full py-1 text-[10px] font-black text-white bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 rounded-md shadow-md uppercase tracking-widest transition-all cursor-pointer"
+            >
+              Enviar Pronóstico
+            </button>
+          </div>
+        )}
 
-          {getPointsTag()}
-        </div>
+        {/* 👇 MARCADOR OFICIAL Y PASTILLA DE PUNTOS EN LA MISMA FILA 👇 */}
+        {!hideOfficialAndPoints && (
+          <div className="flex justify-center items-center gap-2 mt-2 h-[24px]">
+            {officialScore ? (
+              <>
+                <div className="px-2 py-px rounded bg-[#8b4432] border border-white/50 shadow-md">
+                  <span className="text-[10px] font-bold text-white tracking-wider ">
+                    OFICIAL: {officialScore.home} - {officialScore.away}
+                  </span>
+                </div>
+                {getPointsTag()}
+              </>
+            ) : hasPrediction ? (
+              <div className="px-3 py-[2px] rounded border border-amber-500/50 bg-amber-500/10 shadow-[0_0_10px_rgba(251,191,36,0.2)]">
+                <span className="text-[9px] font-black text-amber-500/90 tracking-widest uppercase">
+                  {lang === "en" ? "Predictions Sent" : "Pronósticos Enviados"}
+                </span>
+              </div>
+            ) : (
+              <>
+                <div className="px-2 py-[2px] rounded bg-white/5 border border-white/10">
+                  <span className="text-[10px] font-bold text-white/40 tracking-wider">
+                    OFICIAL: -
+                  </span>
+                </div>
+                {getPointsTag()}
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -17,6 +17,7 @@ import { FloatingPhase } from "@/components/fan/FloatingPhase";
 import { SystemAlerts } from "@/components/shared/SystemAlerts";
 import { OfficialGroupsResults } from "@/components/dashboards/OfficialGroupsResults";
 import { OfficialKnockoutResults } from "@/components/dashboards/OfficialKnockoutResults";
+import { OfficialKnockoutResultsV2 } from "@/components/dashboards/OfficialKnockoutResultsV2";
 import { SubmitGroupModal } from "@/components/predictions/SubmitGroupModal";
 import { FanNavigation } from "@/components/fan/header/FanNavigation";
 import { VarReportModal } from "@/components/fan/reportes/VarReportModal";
@@ -201,17 +202,25 @@ export const FanDashboard = ({
 
   const t = DICTIONARY[lang];
 
-  // 🏆 ESTADOS PARA EL MODAL DE 16AVOS
   const [isKnockoutModalOpen, setIsKnockoutModalOpen] = useState(false);
   const [modalTeams, setModalTeams] = useState<any[]>([]);
   const [isLoadingTeams, setIsLoadingTeams] = useState(false);
+  const [currentMatchIdsToSubmit, setCurrentMatchIdsToSubmit] = useState<any[]>([]);
 
-  // 🚀 NUEVA VERSIÓN: Valida vacíos y filtra solo a los clasificados desde BD pura
+  // 🚀 NUEVA VERSIÓN: Envío individual o interceptación del Pick 2
   const handleOpenKnockoutModal = async (phase: string, matchIds: any[]) => {
-    // 1. VALIDACIÓN: ¿Están todos los partidos llenos?
+    // 1. VALIDACIÓN: Valida solo el/los partido(s) que se pasa(n)
     if (!validateKnockoutPhase(phase, matchIds)) return;
 
-    // 2. Si pasó la aduana, abrimos el modal
+    // 2. Lógica de "Bypass" o Interceptación
+    // Si NO es r32 O el usuario YA tiene el pick 2 guardado, guardamos directamente
+    if (phase !== "r32" || userSession?.champion_pick_2) {
+      handleSubmit(phase, matchIds);
+      return;
+    }
+
+    // 3. SI es el primer envío de 16avos, abrimos el modal
+    setCurrentMatchIdsToSubmit(matchIds);
     setIsKnockoutModalOpen(true);
 
     if (modalTeams.length === 0) {
@@ -272,6 +281,7 @@ export const FanDashboard = ({
     handleAdvanceTeam,
     knockoutWinners,
     handleSaveKnockoutPrediction,
+    handleSaveSingleKnockoutMatch,
     hasUnsavedChanges,
     handleManualSave,
     handleRefresh,
@@ -481,7 +491,7 @@ export const FanDashboard = ({
         pollaId={headerSession?.polla_id}
         points={calculatedTotalPoints}
         submissionDate={headerSession?.submission_date}
-        hasUnsavedChanges={hasUnsavedChanges}
+        hasUnsavedChanges={currentView === "pred_groups" ? hasUnsavedChanges : false}
         onManualSave={handleManualSave}
         onRefresh={handleRefresh}
         onLogout={() => handleLogoutAttempt(handleInternalLogout)}
@@ -576,18 +586,8 @@ export const FanDashboard = ({
                   {/* 16AVOS LECTURA PURA DESDE LA DB */}
                   <PhaseColumn
                     title={t.bracketPhaseR32Full}
-                    isActive={
-                      safeConfig?.allow_r32 && !userSession?.sub_date_r32
-                    }
-                    isSubmitted={!!userSession?.sub_date_r32}
                     lang={lang}
-                    showFloating={showFloating}
-                    onAction={() => {
-                      const matchIds = R32_MATCHUPS.map((m: any) =>
-                        getPhysicalMatchId(m.id),
-                      );
-                      handleOpenKnockoutModal("r32", matchIds);
-                    }}
+                    showFloating={false}
                   >
                     {R32_MATCHUPS.map((match, idx) => {
                       const physicalId = getPhysicalMatchId(match.id);
@@ -618,6 +618,10 @@ export const FanDashboard = ({
                       const dbAway =
                         getTeamData(prediction?.predicted_away_team) || {};
 
+                      // NUEVO LOGICA: Unlocked si el partido en DB tiene is_unlocked en true
+                      const isUnlocked = offScore?.is_unlocked || false;
+                      const hasPrediction = !!(prediction && prediction.pred_home !== null && prediction.pred_away !== null);
+
                       return (
                         <BracketMatchCard
                           key={match.id}
@@ -627,7 +631,21 @@ export const FanDashboard = ({
                               ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
                               : `M${match.id}`
                           }
-                          isLocked={!!userSession?.sub_date_r32}
+                          isLocked={hasPrediction || !isUnlocked}
+                          isUnlocked={isUnlocked}
+                          hasPrediction={hasPrediction}
+                          onAction={async (hScore, aScore, winnerId) => {
+                            const pId = getPhysicalMatchId(match.id);
+                            if (hScore && aScore) {
+                              const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
+                              if (!saved) return;
+                            }
+                            if (!headerSession?.champion_pick_2) {
+                              handleOpenKnockoutModal("r32", [pId]);
+                            } else {
+                              alert("¡Pronóstico guardado exitosamente!");
+                            }
+                          }}
                           lang={lang}
                           onAdvanceTeam={handleAdvanceTeam}
                           style={
@@ -682,20 +700,8 @@ export const FanDashboard = ({
                   {/* OCTAVOS */}
                   <PhaseColumn
                     title={t.bracketPhaseR16Full}
-                    isActive={
-                      safeConfig?.allow_r16 && !userSession?.sub_date_r16
-                    }
-                    isSubmitted={!!userSession?.sub_date_r16}
                     lang={lang}
-                    showFloating={showFloating}
-                    onAction={() => {
-                      const matchIds = R16_MATCHUPS.map((m) =>
-                        getPhysicalMatchId(m.id),
-                      );
-                      if (validateKnockoutPhase("r16", matchIds)) {
-                        handleSubmit("r16", matchIds);
-                      }
-                    }}
+                    showFloating={false}
                   >
                     {R16_MATCHUPS.map((match, idx) => {
                       const physicalId = getPhysicalMatchId(match.id);
@@ -733,6 +739,9 @@ export const FanDashboard = ({
                       const finalHome = dbHome || simHome;
                       const finalAway = dbAway || simAway;
 
+                      const isUnlocked = offScore?.is_unlocked || false;
+                      const hasPrediction = !!(prediction && prediction.pred_home !== null && prediction.pred_away !== null);
+
                       return (
                         <BracketMatchCard
                           key={match.id}
@@ -742,7 +751,17 @@ export const FanDashboard = ({
                               ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
                               : `M${match.id}`
                           }
-                          isLocked={!!userSession?.sub_date_r16}
+                          isLocked={hasPrediction || !isUnlocked}
+                          isUnlocked={isUnlocked}
+                          hasPrediction={hasPrediction}
+                          onAction={async (hScore, aScore, winnerId) => {
+                            const pId = getPhysicalMatchId(match.id);
+                            if (hScore && aScore) {
+                              const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
+                              if (!saved) return;
+                            }
+                            alert("¡Pronóstico guardado exitosamente!");
+                          }}
                           lang={lang}
                           onAdvanceTeam={handleAdvanceTeam}
                           style={
@@ -795,18 +814,8 @@ export const FanDashboard = ({
                   {/* CUARTOS */}
                   <PhaseColumn
                     title={t.bracketPhaseQFFull}
-                    isActive={safeConfig?.allow_qf && !userSession?.sub_date_qf}
-                    isSubmitted={!!userSession?.sub_date_qf}
                     lang={lang}
-                    showFloating={showFloating}
-                    onAction={() => {
-                      const matchIds = QF_MATCHUPS.map((m) =>
-                        getPhysicalMatchId(m.id),
-                      );
-                      if (validateKnockoutPhase("qf", matchIds)) {
-                        handleSubmit("qf", matchIds);
-                      }
-                    }}
+                    showFloating={false}
                   >
                     {QF_MATCHUPS.map((match, idx) => {
                       const physicalId = getPhysicalMatchId(match.id);
@@ -844,6 +853,9 @@ export const FanDashboard = ({
                       const finalHome = dbHome || simHome;
                       const finalAway = dbAway || simAway;
 
+                      const isUnlocked = offScore?.is_unlocked || false;
+                      const hasPrediction = !!(prediction && prediction.pred_home !== null && prediction.pred_away !== null);
+
                       return (
                         <BracketMatchCard
                           key={match.id}
@@ -853,7 +865,17 @@ export const FanDashboard = ({
                               ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
                               : `M${match.id}`
                           }
-                          isLocked={!!userSession?.sub_date_qf}
+                          isLocked={hasPrediction || !isUnlocked}
+                          isUnlocked={isUnlocked}
+                          hasPrediction={hasPrediction}
+                          onAction={async (hScore, aScore, winnerId) => {
+                            const pId = getPhysicalMatchId(match.id);
+                            if (hScore && aScore) {
+                              const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
+                              if (!saved) return;
+                            }
+                            alert("¡Pronóstico guardado exitosamente!");
+                          }}
                           lang={lang}
                           onAdvanceTeam={handleAdvanceTeam}
                           style={
@@ -906,18 +928,8 @@ export const FanDashboard = ({
                   {/* SEMIS */}
                   <PhaseColumn
                     title={t.bracketPhaseSFFull}
-                    isActive={safeConfig?.allow_sf && !userSession?.sub_date_sf}
-                    isSubmitted={!!userSession?.sub_date_sf}
                     lang={lang}
-                    showFloating={showFloating}
-                    onAction={() => {
-                      const matchIds = SF_MATCHUPS.map((m) =>
-                        getPhysicalMatchId(m.id),
-                      );
-                      if (validateKnockoutPhase("sf", matchIds)) {
-                        handleSubmit("sf", matchIds);
-                      }
-                    }}
+                    showFloating={false}
                   >
                     {SF_MATCHUPS.map((match, idx) => {
                       const physicalId = getPhysicalMatchId(match.id);
@@ -955,6 +967,9 @@ export const FanDashboard = ({
                       const finalHome = dbHome || simHome;
                       const finalAway = dbAway || simAway;
 
+                      const isUnlocked = offScore?.is_unlocked || false;
+                      const hasPrediction = !!(prediction && prediction.pred_home !== null && prediction.pred_away !== null);
+
                       return (
                         <BracketMatchCard
                           key={match.id}
@@ -964,7 +979,17 @@ export const FanDashboard = ({
                               ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
                               : `M${match.id}`
                           }
-                          isLocked={!!userSession?.sub_date_sf}
+                          isLocked={hasPrediction || !isUnlocked}
+                          isUnlocked={isUnlocked}
+                          hasPrediction={hasPrediction}
+                          onAction={async (hScore, aScore, winnerId) => {
+                            const pId = getPhysicalMatchId(match.id);
+                            if (hScore && aScore) {
+                              const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
+                              if (!saved) return;
+                            }
+                            alert("¡Pronóstico guardado exitosamente!");
+                          }}
                           lang={lang}
                           onAdvanceTeam={handleAdvanceTeam}
                           style={
@@ -1017,18 +1042,8 @@ export const FanDashboard = ({
                   {/* FINAL */}
                   <PhaseColumn
                     title={t.bracketPhaseFTitle}
-                    isActive={safeConfig?.allow_f && !userSession?.sub_date_f}
-                    isSubmitted={!!userSession?.sub_date_f}
                     lang={lang}
-                    showFloating={showFloating}
-                    onAction={() => {
-                      const matchIds = F_MATCHUPS.map((m) =>
-                        getPhysicalMatchId(m.id),
-                      );
-                      if (validateKnockoutPhase("f", matchIds)) {
-                        handleSubmit("f", matchIds);
-                      }
-                    }}
+                    showFloating={false}
                   >
                     {resolveBracketMatches(
                       safeGroups,
@@ -1068,6 +1083,9 @@ export const FanDashboard = ({
                       const finalHome = dbHome || match.home;
                       const finalAway = dbAway || match.away;
 
+                      const isUnlocked = offScore?.is_unlocked || false;
+                      const hasPrediction = !!(prediction && prediction.pred_home !== null && prediction.pred_away !== null);
+
                       return (
                         <BracketMatchCard
                           key={match.id}
@@ -1077,7 +1095,17 @@ export const FanDashboard = ({
                               ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
                               : `M${match.id}`
                           }
-                          isLocked={!!userSession?.sub_date_f}
+                          isLocked={hasPrediction || !isUnlocked}
+                          isUnlocked={isUnlocked}
+                          hasPrediction={hasPrediction}
+                          onAction={async (hScore, aScore, winnerId) => {
+                            const pId = getPhysicalMatchId(match.id);
+                            if (hScore && aScore) {
+                              const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
+                              if (!saved) return;
+                            }
+                            alert("¡Pronóstico guardado exitosamente!");
+                          }}
                           lang={lang}
                           onAdvanceTeam={(id, w, isManual) =>
                             handleFinalAdvance(id, w, isFinal, isManual)
@@ -1129,7 +1157,7 @@ export const FanDashboard = ({
                 <OfficialGroupsResults groupsData={safeGroups} lang={lang} />
               )}
               {currentView === "res_finals" && (
-                <OfficialKnockoutResults
+                <OfficialKnockoutResultsV2
                   groupsData={safeGroups}
                   officialWinners={officialWinners || {}}
                   officialScores={officialScores || []}
@@ -1196,11 +1224,7 @@ export const FanDashboard = ({
         lang={lang}
         isLoading={isSubmitting || isLoadingTeams}
         onConfirm={(championId) => {
-          handleSubmit(
-            "r32",
-            R32_MATCHUPS.map((m) => getPhysicalMatchId(m.id)), // 🚀 Ahora usamos los R32 puros
-            championId,
-          );
+          handleSubmit("r32", currentMatchIdsToSubmit, championId);
           setIsKnockoutModalOpen(false);
         }}
       />

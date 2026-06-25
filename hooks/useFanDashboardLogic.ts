@@ -325,7 +325,7 @@ export const useFanDashboardLogic = (
   };
 
   const handleRefresh = () => {
-    if (hasUnsavedChanges) setSystemModal("refresh");
+    if (hasUnsavedChanges && currentView === "pred_groups") setSystemModal("refresh");
     else window.location.reload();
   };
 
@@ -385,37 +385,45 @@ export const useFanDashboardLogic = (
     }
 
     if (missing > 0) {
-      const phaseNames = {
-        es: {
-          r32: "los 16avos de Final",
-          r16: "los Octavos de Final",
-          qf: "los Cuartos de Final",
-          sf: "las Semifinales",
-          f: "la Gran Final",
-        },
-        en: {
-          r32: "the Round of 32",
-          r16: "the Round of 16",
-          qf: "the Quarterfinals",
-          sf: "the Semifinals",
-          f: "the Grand Final",
-        },
-      };
+      let finalMessage = "";
+      
+      if (phaseMatchIds.length === 1) {
+        finalMessage = lang === "en"
+          ? "⚠️ CUSTOMS: Please fill in the exact score for this match before submitting."
+          : "⚠️ ADUANA: Debes ingresar el marcador exacto para este partido antes de enviarlo.";
+      } else {
+        const phaseNames = {
+          es: {
+            r32: "los 16avos de Final",
+            r16: "los Octavos de Final",
+            qf: "los Cuartos de Final",
+            sf: "las Semifinales",
+            f: "la Gran Final",
+          },
+          en: {
+            r32: "the Round of 32",
+            r16: "the Round of 16",
+            qf: "the Quarterfinals",
+            sf: "the Semifinals",
+            f: "the Grand Final",
+          },
+        };
 
-      const phaseName =
-        phaseNames[lang as keyof typeof phaseNames]?.[
-          phase as keyof (typeof phaseNames)["es"]
-        ] || phase;
+        const phaseName =
+          phaseNames[lang as keyof typeof phaseNames]?.[
+            phase as keyof (typeof phaseNames)["es"]
+          ] || phase;
 
-      const baseMessage =
-        t.incompletePhaseMsg ||
-        (lang === "en"
-          ? "⚠️ CUSTOMS: You are missing {count} matches to fill in {phase}. Complete them all before submitting."
-          : "⚠️ ADUANA: Te faltan {count} partidos por llenar en {phase}. Complétalos todos antes de enviar.");
+        const baseMessage =
+          t.incompletePhaseMsg ||
+          (lang === "en"
+            ? "⚠️ CUSTOMS: You are missing {count} matches to fill in {phase}. Complete them all before submitting."
+            : "⚠️ ADUANA: Te faltan {count} partidos por llenar en {phase}. Complétalos todos antes de enviar.");
 
-      const finalMessage = baseMessage
-        .replace("{count}", missing.toString())
-        .replace("{phase}", phaseName);
+        finalMessage = baseMessage
+          .replace("{count}", missing.toString())
+          .replace("{phase}", phaseName);
+      }
 
       alert(finalMessage);
       return false;
@@ -431,7 +439,7 @@ export const useFanDashboardLogic = (
     if (isSubmitting || hasSubmitted) return;
     if (!userId) return alert("Error: No se identifica el usuario.");
 
-    if (hasUnsavedChanges) {
+    if (hasUnsavedChanges && (!phase || phase === "groups")) {
       await handleManualSave(true);
     }
 
@@ -511,6 +519,60 @@ export const useFanDashboardLogic = (
     [],
   );
 
+  const handleSaveSingleKnockoutMatch = async (
+    matchId: string | number,
+    hScore: any,
+    aScore: any,
+    winnerId: string | null,
+  ) => {
+    if (!userId) return false;
+    setIsSubmitting(true);
+    try {
+      await saveKnockoutPredictionAction(
+        userId,
+        matchId,
+        hScore,
+        aScore,
+        winnerId || null,
+      );
+
+      // Update local state so UI locks the match
+      const existing = initialPredictions.find(
+        (p: any) => p.match_id.toString() === matchId.toString(),
+      );
+      if (existing) {
+        existing.pred_home = hScore;
+        existing.pred_away = aScore;
+        existing.predicted_winner = winnerId;
+      } else {
+        initialPredictions.push({
+          match_id: matchId,
+          pred_home: hScore,
+          pred_away: aScore,
+          predicted_winner: winnerId,
+        });
+      }
+
+      // Remove from unsaved to prevent bulk save later
+      if (unsavedPredictions.current[matchId]) {
+        delete unsavedPredictions.current[matchId];
+      }
+      if (Object.keys(unsavedPredictions.current).length === 0) {
+        setHasUnsavedChanges(false);
+      }
+
+      // Trigger a re-render by updating progress slightly
+      setCompletedMatches((prev) => new Set(prev).add(matchId));
+
+      return true;
+    } catch (error) {
+      console.error("Error saving single match:", error);
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return {
     currentView,
     setCurrentView: handleViewChange,
@@ -527,6 +589,7 @@ export const useFanDashboardLogic = (
     knockoutWinners,
     handleAdvanceTeam,
     handleSaveKnockoutPrediction,
+    handleSaveSingleKnockoutMatch,
     hasUnsavedChanges,
     handleManualSave,
     handleRefresh,

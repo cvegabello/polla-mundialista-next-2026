@@ -29,16 +29,24 @@ export default async function HomePage() {
     officialMatchesRaw,
     bonusesResponse,
     configResponse,
+    profileResponse,
   ] = await Promise.all([
     getFullGroupsData(),
     getUserPredictions(userSession.id),
     getOfficialMatches(),
     supabase.from("bonus_points").select("*").eq("user_id", userSession.id),
     supabase.from("global_config").select("*").single(),
+    supabase.from("profiles").select("champion_pick_1, champion_pick_2").eq("id", userSession.id).single(),
   ]);
 
   const userBonuses = bonusesResponse.data || [];
   const globalConfig = configResponse.data || {};
+
+  // 🔥 Guarantee champion picks are fresh directly from DB
+  if (profileResponse?.data) {
+    userSession.champion_pick_1 = profileResponse.data.champion_pick_1 || userSession.champion_pick_1;
+    userSession.champion_pick_2 = profileResponse.data.champion_pick_2 || userSession.champion_pick_2;
+  }
 
   const officialScores: any[] = [];
   const officialWinners: Record<string, any> = {};

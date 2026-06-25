@@ -13,6 +13,7 @@ import {
   F_MATCHUPS,
 } from "@/components/constants/matchups";
 import { Language, DICTIONARY } from "@/components/constants/dictionary";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
 interface OfficialKnockoutResultsProps {
   groupsData: any[];
@@ -116,75 +117,95 @@ export const OfficialKnockoutResults = ({
             flag: dbAway.flag_code || dbAway.flag || null,
           }}
           prediction={simulatedPrediction}
+          hideOfficialAndPoints={true}
         />
       );
     });
   };
 
   return (
-    <div className={`max-w-[1600px] mx-auto mt-4`}>
-      <BracketContainer>
-        <PhaseColumn
-          title={t.bracketPhaseR32Full}
-          isActive={true}
-          lang={lang}
-          showFloating={false}
-          isOfficial={true}
+    <div className={`max-w-[1600px] mx-auto mt-4 overflow-hidden`}>
+      <div
+        className="w-full h-[calc(100vh-80px)] overflow-hidden bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] relative"
+        style={{ touchAction: 'none' }}
+      >
+        <TransformWrapper
+          initialScale={1}
+          minScale={0.3}
+          maxScale={2}
+          centerOnInit={false}
+          limitToBounds={true}
+          wheel={{ step: 0.1 }}
+          panning={{ velocityDisabled: true }}
         >
-          {renderPhase(R32_MATCHUPS, false, (idx) =>
-            idx % 2 !== 0 ? { marginTop: "-8px" } : { marginTop: "15px" },
-          )}
-        </PhaseColumn>
+          <TransformComponent 
+            wrapperStyle={{ width: "100%", height: "100%" }} 
+            contentStyle={{ width: "fit-content", minWidth: "1600px", height: "fit-content", minHeight: "1200px" }}
+          >
+            <div className="flex flex-row items-start pl-8 pt-6 pb-6 gap-6 w-max min-h-full">
+              <PhaseColumn
+                title={t.bracketPhaseR32Full}
+                isActive={true}
+                lang={lang}
+                showFloating={false}
+                isOfficial={true}
+              >
+                {renderPhase(R32_MATCHUPS, false, (idx) =>
+                  idx % 2 !== 0 ? { marginTop: "-8px" } : { marginTop: "15px" },
+                )}
+              </PhaseColumn>
 
-        <PhaseColumn
-          title={t.bracketPhaseR16Full}
-          isActive={false}
-          lang={lang}
-          showFloating={false}
-          isOfficial={true}
-        >
-          {renderPhase(R16_MATCHUPS, false, (idx) =>
-            idx % 10 !== 0 ? { marginTop: "125px" } : { marginTop: "65px" },
-          )}
-        </PhaseColumn>
+              <PhaseColumn
+                title={t.bracketPhaseR16Full}
+                isActive={false}
+                lang={lang}
+                showFloating={false}
+                isOfficial={true}
+              >
+                {renderPhase(R16_MATCHUPS, false, (idx) =>
+                  idx % 10 !== 0 ? { marginTop: "125px" } : { marginTop: "65px" },
+                )}
+              </PhaseColumn>
 
-        <PhaseColumn
-          title={t.bracketPhaseQFFull}
-          isActive={false}
-          lang={lang}
-          showFloating={false}
-          isOfficial={true}
-        >
-          {renderPhase(QF_MATCHUPS, false, (idx) =>
-            idx % 10 !== 0 ? { marginTop: "360px" } : { marginTop: "200px" },
-          )}
-        </PhaseColumn>
+              <PhaseColumn
+                title={t.bracketPhaseQFFull}
+                isActive={false}
+                lang={lang}
+                showFloating={false}
+                isOfficial={true}
+              >
+                {renderPhase(QF_MATCHUPS, false, (idx) =>
+                  idx % 10 !== 0 ? { marginTop: "360px" } : { marginTop: "200px" },
+                )}
+              </PhaseColumn>
 
-        <PhaseColumn
-          title={t.bracketPhaseSFFull}
-          isActive={false}
-          lang={lang}
-          showFloating={false}
-          isOfficial={true}
-        >
-          {renderPhase(SF_MATCHUPS, false, (idx) =>
-            idx % 10 !== 0 ? { marginTop: "850px" } : { marginTop: "450px" },
-          )}
-        </PhaseColumn>
+              <PhaseColumn
+                title={t.bracketPhaseSFFull}
+                isActive={false}
+                lang={lang}
+                showFloating={false}
+                isOfficial={true}
+              >
+                {renderPhase(SF_MATCHUPS, false, (idx) =>
+                  idx % 10 !== 0 ? { marginTop: "850px" } : { marginTop: "450px" },
+                )}
+              </PhaseColumn>
 
-        <PhaseColumn
-          title={t.bracketPhaseFTitle}
-          isActive={false}
-          lang={lang}
-          showFloating={false}
-          isOfficial={true}
-        >
-          {renderPhase(F_MATCHUPS, true, (idx) =>
-            idx % 2 !== 0 ? { marginTop: "60px" } : { marginTop: "15px" },
-          )}
-        </PhaseColumn>
-      </BracketContainer>
+              <PhaseColumn
+                title={t.bracketPhaseFTitle}
+                isActive={false}
+                lang={lang}
+                showFloating={false}
+                isOfficial={true}
+              >
+                {renderPhase(F_MATCHUPS, true, (idx) =>
+                  idx % 2 !== 0 ? { marginTop: "60px" } : { marginTop: "15px" },
+                )}
+              </PhaseColumn>
+            </div>
+          </TransformComponent>
+        </TransformWrapper>
+      </div>
     </div>
-    // Reutilizamos su BracketContainer para heredar el scroll horizontal
   );
 };

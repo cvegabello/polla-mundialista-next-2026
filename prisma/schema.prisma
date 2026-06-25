@@ -59,6 +59,7 @@ model matches {
   phase                             String?
   winner_id                         String?       @db.Uuid
   match_number                      Int?
+  is_unlocked                       Boolean?      @default(false)
   groups                            groups?       @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_matches_group")
   teams_matches_winner_idToteams    teams?        @relation("matches_winner_idToteams", fields: [winner_id], references: [id], onUpdate: NoAction, map: "fk_matches_winner")
   teams_matches_away_team_idToteams teams?        @relation("matches_away_team_idToteams", fields: [away_team_id], references: [id], onDelete: NoAction, onUpdate: NoAction)

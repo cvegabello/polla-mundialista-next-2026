@@ -10,6 +10,7 @@ export const getOfficialMatches = async () => {
       `
         id,
         match_number,
+        is_unlocked,
         home_score,
         away_score,
         winner_id,

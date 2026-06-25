@@ -96,8 +96,11 @@ export async function submitPredictionsAction(
       const sessionData = JSON.parse(decodeURIComponent(sessionCookie.value));
       sessionData[phaseColumn] = submissionDate;
 
-      // Si quiere también guardamos el pick en la sesión por si acaso
-      if (championId) sessionData.champion_pick_1 = championId;
+      if (phaseColumn === "sub_date_groups" && championId) {
+        sessionData.champion_pick_1 = championId;
+      } else if (phaseColumn === "sub_date_r32" && championId) {
+        sessionData.champion_pick_2 = championId;
+      }
 
       cookieStore.set(
         "polla_session",

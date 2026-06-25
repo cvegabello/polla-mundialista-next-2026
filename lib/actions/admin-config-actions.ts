@@ -27,10 +27,10 @@ export async function getAdminPanelDataAction() {
     .select("*")
     .single();
 
-  // B. Traemos TODOS los partidos, incluyendo el nuevo campo ESTATICO: match_number
+  // B. Traemos TODOS los partidos, incluyendo el nuevo campo ESTATICO: match_number y is_unlocked
   const { data: allMatches, error: matchError } = await supabase
     .from("matches")
-    .select("id, match_number, home_score, away_score"); // 👈 Pedimos match_number
+    .select("id, match_number, home_score, away_score, is_unlocked"); // 👈 Pedimos match_number y is_unlocked
 
   if (matchError) {
     console.error("🚨 ERROR TRAIENDO PARTIDOS:", matchError);
@@ -73,7 +73,7 @@ export async function getAdminPanelDataAction() {
     ).length,
   };
 
-  return { config, stats };
+  return { config, stats, matches: allMatches };
 }
 
 // 3. Activar/Desactivar Fases + INYECCIÓN MASIVA CREADORA 💥🛡️
@@ -207,6 +207,71 @@ export async function togglePhaseAction(
     return { success: true };
   } catch (error: any) {
     console.error("Error actualizando fase:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// 4. Activar/Desactivar Partido Individual + Inyección de Esqueleto 🎯
+export async function toggleMatchLockAction(
+  matchId: number,
+  isUnlocked: boolean,
+) {
+  const supabase = await createClient();
+  try {
+    // 1. Actualizamos el estado del partido
+    const { error: updateError } = await supabase
+      .from("matches")
+      .update({ is_unlocked: isUnlocked })
+      .eq("id", matchId);
+
+    if (updateError) throw updateError;
+
+    // 2. Si se está abriendo, inyectamos el esqueleto para todos los fans
+    if (isUnlocked) {
+      // Obtenemos los equipos oficiales actuales de este partido
+      const { data: matchData } = await supabase
+        .from("matches")
+        .select("home_team_id, away_team_id")
+        .eq("id", matchId)
+        .single();
+
+      if (matchData && matchData.home_team_id && matchData.away_team_id) {
+        // Traemos a TODOS los perfiles (fans)
+        const { data: fans } = await supabase.from("profiles").select("id");
+
+        if (fans && fans.length > 0) {
+          // Preparamos los esqueletos
+          const newPredictions = fans.map((fan) => ({
+            user_id: fan.id,
+            match_id: matchId,
+            predicted_home_team: matchData.home_team_id,
+            predicted_away_team: matchData.away_team_id,
+            pred_home: null,
+            pred_away: null,
+            predicted_winner: null,
+          }));
+
+          // Usamos upsert para evitar errores de clave duplicada
+          // y le decimos que NO ignore conflictos, sino que actualice los predicted_teams
+          // (esto garantiza que si el Admin cambia de opinión y re-asigna equipos, los actualiza)
+          const { error: upsertError } = await supabase
+            .from("predictions")
+            .upsert(newPredictions, {
+              onConflict: "user_id, match_id",
+              ignoreDuplicates: false,
+            });
+
+          if (upsertError) {
+            console.error("🚨 Error inyectando esqueleto:", upsertError);
+          }
+        }
+      }
+    }
+
+    revalidatePath("/", "layout");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error actualizando candado del partido:", error);
     return { success: false, error: error.message };
   }
 }

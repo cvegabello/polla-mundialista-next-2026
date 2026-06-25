@@ -684,3 +684,120 @@ export async function saveManualTieBreakerAction(
   revalidatePath("/admin/dashboard", "layout");
   return { success: true };
 }
+
+// ==========================================
+// 🔄 SYNC OFICIAL MATCHUPS A FANS
+// ==========================================
+export async function syncPhaseMatchupsAction(phaseColumn: string) {
+  const { createClient } = await import("@/utils/supabase/server");
+  const { revalidatePath } = await import("next/cache");
+  const supabase = await createClient();
+
+  try {
+    let currentPhaseStart = 0;
+    let currentPhaseEnd = 0;
+    let futurePhaseStart = 0;
+
+    if (phaseColumn === "r32") {
+      currentPhaseStart = 73;
+      currentPhaseEnd = 88;
+      futurePhaseStart = 89;
+    } else if (phaseColumn === "r16") {
+      currentPhaseStart = 89;
+      currentPhaseEnd = 96;
+      futurePhaseStart = 97;
+    } else if (phaseColumn === "qf") {
+      currentPhaseStart = 97;
+      currentPhaseEnd = 100;
+      futurePhaseStart = 101;
+    } else if (phaseColumn === "sf") {
+      currentPhaseStart = 101;
+      currentPhaseEnd = 102;
+      futurePhaseStart = 103;
+    } else if (phaseColumn === "f") {
+      currentPhaseStart = 103;
+      currentPhaseEnd = 104;
+      futurePhaseStart = 105;
+    }
+
+    if (currentPhaseStart > 0) {
+      // --- PASO A: Buscar Partidos y Fans ---
+      const { data: officialMatches } = await supabase
+        .from("matches")
+        .select("id, home_team_id, away_team_id")
+        .gte("match_number", currentPhaseStart)
+        .lte("match_number", currentPhaseEnd);
+
+      const { data: fans } = await supabase.from("profiles").select("id").neq("id", "00000000-0000-0000-0000-000000000000");
+
+      if (officialMatches && officialMatches.length > 0 && fans && fans.length > 0) {
+        const currentMatchIds = officialMatches.map((m: any) => m.id);
+
+        // 1. Obtenemos las predicciones existentes para preservar sus marcadores
+        const { data: existingPreds } = await supabase
+          .from("predictions")
+          .select("user_id, match_id, pred_home, pred_away, predicted_winner")
+          .in("match_id", currentMatchIds);
+
+        const predsMap = new Map();
+        if (existingPreds) {
+          for (const p of existingPreds) {
+            predsMap.set(`${p.user_id}-${p.match_id}`, p);
+          }
+        }
+
+        // 2. Preparamos el batallón con las COLUMNAS CORRECTAS respetando los scores
+        const newPredictions: any[] = [];
+        for (const match of officialMatches) {
+          for (const fan of fans) {
+            const existing = predsMap.get(`${fan.id}-${match.id}`);
+            newPredictions.push({
+              user_id: fan.id,
+              match_id: match.id,
+              predicted_home_team: match.home_team_id,
+              predicted_away_team: match.away_team_id,
+              pred_home: existing?.pred_home !== undefined ? existing.pred_home : null,
+              pred_away: existing?.pred_away !== undefined ? existing.pred_away : null,
+              predicted_winner: existing?.predicted_winner !== undefined ? existing.predicted_winner : null,
+            });
+          }
+        }
+
+        // 3. Upsert a la fuerza (sobreescribe equipos, preserva scores)
+        if (newPredictions.length > 0) {
+          // Dividimos en chunks de 500 para evitar timeout en Supabase
+          const chunkSize = 500;
+          for (let i = 0; i < newPredictions.length; i += chunkSize) {
+            const chunk = newPredictions.slice(i, i + chunkSize);
+            const { error: upsertError } = await supabase
+              .from("predictions")
+              .upsert(chunk, { onConflict: "user_id,match_id" });
+            if (upsertError) throw upsertError;
+          }
+        }
+      }
+
+      // --- PASO B: DESTRUIR EL FUTURO ---
+      if (futurePhaseStart <= 104) {
+        const { data: futureMatches } = await supabase
+          .from("matches")
+          .select("id")
+          .gte("match_number", futurePhaseStart);
+
+        if (futureMatches && futureMatches.length > 0) {
+          const idsToDelete = futureMatches.map((m: any) => m.id);
+          await supabase
+            .from("predictions")
+            .delete()
+            .in("match_id", idsToDelete);
+        }
+      }
+    }
+
+    revalidatePath("/admin/dashboard", "layout");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error en syncPhaseMatchupsAction:", error);
+    return { success: false, error: error.message };
+  }
+}

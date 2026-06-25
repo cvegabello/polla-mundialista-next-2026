@@ -125,51 +125,55 @@ export const SystemConfigPanel = () => {
 
   const { config, stats } = panelData!;
 
-  // 🧠 LÓGICA DE CANDADOS Y CONTADORES VISUALES ELEGANTES
-  const phases = [
-    {
-      label: "Grupos",
-      col: "allow_groups",
-      disabled: false,
-      count: stats.groups,
-      total: 72,
-    },
-    {
-      label: "16avos",
-      col: "allow_r32",
-      disabled: stats.groups < 72,
-      count: stats.r32,
-      total: 16,
-    },
-    {
-      label: "8vos",
-      col: "allow_r16",
-      disabled: stats.r32 < 16,
-      count: stats.r16,
-      total: 8,
-    },
-    {
-      label: "Cuartos",
-      col: "allow_qf",
-      disabled: stats.r16 < 8,
-      count: stats.qf,
-      total: 4,
-    },
-    {
-      label: "Semis",
-      col: "allow_sf",
-      disabled: stats.qf < 4,
-      count: stats.sf,
-      total: 2,
-    },
-    {
-      label: "Final",
-      col: "allow_f",
-      disabled: stats.sf < 2,
-      count: stats.f,
-      total: 2,
-    },
-  ];
+  // 🧠 LÓGICA DE FASE DE GRUPOS (Se mantiene global)
+  const isGroupsComplete = stats.groups === 72;
+
+  // Organizar los partidos por fase
+  const r32Matches = (panelData!.matches || []).filter((m: any) => m.match_number >= 73 && m.match_number <= 88).sort((a: any, b: any) => a.match_number - b.match_number);
+  const r16Matches = (panelData!.matches || []).filter((m: any) => m.match_number >= 89 && m.match_number <= 96).sort((a: any, b: any) => a.match_number - b.match_number);
+  const qfMatches = (panelData!.matches || []).filter((m: any) => m.match_number >= 97 && m.match_number <= 100).sort((a: any, b: any) => a.match_number - b.match_number);
+  const sfMatches = (panelData!.matches || []).filter((m: any) => m.match_number >= 101 && m.match_number <= 102).sort((a: any, b: any) => a.match_number - b.match_number);
+  const fMatches = (panelData!.matches || []).filter((m: any) => m.match_number >= 103 && m.match_number <= 104).sort((a: any, b: any) => a.match_number - b.match_number);
+
+  const renderMatchToggles = (title: string, matches: any[]) => (
+    <div className="mt-6 mb-6">
+      <h3 className="text-orange-400 font-black text-lg mb-4 tracking-widest uppercase border-b border-white/10 pb-2">
+        {title}
+      </h3>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {matches.map((match: any) => (
+          <label
+            key={match.id}
+            className={`flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all duration-300 ${
+              match.is_unlocked
+                ? "bg-orange-950/40 border-orange-500/60 text-orange-200 shadow-[0_3px_10px_rgba(249,115,22,0.2)]"
+                : "bg-slate-900/60 border-slate-700 text-slate-400"
+            } cursor-pointer`}
+          >
+            <span className="font-bold text-sm">M{match.match_number}</span>
+            <input
+              type="checkbox"
+              className="w-5 h-5 accent-orange-500 cursor-pointer rounded bg-slate-800 border-slate-600"
+              checked={match.is_unlocked || false}
+              onChange={async (e) => {
+                const newValue = e.target.checked;
+                // Optimistic UI
+                setPanelData((prev: any) => ({
+                  ...prev,
+                  matches: prev.matches.map((m: any) =>
+                    m.id === match.id ? { ...m, is_unlocked: newValue } : m
+                  ),
+                }));
+                // Llamar al action individual
+                const { toggleMatchLockAction } = await import("@/lib/actions/admin-config-actions");
+                await toggleMatchLockAction(match.id, newValue);
+              }}
+            />
+          </label>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div className="w-full max-w-5xl mx-auto p-[2px] rounded-2xl bg-gradient-to-br from-slate-700/50 to-slate-800/30 shadow-[0_0_30px_rgba(0,0,0,0.5)] mt-8">
@@ -192,71 +196,54 @@ export const SystemConfigPanel = () => {
           <p className="text-slate-400 font-bold text-sm mb-6 tracking-widest uppercase text-center flex flex-col items-center gap-1">
             <span>Habilitar Fases (Check para abrir)</span>
             <span className="text-xs text-orange-400/80 normal-case font-normal max-w-md">
-              Las fases finales se desbloquearán cuando se ingresen todos los
-              marcadores oficiales de la fase anterior.
+              Activa los partidos individuales cuando sepas las llaves oficiales.
             </span>
           </p>
 
-          <div className="flex flex-wrap justify-center gap-6 bg-black/30 p-8 rounded-2xl border border-white/5 shadow-inner">
-            {phases.map((phase) => {
-              const isComplete = phase.count === phase.total;
+          <div className="flex flex-col gap-6 bg-black/30 p-8 rounded-2xl border border-white/5 shadow-inner">
+            {/* FASE DE GRUPOS (GLOBAL) */}
+            <div className="flex justify-center mb-6">
+              <label
+                className={`flex items-center justify-start gap-5 px-6 py-6 min-w-[190px] rounded-2xl border-2 transition-all duration-300 relative ${
+                  config?.allow_groups
+                    ? "bg-orange-950/40 border-orange-500/60 text-orange-200 shadow-[0_5px_15px_rgba(249,115,22,0.2)] cursor-pointer hover:-translate-y-1"
+                    : "bg-slate-900/60 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200 cursor-pointer hover:-translate-y-1"
+                }`}
+              >
+                <div className="flex-shrink-0 flex items-center justify-center w-6 h-6">
+                  <input
+                    type="checkbox"
+                    className="w-5 h-5 accent-orange-500 cursor-pointer rounded bg-slate-800 border-slate-600"
+                    checked={config?.allow_groups || false}
+                    onChange={() => handleTogglePhase("allow_groups", config?.allow_groups)}
+                  />
+                </div>
+                <div className="flex flex-col items-start gap-2 w-full">
+                  <span className="font-black text-sm md:text-base uppercase tracking-wider">
+                    Grupos
+                  </span>
+                  <span
+                    className={`text-xs px-3 py-1 rounded-full font-bold tracking-widest inline-block ${
+                      isGroupsComplete
+                        ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                        : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                    }`}
+                  >
+                    {stats.groups} / 72
+                  </span>
+                </div>
+              </label>
+            </div>
 
-              return (
-                <label
-                  key={phase.col}
-                  className={`flex items-center justify-start gap-5 px-6 py-6 min-w-[190px] rounded-2xl border-2 transition-all duration-300 relative ${
-                    phase.disabled
-                      ? "bg-[#13141c] border-slate-800 text-slate-600 cursor-not-allowed opacity-60"
-                      : config?.[phase.col]
-                        ? "bg-orange-950/40 border-orange-500/60 text-orange-200 shadow-[0_5px_15px_rgba(249,115,22,0.2)] cursor-pointer hover:-translate-y-1"
-                        : "bg-slate-900/60 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200 cursor-pointer hover:-translate-y-1"
-                  }`}
-                >
-                  {/* Icono o Checkbox (Con un contenedor de tamaño fijo) */}
-                  <div className="flex-shrink-0 flex items-center justify-center w-6 h-6">
-                    {phase.disabled ? (
-                      <Lock size={22} className="text-slate-600" />
-                    ) : (
-                      <input
-                        type="checkbox"
-                        className="w-5 h-5 accent-orange-500 cursor-pointer rounded bg-slate-800 border-slate-600"
-                        checked={config?.[phase.col] || false}
-                        onChange={() =>
-                          handleTogglePhase(phase.col, config?.[phase.col])
-                        }
-                      />
-                    )}
-                  </div>
-
-                  {/* Textos y Pastillita (Badge) con más respiro */}
-                  <div className="flex flex-col items-start gap-2 w-full">
-                    <span className="font-black text-sm md:text-base uppercase tracking-wider">
-                      {phase.label}
-                    </span>
-
-                    {/* El contador elegante más redondito y espacioso */}
-                    <span
-                      className={`text-xs px-3 py-1 rounded-full font-bold tracking-widest inline-block ${
-                        isComplete
-                          ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                          : phase.disabled
-                            ? "bg-slate-800 text-slate-500 border border-slate-700"
-                            : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                      }`}
-                    >
-                      {phase.count} / {phase.total}
-                    </span>
-                  </div>
-
-                  {/* Tooltip interactivo */}
-                  {phase.disabled && (
-                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black border border-slate-700 text-xs text-slate-300 px-4 py-2 rounded-lg opacity-0 hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl">
-                      Requiere completar fase anterior
-                    </div>
-                  )}
-                </label>
-              );
-            })}
+            {/* PARTIDOS INDIVIDUALES FASE FINAL */}
+            <div className="w-full bg-slate-900/40 p-6 rounded-2xl border border-white/5">
+              <h3 className="text-xl font-bold text-center text-slate-300 mb-6">Fase Final - Activar Partidos</h3>
+              {renderMatchToggles("16avos de Final", r32Matches)}
+              {renderMatchToggles("Octavos de Final", r16Matches)}
+              {renderMatchToggles("Cuartos de Final", qfMatches)}
+              {renderMatchToggles("Semifinales", sfMatches)}
+              {renderMatchToggles("Final y Tercer Puesto", fMatches)}
+            </div>
           </div>
         </div>
 

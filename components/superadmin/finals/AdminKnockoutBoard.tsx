@@ -16,6 +16,7 @@ import { resolveBracketMatches } from "@/utils/bracket-resolver";
 import {
   saveOfficialScoreAction,
   syncBracketTeamsAction,
+  syncPhaseMatchupsAction,
 } from "@/lib/actions/super-admin-actions";
 import { calculateStandings } from "@/utils/standings";
 
@@ -49,6 +50,29 @@ export const AdminKnockoutBoard = ({
   const [knockoutWinners, setKnockoutWinners] = useState<Record<string, any>>(
     {},
   );
+  const [isSyncingPhase, setIsSyncingPhase] = useState<string | null>(null);
+
+  const handleSyncPhase = async (phaseColumn: string) => {
+    const confirm = window.confirm(
+      "¡ATENCIÓN! Al sincronizar esta fase, se inyectarán las llaves oficiales a los fans y se borrarán sus pronósticos futuros (El pasado no se toca). ¿Está seguro?",
+    );
+    if (!confirm) return;
+
+    setIsSyncingPhase(phaseColumn);
+    try {
+      const res = await syncPhaseMatchupsAction(phaseColumn);
+      if (res.success) {
+        alert("✅ Llaves sincronizadas con los fans exitosamente.");
+      } else {
+        alert("❌ Error al sincronizar las llaves: " + res.error);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("❌ Error inesperado al sincronizar.");
+    } finally {
+      setIsSyncingPhase(null);
+    }
+  };
 
   const officialStandings = useMemo(() => {
     let all: any[] = [];
@@ -330,7 +354,7 @@ export const AdminKnockoutBoard = ({
     }
   };
 
-  const renderPhase = (title: string, matchups: any[], isFinal = false) => {
+  const renderPhase = (title: string, matchups: any[], phaseId: string, isFinal = false) => {
     const resolvedMatches = resolveBracketMatches(
       officialStandings,
       knockoutWinners,
@@ -338,7 +362,11 @@ export const AdminKnockoutBoard = ({
     );
 
     return (
-      <AdminPhaseColumn title={title}>
+      <AdminPhaseColumn 
+        title={title} 
+        onSync={() => handleSyncPhase(phaseId)} 
+        isSyncing={isSyncingPhase === phaseId}
+      >
         {resolvedMatches.map((m) => {
           // 🚀 BALA DE PLATA: Buscar el partido oficial para pintar los goles
           const matchData = localMatches.find(
@@ -404,19 +432,23 @@ export const AdminKnockoutBoard = ({
         {renderPhase(
           lang === "en" ? "ROUND OF 32" : "16 AVOS DE FINAL",
           R32_MATCHUPS,
+          "r32"
         )}
         {renderPhase(
           lang === "en" ? "ROUND OF 16" : "OCTAVOS DE FINAL",
           R16_MATCHUPS,
+          "r16"
         )}
         {renderPhase(
           lang === "en" ? "QUARTERFINALS" : "CUARTOS DE FINAL",
           QF_MATCHUPS,
+          "qf"
         )}
-        {renderPhase(lang === "en" ? "SEMIFINALS" : "SEMIFINALES", SF_MATCHUPS)}
+        {renderPhase(lang === "en" ? "SEMIFINALS" : "SEMIFINALES", SF_MATCHUPS, "sf")}
         {renderPhase(
           lang === "en" ? "FINAL & 3RD PLACE" : "FINAL Y 3ER PUESTO",
           F_MATCHUPS,
+          "f",
           true,
         )}
       </AdminBracketContainer>

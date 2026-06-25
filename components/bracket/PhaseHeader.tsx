@@ -62,14 +62,11 @@ export const PhaseHeader = ({
         </span>
       </div>
 
-      {/* BOTONES */}
-      <div className="w-full">
-        {isSubmitted ? (
-          // 🟢 BOTÓN VERDE REVISADO: Máximo Brillo y Contraste
+      {/* ESTADO DE ENVÍO */}
+      {isSubmitted && (
+        <div className="w-full">
           <div className="mt-1 flex flex-col items-center gap-2">
-            {/* Cambiamos a bg-emerald-950 (más sólido), borde emerald-500 (brillante) y texto emerald-300 */}
             <div className="flex items-center justify-center gap-2 w-full py-3 px-2 bg-emerald-950 border-2 border-emerald-500 rounded-xl text-emerald-300 font-bold tracking-widest cursor-default text-xs uppercase shadow-[0_0_25px_rgba(16,185,129,0.4)]">
-              {/* Ícono verde brillante con sombra para que resalte */}
               <svg
                 className="w-5 h-5 text-emerald-400 drop-shadow-[0_0_3px_rgba(16,185,129,1)]"
                 fill="none"
@@ -84,40 +81,15 @@ export const PhaseHeader = ({
                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                 ></path>
               </svg>
-              {/* Texto con sombra para máximo contraste en fondo oscuro */}
               <span className="text-white/80 text-[12px] flex items-center gap-1.5 font-medium mt-1">
                 {lang === "en"
                   ? "Predictions Submitted"
                   : "Pronósticos Enviados"}
               </span>
             </div>
-            {/* <div className="text-white/80 text-[10px] flex items-center gap-1.5 font-medium mt-1">
-              <Lock size={11} className="text-white/60" />
-              {lang === "en"
-                ? "Your predictions are locked"
-                : "Tus pronósticos están blindados"}
-            </div> */}
           </div>
-        ) : (
-          // 🔘 BOTÓN NORMAL (Enviar o Fase Cerrada)
-          <button
-            onClick={isActive ? onAction : undefined}
-            disabled={!isActive}
-            className={`
-              w-full py-3 rounded-xl text-[14px] font-bold tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5
-              ${
-                isActive
-                  ? "bg-green-500 text-black shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:shadow-[0_0_30px_rgba(34,197,94,0.7)] hover:scale-[1.02] cursor-pointer"
-                  : "bg-slate-800/50 text-slate-400 border-2 border-white/20 cursor-not-allowed uppercase"
-              }
-            `}
-          >
-            {!isActive && <Lock size={14} className="opacity-70" />}
-            {isActive && <Send size={14} />}
-            {isActive ? t.bracketSubmitBtn : t.bracketPhaseLocked}
-          </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
