@@ -577,7 +577,7 @@ export const VarReportModal = ({
                                   const gId = String.fromCharCode(64 + i + 1);
                                   const letter = gId;
                                   const off = officialGroupStandings[gId];
-                                  const isFinished = data?.matches?.filter((m: any) => String(m.group_id) === gId).every((m: any) => m.status === "finished");
+                                  const isFinished = data?.matches?.filter((m: any) => String(m.group_id) === gId).every((m: any) => m.home_score !== null && m.away_score !== null);
                                   
                                   return (
                                     <th
@@ -651,7 +651,7 @@ export const VarReportModal = ({
 
                                 <th
                                   rowSpan={2}
-                                  className="px-2 sm:px-4 py-2 sm:py-3 bg-[#0a0500]/90 z-30 border-l border-orange-700/60 min-w-[60px]"
+                                  className="px-2 sm:px-4 py-2 sm:py-3 bg-[#0a0500]/95 z-40 border-l border-orange-700/60 w-[80px] min-w-[80px] max-w-[80px] static sm:sticky sm:right-[160px] shadow-none"
                                 >
                                   <span className="text-gray-400 font-black tracking-widest drop-shadow-md">
                                     {t.varSubtotal || "SUBTOTAL"}
@@ -663,7 +663,7 @@ export const VarReportModal = ({
                                 </th>
                                 <th
                                   rowSpan={2}
-                                  className="px-2 sm:px-4 py-2 sm:py-3 bg-[#0a0500]/90 z-30 border-l border-r border-orange-700/60 min-w-[60px]"
+                                  className="px-2 sm:px-4 py-2 sm:py-3 bg-[#0a0500]/95 z-40 border-l border-r border-orange-700/60 w-[80px] min-w-[80px] max-w-[80px] static sm:sticky sm:right-[80px] shadow-none"
                                 >
                                   <span className="text-cyan-400 font-black tracking-widest drop-shadow-md">
                                     {t.varBonus || "BONO"}
@@ -679,7 +679,7 @@ export const VarReportModal = ({
                           {filteredMatches.length > 0 && (
                             <th
                               rowSpan={2}
-                              className="px-2 sm:px-4 py-2 sm:py-3 static sm:sticky right-0 top-0 bg-[#0a0500]/95 z-40 border-l border-orange-700/60 min-w-[60px] sm:min-w-[80px] shadow-none sm:shadow-[-5px_0_15px_rgba(0,0,0,0.5)]"
+                              className="px-2 sm:px-4 py-2 sm:py-3 static sm:sticky right-0 bg-[#0a0500]/95 z-40 border-l border-orange-700/60 w-[80px] min-w-[80px] max-w-[80px] shadow-none sm:shadow-[-5px_0_15px_rgba(0,0,0,0.5)]"
                             >
                               <span className="text-amber-500 font-black tracking-widest drop-shadow-md">
                                 {t.varTotal}
@@ -788,7 +788,7 @@ export const VarReportModal = ({
                                     {Array.from({ length: 12 }).map((_, i) => {
                                       const gId = String.fromCharCode(64 + i + 1);
                                       const bData = user.groupBonuses?.[("GROUP_" + gId)];
-                                      const isFinished = data?.matches?.filter((m: any) => String(m.group_id) === gId).every((m: any) => m.status === "finished");
+                                      const isFinished = data?.matches?.filter((m: any) => String(m.group_id) === gId).every((m: any) => m.home_score !== null && m.away_score !== null);
                                       
                                       let team1Id = bData?.team1;
                                       let team2Id = bData?.team2;
@@ -908,17 +908,17 @@ export const VarReportModal = ({
                                         : "-"}
                                     </td>
 
-                                    <td className="px-2 py-2 border-l border-orange-800/50 text-center font-black text-gray-200 align-middle drop-shadow-md">
+                                    <td className="px-2 py-2 border-l border-orange-800/50 text-center font-black text-gray-200 align-middle drop-shadow-md bg-black/90 group-hover:bg-[#0a0500]/95 z-20 w-[80px] min-w-[80px] max-w-[80px] static sm:sticky sm:right-[160px]">
                                       {matchPoints}
                                     </td>
-                                    <td className="px-2 py-2 border-l border-r border-orange-800/50 text-center font-black text-cyan-400 align-middle drop-shadow-md">
+                                    <td className="px-2 py-2 border-l border-r border-orange-800/50 text-center font-black text-cyan-400 align-middle drop-shadow-md bg-black/90 group-hover:bg-[#0a0500]/95 z-20 w-[80px] min-w-[80px] max-w-[80px] static sm:sticky sm:right-[80px]">
                                       {userBonus > 0 ? `+${userBonus}` : "-"}
                                     </td>
                                   </>
                                 )}
 
                               {filteredMatches.length > 0 && (
-                                <td className="px-2 sm:px-4 py-2 font-black static sm:sticky right-0 bg-black/90 group-hover:bg-[#0a0500]/95 border-l border-orange-800/50 text-amber-500 z-20 text-base shadow-none sm:shadow-[-5px_0_15px_rgba(0,0,0,0.5)] backdrop-blur-sm drop-shadow-md">
+                                <td className="px-2 sm:px-4 py-2 font-black static sm:sticky right-0 bg-black/90 group-hover:bg-[#0a0500]/95 border-l border-orange-800/50 text-amber-500 z-20 text-base shadow-none sm:shadow-[-5px_0_15px_rgba(0,0,0,0.5)] backdrop-blur-sm drop-shadow-md w-[80px] min-w-[80px] max-w-[80px] text-center">
                                   {rowTotalPoints}
                                 </td>
                               )}
