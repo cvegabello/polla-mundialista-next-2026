@@ -620,7 +620,7 @@ export const FanDashboard = ({
 
                       // NUEVO LOGICA: Unlocked si el partido en DB tiene is_unlocked en true
                       const isUnlocked = offScore?.is_unlocked || false;
-                      const hasPrediction = !!(prediction && prediction.pred_home !== null && prediction.pred_away !== null);
+                      const hasPrediction = !!(prediction && prediction.pred_home != null && prediction.pred_away != null);
 
                       return (
                         <BracketMatchCard
@@ -740,7 +740,7 @@ export const FanDashboard = ({
                       const finalAway = dbAway || simAway;
 
                       const isUnlocked = offScore?.is_unlocked || false;
-                      const hasPrediction = !!(prediction && prediction.pred_home !== null && prediction.pred_away !== null);
+                      const hasPrediction = !!(prediction && prediction.pred_home != null && prediction.pred_away != null);
 
                       return (
                         <BracketMatchCard
@@ -854,7 +854,7 @@ export const FanDashboard = ({
                       const finalAway = dbAway || simAway;
 
                       const isUnlocked = offScore?.is_unlocked || false;
-                      const hasPrediction = !!(prediction && prediction.pred_home !== null && prediction.pred_away !== null);
+                      const hasPrediction = !!(prediction && prediction.pred_home != null && prediction.pred_away != null);
 
                       return (
                         <BracketMatchCard
@@ -968,7 +968,7 @@ export const FanDashboard = ({
                       const finalAway = dbAway || simAway;
 
                       const isUnlocked = offScore?.is_unlocked || false;
-                      const hasPrediction = !!(prediction && prediction.pred_home !== null && prediction.pred_away !== null);
+                      const hasPrediction = !!(prediction && prediction.pred_home != null && prediction.pred_away != null);
 
                       return (
                         <BracketMatchCard
@@ -1084,7 +1084,7 @@ export const FanDashboard = ({
                       const finalAway = dbAway || match.away;
 
                       const isUnlocked = offScore?.is_unlocked || false;
-                      const hasPrediction = !!(prediction && prediction.pred_home !== null && prediction.pred_away !== null);
+                      const hasPrediction = !!(prediction && prediction.pred_home != null && prediction.pred_away != null);
 
                       return (
                         <BracketMatchCard
