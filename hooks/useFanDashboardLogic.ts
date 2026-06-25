@@ -562,7 +562,7 @@ export const useFanDashboardLogic = (
       }
 
       // Trigger a re-render by updating progress slightly
-      setCompletedMatches((prev) => new Set(prev).add(matchId));
+      setCompletedMatches((prev) => new Set(prev).add(String(matchId)));
 
       return true;
     } catch (error) {

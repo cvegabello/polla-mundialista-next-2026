@@ -4,7 +4,7 @@ import { Language } from "@/components/constants/dictionary";
 
 interface PhaseColumnProps {
   title: string;
-  isActive: boolean;
+  isActive?: boolean;
   lang: Language;
   showFloating?: boolean;
   children?: React.ReactNode;
@@ -28,7 +28,7 @@ export const PhaseColumn: React.FC<PhaseColumnProps> = ({
       <div className="bg-transparent pt-6 pb-6 mb-2">
         <PhaseHeader
           title={title}
-          isActive={isActive}
+          isActive={isActive ?? false}
           lang={lang}
           isOfficial={isOfficial}
           onAction={onAction}

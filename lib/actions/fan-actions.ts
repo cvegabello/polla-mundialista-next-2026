@@ -190,7 +190,7 @@ export async function saveKnockoutPredictionAction(
   matchId: string | number,
   homeScore: number,
   awayScore: number,
-  winnerId: string,
+  winnerId: string | null,
 ) {
   const supabase = await createClient();
   try {

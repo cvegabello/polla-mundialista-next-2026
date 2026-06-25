@@ -20,6 +20,7 @@ export const SystemConfigPanel = () => {
   const [panelData, setPanelData] = useState<{
     config: any;
     stats: any;
+    matches?: any[] | null;
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
