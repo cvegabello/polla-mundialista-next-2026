@@ -615,17 +615,17 @@ export const SuperAdminVarModal = ({
                                         <div className="flex flex-col items-center gap-1 mt-1 text-[9px] text-cyan-200">
                                           <span className="flex items-center gap-1">
                                             1. 
-                                            {off.first.teamId && teamsDict[off.first.teamId] && (
-                                              <img src={`https://flagcdn.com/w20/${teamsDict[off.first.teamId].flag_code?.substring(0, 2)}.png`} alt="flag" className="w-3 h-3 rounded-full object-cover" />
+                                            {off.first && teamsDict[off.first] && (
+                                              <img src={`https://flagcdn.com/w20/${teamsDict[off.first].flag_code?.substring(0, 2)}.png`} alt="flag" className="w-3 h-3 rounded-full object-cover" />
                                             )}
-                                            {off.first.name.substring(0, 3).toUpperCase()}
+                                            {off.first && teamsDict[off.first] ? teamsDict[off.first].name_es?.substring(0, 3).toUpperCase() : "?"}
                                           </span>
                                           <span className="flex items-center gap-1">
                                             2. 
-                                            {off.second.teamId && teamsDict[off.second.teamId] && (
-                                              <img src={`https://flagcdn.com/w20/${teamsDict[off.second.teamId].flag_code?.substring(0, 2)}.png`} alt="flag" className="w-3 h-3 rounded-full object-cover" />
+                                            {off.second && teamsDict[off.second] && (
+                                              <img src={`https://flagcdn.com/w20/${teamsDict[off.second].flag_code?.substring(0, 2)}.png`} alt="flag" className="w-3 h-3 rounded-full object-cover" />
                                             )}
-                                            {off.second.name.substring(0, 3).toUpperCase()}
+                                            {off.second && teamsDict[off.second] ? teamsDict[off.second].name_es?.substring(0, 3).toUpperCase() : "?"}
                                           </span>
                                         </div>
                                       ) : (
@@ -854,14 +854,14 @@ export const SuperAdminVarModal = ({
                                                   {team1Id && teamsDict[team1Id] && (
                                                     <img src={`https://flagcdn.com/w20/${teamsDict[team1Id].flag_code?.substring(0, 2)}.png`} alt="flag" className="w-3 h-3 rounded-full object-cover" />
                                                   )}
-                                                  {team1Id && teamsDict[team1Id] ? teamsDict[team1Id].name_es.substring(0, 3).toUpperCase() : "?"}
+                                                  {team1Id && teamsDict[team1Id] ? teamsDict[team1Id].name_es?.substring(0, 3).toUpperCase() : "?"}
                                                 </span>
                                                 <span className="flex items-center gap-1">
                                                   2. 
                                                   {team2Id && teamsDict[team2Id] && (
                                                     <img src={`https://flagcdn.com/w20/${teamsDict[team2Id].flag_code?.substring(0, 2)}.png`} alt="flag" className="w-3 h-3 rounded-full object-cover" />
                                                   )}
-                                                  {team2Id && teamsDict[team2Id] ? teamsDict[team2Id].name_es.substring(0, 3).toUpperCase() : "?"}
+                                                  {team2Id && teamsDict[team2Id] ? teamsDict[team2Id].name_es?.substring(0, 3).toUpperCase() : "?"}
                                                 </span>
                                               </div>
                                               {pill}
