@@ -164,7 +164,7 @@ export const SuperAdminVarModal = ({
     for (let i = 1; i <= 12; i++) {
       const gId = String(i);
       const groupMatches = data.matches
-        .filter((m: any) => m.group_id === gId)
+        .filter((m: any) => String(m.group_id) === gId)
         .map((m: any) => ({
           ...m,
           home_team: m.home,
@@ -599,7 +599,7 @@ export const SuperAdminVarModal = ({
                                   const gId = String(i + 1);
                                   const letter = String.fromCharCode(64 + i + 1);
                                   const off = officialGroupStandings[gId];
-                                  const isFinished = data?.matches?.filter((m: any) => m.group_id === gId).every((m: any) => m.status === "finished");
+                                  const isFinished = data?.matches?.filter((m: any) => String(m.group_id) === gId).every((m: any) => m.status === "finished");
                                   
                                   return (
                                     <th
@@ -810,13 +810,13 @@ export const SuperAdminVarModal = ({
                                     {Array.from({ length: 12 }).map((_, i) => {
                                       const gId = String(i + 1);
                                       const bData = user.groupBonuses?.[("GROUP_" + gId)];
-                                      const isFinished = data?.matches?.filter((m: any) => m.group_id === gId).every((m: any) => m.status === "finished");
+                                      const isFinished = data?.matches?.filter((m: any) => String(m.group_id) === gId).every((m: any) => m.status === "finished");
                                       
                                       let team1Id = bData?.team1;
                                       let team2Id = bData?.team2;
 
                                       if (bData && (!team1Id || !team2Id)) {
-                                        const groupMatches = data.matches.filter((m: any) => m.group_id === gId);
+                                        const groupMatches = data.matches.filter((m: any) => String(m.group_id) === gId);
                                         const simulatedMatches = groupMatches.map((m: any) => {
                                           const pred = data.predictions?.find((p: any) => p.user_id === user.id && p.match_id === m.id);
                                           return {
