@@ -156,10 +156,10 @@ export const VarReportModal = ({
 
   // 🏆 Leaderboard de la derecha (Puntos totales Base)
   const officialGroupStandings = useMemo(() => {
-    if (!data?.matches) return {};
-    const map: Record<string, any> = {};
+    if (!data?.matches || data.matches.length === 0) return {};
+    const standings: any = {};
     for (let i = 1; i <= 12; i++) {
-      const gId = String(i);
+      const gId = String.fromCharCode(64 + i);
       const groupMatches = data.matches
         .filter((m: any) => String(m.group_id) === gId)
         .map((m: any) => ({
@@ -574,8 +574,8 @@ export const VarReportModal = ({
                               <>
                                 
                                 {Array.from({ length: 12 }).map((_, i) => {
-                                  const gId = String(i + 1);
-                                  const letter = String.fromCharCode(64 + i + 1);
+                                  const gId = String.fromCharCode(64 + i + 1);
+                                  const letter = gId;
                                   const off = officialGroupStandings[gId];
                                   const isFinished = data?.matches?.filter((m: any) => String(m.group_id) === gId).every((m: any) => m.status === "finished");
                                   
@@ -786,7 +786,7 @@ export const VarReportModal = ({
                                   <>
                                     
                                     {Array.from({ length: 12 }).map((_, i) => {
-                                      const gId = String(i + 1);
+                                      const gId = String.fromCharCode(64 + i + 1);
                                       const bData = user.groupBonuses?.[("GROUP_" + gId)];
                                       const isFinished = data?.matches?.filter((m: any) => String(m.group_id) === gId).every((m: any) => m.status === "finished");
                                       
