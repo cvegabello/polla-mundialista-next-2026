@@ -172,10 +172,10 @@ export const SuperAdminVarModal = ({
         }));
       if (groupMatches.length > 0) {
         const st = calculateStandings(groupMatches, "es");
-        map[gId] = { first: st[0], second: st[1] };
+        standings[gId] = { first: st[0]?.teamId, second: st[1]?.teamId };
       }
     }
-    return map;
+    return standings;
   }, [data?.matches]);
 
   const teamsDict = useMemo(() => {
