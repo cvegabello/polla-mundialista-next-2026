@@ -346,7 +346,7 @@ export async function getVarReportDataAction(userId: string) {
       .from("matches")
       .select(
         `
-        id, match_number, match_date, home_score, away_score, status, winner_id,
+        id, match_number, match_date, home_score, away_score, status, winner_id, group_id,
         home:teams!home_team_id(id, name_es, name_en, flag_code),
         away:teams!away_team_id(id, name_es, name_en, flag_code)
       `,
@@ -385,7 +385,7 @@ export async function getVarReportDataAction(userId: string) {
         const chunk = participantIds.slice(i, i + CHUNK_SIZE);
         const { data: bonusesChunk } = await supabase
           .from("bonus_points")
-          .select("user_id, points_won, bonus_type")
+          .select("user_id, points_won, bonus_type, target_team_1, target_team_2")
           .in("user_id", chunk);
         if (bonusesChunk) {
           allBonuses = [...allBonuses, ...bonusesChunk];
@@ -394,24 +394,18 @@ export async function getVarReportDataAction(userId: string) {
       bonusPoints = allBonuses;
     }
 
-    // 🏆 CAMBIO 2: Buscamos TODOS los equipos campeones elegidos por el grupo
-    const allChampIds = new Set();
-    participants?.forEach((p) => {
-      if (p.champion_pick_1) allChampIds.add(p.champion_pick_1);
-      if (p.champion_pick_2) allChampIds.add(p.champion_pick_2);
-    });
+    // 🏆 Obtenemos todos los equipos para mapear en el frontend
+    const { data: teamsData } = await supabase
+      .from("teams")
+      .select("id, name_es, name_en, flag_code, group_id");
+    
+    let allTeams: any[] = teamsData || [];
 
+    // 🏆 CAMBIO 2: Mapeamos los campeones
     let champTeamsMap: any = {};
-    if (allChampIds.size > 0) {
-      const { data: tData } = await supabase
-        .from("teams")
-        .select("id, name_es, name_en, flag_code")
-        .in("id", Array.from(allChampIds));
-
-      tData?.forEach((t) => {
-        champTeamsMap[t.id] = t;
-      });
-    }
+    allTeams.forEach((t) => {
+      champTeamsMap[t.id] = t;
+    });
 
     const getFlagUrl = (code?: string) =>
       code && !code.includes("_rep_")
@@ -493,12 +487,13 @@ export async function getVarReportDataAction(userId: string) {
       success: true,
       data: {
         pollaName,
-        participants: enrichedParticipants || [], // 👈 Va enriquecido con banderas
-        matches: matches || [],
+        participants: enrichedParticipants,
+        matches,
         predictions,
-        scoreConfig,
         bonusPoints,
+        scoreConfig,
         championPicks,
+        teams: allTeams,
       },
     };
   } catch (error: any) {

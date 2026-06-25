@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { getSuperAdminVarReportAction, getAllPollasAction } from "@/lib/actions/super-admin-actions";
-import { X, RefreshCw, Maximize2, Minimize2 } from "lucide-react";
+import { X, RefreshCw, Maximize2, Minimize2, CheckCircle2 } from "lucide-react";
 import { DICTIONARY, Language } from "@/components/constants/dictionary";
+import { calculateStandings } from "@/utils/standings";
 
 interface SuperAdminVarModalProps {
   isOpen: boolean;
@@ -157,6 +158,35 @@ export const SuperAdminVarModal = ({
   }, [data?.matches, selectedDate]);
 
   // 🏆 Leaderboard de la derecha (Puntos totales Base)
+  const officialGroupStandings = useMemo(() => {
+    if (!data?.matches) return {};
+    const map: Record<string, any> = {};
+    for (let i = 1; i <= 12; i++) {
+      const gId = String(i);
+      const groupMatches = data.matches
+        .filter((m: any) => m.group_id === gId)
+        .map((m: any) => ({
+          ...m,
+          home_team: m.home,
+          away_team: m.away,
+        }));
+      if (groupMatches.length > 0) {
+        const st = calculateStandings(groupMatches, "es");
+        map[gId] = { first: st[0], second: st[1] };
+      }
+    }
+    return map;
+  }, [data?.matches]);
+
+  const teamsDict = useMemo(() => {
+    if (!data?.teams) return {};
+    const dict: Record<string, any> = {};
+    data.teams.forEach((t: any) => {
+      dict[t.id] = t;
+    });
+    return dict;
+  }, [data?.teams]);
+
   const leaderboard = useMemo(() => {
     if (!data?.participants || !data?.predictions) return [];
 
@@ -184,6 +214,7 @@ export const SuperAdminVarModal = ({
 
       let bonusPoints = 0;
       let bonusGrp = 0;
+      let groupBonuses: Record<string, any> = {};
 
       if (data.bonusPoints) {
         data.bonusPoints
@@ -193,6 +224,11 @@ export const SuperAdminVarModal = ({
             bonusPoints += pts;
             if (b.bonus_type && b.bonus_type.includes("GROUP")) {
               bonusGrp += pts;
+              groupBonuses[b.bonus_type] = {
+                points: pts,
+                team1: b.target_team_1,
+                team2: b.target_team_2,
+              };
             }
           });
       }
@@ -206,6 +242,7 @@ export const SuperAdminVarModal = ({
         diffPts,
         winnerPts,
         bonusGrp,
+        groupBonuses,
         champPts,
       };
     });
@@ -557,6 +594,46 @@ export const SuperAdminVarModal = ({
                           {filteredMatches.length > 0 &&
                             selectedDate === "all" && (
                               <>
+                                
+                                {Array.from({ length: 12 }).map((_, i) => {
+                                  const gId = String(i + 1);
+                                  const letter = String.fromCharCode(64 + i + 1);
+                                  const off = officialGroupStandings[gId];
+                                  const isFinished = data?.matches?.filter((m: any) => m.group_id === gId).every((m: any) => m.status === "finished");
+                                  
+                                  return (
+                                    <th
+                                      key={`h-grp-mat-${gId}`}
+                                      rowSpan={2}
+                                      className="px-2 sm:px-4 py-2 sm:py-3 bg-[#0a0500]/90 z-30 border-l border-orange-700/60 min-w-[80px]"
+                                    >
+                                      <span className="text-orange-400 font-black tracking-widest drop-shadow-md">
+                                        BONO GRUPO {letter}
+                                      </span>
+                                      <br />
+                                      {isFinished && off && off.first && off.second ? (
+                                        <div className="flex flex-col items-center gap-1 mt-1 text-[9px] text-cyan-200">
+                                          <span className="flex items-center gap-1">
+                                            1. 
+                                            {off.first.teamId && teamsDict[off.first.teamId] && (
+                                              <img src={`https://flagcdn.com/w20/${teamsDict[off.first.teamId].flag_code?.substring(0, 2)}.png`} alt="flag" className="w-3 h-3 rounded-full object-cover" />
+                                            )}
+                                            {off.first.name.substring(0, 3).toUpperCase()}
+                                          </span>
+                                          <span className="flex items-center gap-1">
+                                            2. 
+                                            {off.second.teamId && teamsDict[off.second.teamId] && (
+                                              <img src={`https://flagcdn.com/w20/${teamsDict[off.second.teamId].flag_code?.substring(0, 2)}.png`} alt="flag" className="w-3 h-3 rounded-full object-cover" />
+                                            )}
+                                            {off.second.name.substring(0, 3).toUpperCase()}
+                                          </span>
+                                        </div>
+                                      ) : (
+                                        <span className="text-[9px] text-orange-700 mt-1">Pendiente</span>
+                                      )}
+                                    </th>
+                                  );
+                                })}
                                 <th
                                   rowSpan={2}
                                   className="px-2 sm:px-4 py-2 sm:py-3 bg-[#0a0500]/90 z-30 border-l border-orange-700/60 min-w-[80px]"
@@ -729,6 +806,72 @@ export const SuperAdminVarModal = ({
                               {filteredMatches.length > 0 &&
                                 selectedDate === "all" && (
                                   <>
+                                    
+                                    {Array.from({ length: 12 }).map((_, i) => {
+                                      const gId = String(i + 1);
+                                      const bData = user.groupBonuses?.[("GROUP_" + gId)];
+                                      const isFinished = data?.matches?.filter((m: any) => m.group_id === gId).every((m: any) => m.status === "finished");
+                                      
+                                      let team1Id = bData?.team1;
+                                      let team2Id = bData?.team2;
+
+                                      if (bData && (!team1Id || !team2Id)) {
+                                        const groupMatches = data.matches.filter((m: any) => m.group_id === gId);
+                                        const simulatedMatches = groupMatches.map((m: any) => {
+                                          const pred = data.predictions?.find((p: any) => p.user_id === user.id && p.match_id === m.id);
+                                          return {
+                                            ...m,
+                                            home_team: m.home,
+                                            away_team: m.away,
+                                            home_score: pred?.pred_home ?? null,
+                                            away_score: pred?.pred_away ?? null,
+                                            winner_id: pred?.predicted_winner ?? null,
+                                          };
+                                        });
+                                        const st = calculateStandings(simulatedMatches, "es");
+                                        team1Id = st[0]?.teamId;
+                                        team2Id = st[1]?.teamId;
+                                      }
+
+                                      let pill = <span className="text-gray-600 font-bold">-</span>;
+                                      if (bData && bData.points > 0) {
+                                        if (bData.points === 10) pill = <span className="text-yellow-400 bg-yellow-950/50 px-1.5 py-0.5 rounded text-[10px] font-black border border-yellow-800 shadow-inner">👑 +10</span>;
+                                        else if (bData.points === 5) pill = <span className="text-gray-300 bg-gray-800/50 px-1.5 py-0.5 rounded text-[10px] font-black border border-gray-600 shadow-inner">🥈 +5</span>;
+                                        else if (bData.points === 2) pill = <span className="text-green-400 bg-green-950/50 px-1.5 py-0.5 rounded text-[10px] font-black border border-green-800 shadow-inner">🎯 +2</span>;
+                                        else pill = <span className="text-cyan-400 bg-cyan-950/50 px-1.5 py-0.5 rounded text-[10px] font-black border border-cyan-800 shadow-inner">+{bData.points}</span>;
+                                      }
+
+                                      return (
+                                        <td
+                                          key={`d-grp-mat-${gId}-${user.id}`}
+                                          className="px-1 py-2 border-l border-orange-800/50 bg-[#0a150a]/40 text-center min-w-[80px] align-middle"
+                                        >
+                                          {isFinished && bData && (team1Id || team2Id) ? (
+                                            <div className="flex flex-col items-center gap-1">
+                                              <div className="flex flex-col items-center gap-1 text-[9px] text-gray-300">
+                                                <span className="flex items-center gap-1">
+                                                  1. 
+                                                  {team1Id && teamsDict[team1Id] && (
+                                                    <img src={`https://flagcdn.com/w20/${teamsDict[team1Id].flag_code?.substring(0, 2)}.png`} alt="flag" className="w-3 h-3 rounded-full object-cover" />
+                                                  )}
+                                                  {team1Id && teamsDict[team1Id] ? teamsDict[team1Id].name_es.substring(0, 3).toUpperCase() : "?"}
+                                                </span>
+                                                <span className="flex items-center gap-1">
+                                                  2. 
+                                                  {team2Id && teamsDict[team2Id] && (
+                                                    <img src={`https://flagcdn.com/w20/${teamsDict[team2Id].flag_code?.substring(0, 2)}.png`} alt="flag" className="w-3 h-3 rounded-full object-cover" />
+                                                  )}
+                                                  {team2Id && teamsDict[team2Id] ? teamsDict[team2Id].name_es.substring(0, 3).toUpperCase() : "?"}
+                                                </span>
+                                              </div>
+                                              {pill}
+                                            </div>
+                                          ) : (
+                                            <div className="flex justify-center">{pill}</div>
+                                          )}
+                                        </td>
+                                      );
+                                    })}
                                     <td className="px-1 py-2 border-l border-orange-800/50 bg-[#0a150a]/40 text-center min-w-[60px] align-middle">
                                       {user.champion1 ? (
                                         <div className="flex flex-col items-center justify-center gap-1">
