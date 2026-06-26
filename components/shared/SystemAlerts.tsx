@@ -21,11 +21,14 @@ interface SystemAlertsProps {
     | "logout"
     | "success"
     | "autosaving"
-    | "autosaved";
+    | "autosaved"
+    | "view_change";
   closeModal: () => void;
   confirmRefresh: () => void;
   proceedWithLogout: (saveFirst: boolean) => void;
+  proceedWithViewChange?: (confirm: boolean) => void;
   lang: Language;
+  currentView?: string;
 }
 
 export const SystemAlerts = ({
@@ -33,7 +36,9 @@ export const SystemAlerts = ({
   closeModal,
   confirmRefresh,
   proceedWithLogout,
+  proceedWithViewChange,
   lang,
+  currentView,
 }: SystemAlertsProps) => {
   const [mounted, setMounted] = useState(false);
 
@@ -80,23 +85,43 @@ export const SystemAlerts = ({
     return createPortal(toastContent, document.body);
   }
 
-  // 🔴 TEXTOS SEGÚN IDIOMA PARA MODALES (Logout / Refresh)
+  // 🔴 TEXTOS SEGÚN IDIOMA PARA MODALES (Logout / Refresh / View Change)
   const isLogout = modalType === "logout";
+  const isViewChange = modalType === "view_change";
+  const isKnockout = currentView && currentView !== "pred_groups";
+
   const title = isLogout
     ? lang === "en"
       ? "Wait! Unsaved Changes"
       : "¡Espera! Cambios sin guardar"
-    : lang === "en"
-      ? "Refresh Warning"
-      : "Advertencia al Refrescar";
+    : isViewChange
+      ? lang === "en"
+        ? "Leave without saving?"
+        : "¿Salir sin guardar?"
+      : lang === "en"
+        ? "Refresh Warning"
+        : "Advertencia al Refrescar";
 
-  const message = isLogout
-    ? lang === "en"
-      ? "You have unsaved predictions. Do you want to save them before logging out?"
-      : "Tienes pronósticos sin guardar. ¿Deseas guardarlos antes de salir de tu cuenta?"
-    : lang === "en"
+  let message = "";
+  if (isLogout) {
+    if (isKnockout) {
+      message = lang === "en"
+        ? "You have unsubmitted predictions. If you log out now, you will lose them. Are you sure you want to log out?"
+        : "Tienes pronósticos sin enviar. Si sales de tu cuenta ahora, los perderás. ¿Estás seguro de que quieres salir?";
+    } else {
+      message = lang === "en"
+        ? "You have unsaved predictions. Do you want to save them before logging out?"
+        : "Tienes pronósticos sin guardar. ¿Deseas guardarlos antes de salir de tu cuenta?";
+    }
+  } else if (isViewChange) {
+    message = lang === "en"
+      ? "You have unsubmitted predictions. If you change views now, you will lose them. Are you sure?"
+      : "Tienes pronósticos sin enviar. Si cambias de pantalla ahora, los perderás. ¿Estás seguro?";
+  } else {
+    message = lang === "en"
       ? "If you refresh the page now, you will lose your recent unsaved predictions. Are you sure?"
       : "Si refrescas la página ahora, perderás tus pronósticos recientes que no has guardado. ¿Estás seguro?";
+  }
 
   // 🟡 MODAL CENTRAL (Para Refresh y Logout)
   const modalContent = (
@@ -116,19 +141,31 @@ export const SystemAlerts = ({
         <div className="flex flex-col w-full gap-3">
           {isLogout ? (
             <>
-              <button
-                onClick={() => proceedWithLogout(true)}
-                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-bold text-slate-900 bg-amber-500 hover:bg-amber-400 transition-colors shadow-lg shadow-amber-500/20"
-              >
-                <Save size={18} />
-                {lang === "en" ? "Save and Logout" : "Guardar y Salir"}
-              </button>
+              {!isKnockout && (
+                <button
+                  onClick={() => proceedWithLogout(true)}
+                  className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-bold text-slate-900 bg-amber-500 hover:bg-amber-400 transition-colors shadow-lg shadow-amber-500/20"
+                >
+                  <Save size={18} />
+                  {lang === "en" ? "Save and Logout" : "Guardar y Salir"}
+                </button>
+              )}
               <button
                 onClick={() => proceedWithLogout(false)}
                 className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-bold text-red-400 bg-slate-800 hover:bg-slate-700 hover:text-red-300 transition-colors border border-red-500/30"
               >
                 <LogOut size={18} />
                 {lang === "en" ? "Logout without saving" : "Salir sin guardar"}
+              </button>
+            </>
+          ) : isViewChange ? (
+            <>
+              <button
+                onClick={() => proceedWithViewChange && proceedWithViewChange(true)}
+                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-bold text-red-400 bg-slate-800 hover:bg-slate-700 hover:text-red-300 transition-colors border border-red-500/30"
+              >
+                <LogOut size={18} />
+                {lang === "en" ? "Leave without saving" : "Salir sin guardar"}
               </button>
             </>
           ) : (

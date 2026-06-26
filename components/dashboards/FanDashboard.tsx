@@ -296,6 +296,7 @@ export const FanDashboard = ({
     closeSystemModal,
     confirmRefresh,
     proceedWithLogout,
+    proceedWithViewChange,
     handleLogoutAttempt,
   } = useFanDashboardLogic(safePredictions, userSession?.id, safeGroups, lang);
 
@@ -1262,6 +1263,8 @@ export const FanDashboard = ({
         closeModal={closeSystemModal}
         confirmRefresh={confirmRefresh}
         proceedWithLogout={proceedWithLogout}
+        proceedWithViewChange={proceedWithViewChange}
+        currentView={currentView}
         lang={lang}
       />
       <AppFooter lang={lang} />

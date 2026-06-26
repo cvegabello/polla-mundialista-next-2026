@@ -58,9 +58,10 @@ export const useFanDashboardLogic = (
   const unsavedPredictions = useRef<Record<string, any>>({});
 
   const [systemModal, setSystemModal] = useState<
-    "none" | "refresh" | "logout" | "success" | "autosaving" | "autosaved"
+    "none" | "refresh" | "logout" | "success" | "autosaving" | "autosaved" | "view_change"
   >("none");
   const logoutActionRef = useRef<(() => void) | null>(null);
+  const pendingViewChangeRef = useRef<string | null>(null);
 
   useEffect(() => {
     const groupMatchIds = new Set<string>();
@@ -308,20 +309,41 @@ export const useFanDashboardLogic = (
     }
   };
 
+  const executeViewChange = (newView: string) => {
+    setCurrentView(newView);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("fanDashboardView", newView);
+    }
+    if (newView === "pred_finals" || newView === "res_finals") {
+      router.refresh();
+    }
+    window.scrollTo(0, 0);
+  };
+
   const handleViewChange = async (newView: string) => {
     if (newView !== currentView) {
       if (hasUnsavedChanges) {
-        await handleManualSave(true);
-      }
-      setCurrentView(newView);
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem("fanDashboardView", newView);
-      }
-
-      if (newView === "pred_finals" || newView === "res_finals") {
-        router.refresh();
+        if (currentView === "pred_groups") {
+          await handleManualSave(true);
+          executeViewChange(newView);
+        } else {
+          pendingViewChangeRef.current = newView;
+          setSystemModal("view_change");
+          return;
+        }
+      } else {
+        executeViewChange(newView);
       }
     }
+  };
+
+  const proceedWithViewChange = (confirm: boolean) => {
+    if (confirm && pendingViewChangeRef.current) {
+      setHasUnsavedChanges(false);
+      unsavedPredictions.current = {};
+      executeViewChange(pendingViewChangeRef.current);
+    }
+    setSystemModal("none");
   };
 
   const handleRefresh = () => {
@@ -598,6 +620,8 @@ export const useFanDashboardLogic = (
     closeSystemModal,
     confirmRefresh,
     proceedWithLogout,
+    proceedWithViewChange,
+    handleViewChange,
     handleLogoutAttempt,
   };
 };
