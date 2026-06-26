@@ -214,9 +214,9 @@ export const FanDashboard = ({
   } | null>(null);
 
   // 🚀 NUEVA VERSIÓN: Envío individual o interceptación del Pick 2
-  const handleOpenKnockoutModal = async (phase: string, matchIds: any[]) => {
+  const handleOpenKnockoutModal = async (phase: string, matchIds: any[], skipValidation?: boolean) => {
     // 1. VALIDACIÓN: Valida solo el/los partido(s) que se pasa(n)
-    if (!validateKnockoutPhase(phase, matchIds)) return;
+    if (!skipValidation && !validateKnockoutPhase(phase, matchIds)) return;
 
     // 2. Lógica de "Bypass" o Interceptación
     // Si NO es r32 O el usuario YA tiene el pick 2 guardado, guardamos directamente
@@ -646,8 +646,10 @@ export const FanDashboard = ({
                             if (!headerSession?.champion_pick_2) {
                               if (hScore && aScore) {
                                 setPendingPrediction({ pId, hScore, aScore, winnerId: winnerId || null });
+                                handleOpenKnockoutModal("r32", [pId], true);
+                              } else {
+                                handleOpenKnockoutModal("r32", [pId]);
                               }
-                              handleOpenKnockoutModal("r32", [pId]);
                               return;
                             }
 
