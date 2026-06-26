@@ -88,6 +88,7 @@ export const SubmitGroupModal = ({
 
         <div className="p-4 bg-black border-t border-orange-900/50 flex flex-col sm:flex-row gap-3">
           <button
+            type="button"
             onClick={onClose}
             disabled={isLoading}
             className="flex-1 py-3 px-4 rounded-xl font-bold text-gray-400 bg-[#111] hover:bg-[#222] hover:text-white transition-colors border border-gray-800 disabled:opacity-50"
@@ -96,6 +97,7 @@ export const SubmitGroupModal = ({
           </button>
 
           <button
+            type="button"
             onClick={() => {
               // 🚀 LA CORRECCIÓN: Aquí sí lo convertimos a número para mandarlo a la BD
               if (selectedTeam !== "") onConfirm(selectedTeam as any);

@@ -98,7 +98,7 @@ export const SubmitZone = ({
             <div className="flex flex-col items-center gap-4 w-full">
               {/* 👇 LA MAGIA DE LOS 4 ESTADOS DEL BOTÓN */}
               <button
-                // 🚀 AQUÍ EL CAMBIO CLAVE: Ya no llama a onSubmit directo, llama a handleOpenModal
+                type="button"
                 onClick={handleOpenModal}
                 disabled={
                   !isComplete || hasUnsavedChanges || isSubmitAllowed === false

@@ -331,6 +331,7 @@ export const BracketMatchCard = ({
                 }
                 onAction(homeScore, awayScore, currentWinner || null);
               }}
+              type="button"
               className="w-full py-1 text-[10px] font-black text-white bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 rounded-md shadow-md uppercase tracking-widest transition-all cursor-pointer"
             >
               {lang === "en" ? "Send Prediction" : "Enviar Pronóstico"}
