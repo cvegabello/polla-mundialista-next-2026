@@ -206,6 +206,12 @@ export const FanDashboard = ({
   const [modalTeams, setModalTeams] = useState<any[]>([]);
   const [isLoadingTeams, setIsLoadingTeams] = useState(false);
   const [currentMatchIdsToSubmit, setCurrentMatchIdsToSubmit] = useState<any[]>([]);
+  const [pendingPrediction, setPendingPrediction] = useState<{
+    pId: string | number;
+    hScore: string;
+    aScore: string;
+    winnerId: string | null;
+  } | null>(null);
 
   // 🚀 NUEVA VERSIÓN: Envío individual o interceptación del Pick 2
   const handleOpenKnockoutModal = async (phase: string, matchIds: any[]) => {
@@ -636,15 +642,20 @@ export const FanDashboard = ({
                           hasPrediction={hasPrediction}
                           onAction={async (hScore, aScore, winnerId) => {
                             const pId = getPhysicalMatchId(match.id);
+                            
+                            if (!headerSession?.champion_pick_2) {
+                              if (hScore && aScore) {
+                                setPendingPrediction({ pId, hScore, aScore, winnerId: winnerId || null });
+                              }
+                              handleOpenKnockoutModal("r32", [pId]);
+                              return;
+                            }
+
                             if (hScore && aScore) {
                               const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
                               if (!saved) return;
                             }
-                            if (!headerSession?.champion_pick_2) {
-                              handleOpenKnockoutModal("r32", [pId]);
-                            } else {
-                              alert("¡Pronóstico guardado exitosamente!");
-                            }
+                            alert("¡Pronóstico guardado exitosamente!");
                           }}
                           lang={lang}
                           onAdvanceTeam={handleAdvanceTeam}
@@ -1223,7 +1234,16 @@ export const FanDashboard = ({
         teams={modalTeams}
         lang={lang}
         isLoading={isSubmitting || isLoadingTeams}
-        onConfirm={(championId) => {
+        onConfirm={async (championId) => {
+          if (pendingPrediction) {
+            await handleSaveSingleKnockoutMatch(
+              pendingPrediction.pId,
+              pendingPrediction.hScore,
+              pendingPrediction.aScore,
+              pendingPrediction.winnerId
+            );
+            setPendingPrediction(null);
+          }
           handleSubmit("r32", currentMatchIdsToSubmit, championId);
           setIsKnockoutModalOpen(false);
         }}
