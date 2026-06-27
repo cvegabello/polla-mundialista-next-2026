@@ -352,7 +352,7 @@ export const useFanDashboardLogic = (
   };
 
   const handleLogoutAttempt = (executeLogout: () => void) => {
-    if (hasUnsavedChanges) {
+    if (hasUnsavedChanges && currentView === "pred_groups") {
       logoutActionRef.current = executeLogout;
       setSystemModal("logout");
     } else executeLogout();
