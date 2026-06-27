@@ -7,7 +7,7 @@ interface AppFooterProps {
 
 export const AppFooter = ({ lang = "es" }: AppFooterProps) => {
   // 👇 Aquí controla la versión manualmente
-  const APP_VERSION = "PROD v5.0.2";
+  const APP_VERSION = "PROD v5.0.3";
 
   // 👇 Aquí pone el nuevo nombre oficial de su app
   const APP_NAME = "TiqueBet";

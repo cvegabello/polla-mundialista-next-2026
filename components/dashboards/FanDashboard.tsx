@@ -659,6 +659,10 @@ export const FanDashboard = ({
                               alert(lang === "en" ? "Please enter the complete score before sending." : "Ingrese el marcador completo antes de enviar.");
                               return;
                             }
+                            if (hScore === aScore && !winnerId) {
+                              alert(lang === "en" ? "You must select a winner in case of a tie." : "Debe seleccionar un ganador en caso de empate.");
+                              return;
+                            }
                             const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
                             if (!saved) return;
                             alert(lang === "en" ? "Prediction saved successfully!" : "¡Pronóstico guardado exitosamente!");
@@ -778,6 +782,10 @@ export const FanDashboard = ({
                               alert(lang === "en" ? "Please enter the complete score before sending." : "Ingrese el marcador completo antes de enviar.");
                               return;
                             }
+                            if (hScore === aScore && !winnerId) {
+                              alert(lang === "en" ? "You must select a winner in case of a tie." : "Debe seleccionar un ganador en caso de empate.");
+                              return;
+                            }
                             const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
                             if (!saved) return;
                             alert(lang === "en" ? "Prediction saved successfully!" : "¡Pronóstico guardado exitosamente!");
@@ -893,6 +901,10 @@ export const FanDashboard = ({
                             const pId = getPhysicalMatchId(match.id);
                             if (!hScore || !aScore) {
                               alert(lang === "en" ? "Please enter the complete score before sending." : "Ingrese el marcador completo antes de enviar.");
+                              return;
+                            }
+                            if (hScore === aScore && !winnerId) {
+                              alert(lang === "en" ? "You must select a winner in case of a tie." : "Debe seleccionar un ganador en caso de empate.");
                               return;
                             }
                             const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
@@ -1012,6 +1024,10 @@ export const FanDashboard = ({
                               alert(lang === "en" ? "Please enter the complete score before sending." : "Ingrese el marcador completo antes de enviar.");
                               return;
                             }
+                            if (hScore === aScore && !winnerId) {
+                              alert(lang === "en" ? "You must select a winner in case of a tie." : "Debe seleccionar un ganador en caso de empate.");
+                              return;
+                            }
                             const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
                             if (!saved) return;
                             alert(lang === "en" ? "Prediction saved successfully!" : "¡Pronóstico guardado exitosamente!");
@@ -1129,6 +1145,10 @@ export const FanDashboard = ({
                             const pId = getPhysicalMatchId(match.id);
                             if (!hScore || !aScore) {
                               alert(lang === "en" ? "Please enter the complete score before sending." : "Ingrese el marcador completo antes de enviar.");
+                              return;
+                            }
+                            if (hScore === aScore && !winnerId) {
+                              alert(lang === "en" ? "You must select a winner in case of a tie." : "Debe seleccionar un ganador en caso de empate.");
                               return;
                             }
                             const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
