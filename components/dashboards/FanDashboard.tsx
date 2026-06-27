@@ -655,10 +655,12 @@ export const FanDashboard = ({
                               return;
                             }
 
-                            if (hScore && aScore) {
-                              const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
-                              if (!saved) return;
+                            if (!hScore || !aScore) {
+                              alert(lang === "en" ? "Please enter the complete score before sending." : "Ingrese el marcador completo antes de enviar.");
+                              return;
                             }
+                            const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
+                            if (!saved) return;
                             alert(lang === "en" ? "Prediction saved successfully!" : "¡Pronóstico guardado exitosamente!");
                           }}
                           lang={lang}
@@ -772,10 +774,12 @@ export const FanDashboard = ({
                           hasPrediction={hasPrediction}
                           onAction={async (hScore, aScore, winnerId) => {
                             const pId = getPhysicalMatchId(match.id);
-                            if (hScore && aScore) {
-                              const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
-                              if (!saved) return;
+                            if (!hScore || !aScore) {
+                              alert(lang === "en" ? "Please enter the complete score before sending." : "Ingrese el marcador completo antes de enviar.");
+                              return;
                             }
+                            const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
+                            if (!saved) return;
                             alert(lang === "en" ? "Prediction saved successfully!" : "¡Pronóstico guardado exitosamente!");
                           }}
                           lang={lang}
@@ -887,10 +891,12 @@ export const FanDashboard = ({
                           hasPrediction={hasPrediction}
                           onAction={async (hScore, aScore, winnerId) => {
                             const pId = getPhysicalMatchId(match.id);
-                            if (hScore && aScore) {
-                              const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
-                              if (!saved) return;
+                            if (!hScore || !aScore) {
+                              alert(lang === "en" ? "Please enter the complete score before sending." : "Ingrese el marcador completo antes de enviar.");
+                              return;
                             }
+                            const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
+                            if (!saved) return;
                             alert(lang === "en" ? "Prediction saved successfully!" : "¡Pronóstico guardado exitosamente!");
                           }}
                           lang={lang}
@@ -1002,10 +1008,12 @@ export const FanDashboard = ({
                           hasPrediction={hasPrediction}
                           onAction={async (hScore, aScore, winnerId) => {
                             const pId = getPhysicalMatchId(match.id);
-                            if (hScore && aScore) {
-                              const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
-                              if (!saved) return;
+                            if (!hScore || !aScore) {
+                              alert(lang === "en" ? "Please enter the complete score before sending." : "Ingrese el marcador completo antes de enviar.");
+                              return;
                             }
+                            const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
+                            if (!saved) return;
                             alert(lang === "en" ? "Prediction saved successfully!" : "¡Pronóstico guardado exitosamente!");
                           }}
                           lang={lang}
@@ -1119,10 +1127,12 @@ export const FanDashboard = ({
                           hasPrediction={hasPrediction}
                           onAction={async (hScore, aScore, winnerId) => {
                             const pId = getPhysicalMatchId(match.id);
-                            if (hScore && aScore) {
-                              const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
-                              if (!saved) return;
+                            if (!hScore || !aScore) {
+                              alert(lang === "en" ? "Please enter the complete score before sending." : "Ingrese el marcador completo antes de enviar.");
+                              return;
                             }
+                            const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
+                            if (!saved) return;
                             alert(lang === "en" ? "Prediction saved successfully!" : "¡Pronóstico guardado exitosamente!");
                           }}
                           lang={lang}
