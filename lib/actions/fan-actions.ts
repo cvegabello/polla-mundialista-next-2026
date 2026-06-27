@@ -369,7 +369,7 @@ export async function getVarReportDataAction(userId: string) {
         const chunk = participantIds.slice(i, i + CHUNK_SIZE);
         const { data: predsChunk, error: chunkErr } = await supabase
           .from("predictions")
-          .select("user_id, match_id, pred_home, pred_away, points_won")
+          .select("user_id, match_id, pred_home, pred_away, points_won, predicted_winner")
           .in("user_id", chunk);
         
         if (chunkErr) {

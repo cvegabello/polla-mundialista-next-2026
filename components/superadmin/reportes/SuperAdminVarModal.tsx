@@ -1,10 +1,14 @@
 "use client";
 
 import React, { useEffect, useState, useMemo, useCallback } from "react";
-import { getSuperAdminVarReportAction, getAllPollasAction } from "@/lib/actions/super-admin-actions";
+import {
+  getSuperAdminVarReportAction,
+  getAllPollasAction,
+} from "@/lib/actions/super-admin-actions";
 import { X, RefreshCw, Maximize2, Minimize2, CheckCircle2 } from "lucide-react";
 import { DICTIONARY, Language } from "@/components/constants/dictionary";
 import { calculateStandings } from "@/utils/standings";
+import { calculateDetailedMatchPoints } from "@/utils/points-engine";
 
 interface SuperAdminVarModalProps {
   isOpen: boolean;
@@ -292,7 +296,7 @@ export const SuperAdminVarModal = ({
     });
   }, [leaderboard, filteredMatches, selectedDate, data?.predictions]);
 
-  const getPointsTag = (points: number | null, config: any) => {
+  const getPointsTag = (points: number | null, config: any, match: any, pred: any) => {
     if (points === null || points === undefined)
       return <span className="text-gray-600 font-bold">-</span>;
     if (points === 0)
@@ -302,33 +306,68 @@ export const SuperAdminVarModal = ({
         </span>
       );
 
+    const isKnockout = Boolean(match.match_number > 48);
+
+    let penaltyText = null;
+    let basePoints = points;
+
+    if (isKnockout && pred && config) {
+      const { penaltyPoints, basePoints: calculatedBase } = calculateDetailedMatchPoints(
+        pred.pred_home,
+        pred.pred_away,
+        pred.predicted_winner,
+        match.home_score,
+        match.away_score,
+        match.winner_id,
+        config
+      );
+      
+      basePoints = calculatedBase;
+      if (penaltyPoints > 0) {
+        penaltyText = (
+          <span className="text-cyan-400 bg-cyan-950/50 px-1.5 py-0.5 rounded text-[10px] font-black border border-cyan-800 shadow-inner ml-1">
+            PEN +{penaltyPoints}
+          </span>
+        );
+      }
+    }
+
     const exactPts = config?.exact_score ?? 5;
     const diffPts = config?.goal_diff ?? 3;
     const winnerPts = config?.winner_only ?? 1;
 
-    if (points === exactPts)
-      return (
+    let baseTag = null;
+
+    if (basePoints === exactPts)
+      baseTag = (
         <span className="text-green-400 bg-green-950/50 px-1.5 py-0.5 rounded text-[10px] font-black border border-green-800 shadow-inner">
-          🎯 +{points}
+          🎯 +{basePoints}
         </span>
       );
-    if (points === diffPts)
-      return (
+    else if (basePoints === diffPts)
+      baseTag = (
         <span className="text-blue-400 bg-blue-950/50 px-1.5 py-0.5 rounded text-[10px] font-black border border-blue-800 shadow-inner">
-          ⭐ +{points}
+          ⭐ +{basePoints}
         </span>
       );
-    if (points === winnerPts)
-      return (
+    else if (basePoints === winnerPts)
+      baseTag = (
         <span className="text-amber-400 bg-amber-950/50 px-1.5 py-0.5 rounded text-[10px] font-black border border-amber-800 shadow-inner">
-          ✅ +{points}
+          ✅ +{basePoints}
+        </span>
+      );
+    else if (basePoints > 0)
+      baseTag = (
+        <span className="text-green-400 bg-green-950/50 px-1.5 py-0.5 rounded text-[10px] font-black border border-green-800 shadow-inner">
+          +{basePoints}
         </span>
       );
 
     return (
-      <span className="text-green-400 bg-green-950/50 px-1.5 py-0.5 rounded text-[10px] font-black border border-green-800 shadow-inner">
-        +{points}
-      </span>
+      <div className="flex items-center justify-center">
+        {baseTag}
+        {penaltyText}
+      </div>
     );
   };
 
@@ -579,9 +618,15 @@ export const SuperAdminVarModal = ({
 
                               {m.home_score !== null &&
                               m.away_score !== null ? (
-                                <div className="text-[10px] text-orange-200 mt-1 bg-orange-950/80 rounded inline-block px-2 py-0.5 border border-orange-700/60 shadow-inner">
-                                  {t.varOfficial}: {m.home_score} -{" "}
-                                  {m.away_score}
+                                <div className="text-[10px] text-orange-200 mt-1 bg-orange-950/80 rounded inline-flex items-center gap-1 px-2 py-0.5 border border-orange-700/60 shadow-inner mx-auto w-fit">
+                                  <span>{t.varOfficial}: {m.home_score} - {m.away_score}</span>
+                                  {m.winner_id && m.home_score === m.away_score && (
+                                    <span className="text-cyan-400 font-black bg-cyan-950/50 px-1 rounded-sm border border-cyan-800">
+                                      {m.winner_id === m.home?.id 
+                                        ? (lang === "en" ? m.home?.name_en : m.home?.name_es)?.substring(0, 3).toUpperCase()
+                                        : (lang === "en" ? m.away?.name_en : m.away?.name_es)?.substring(0, 3).toUpperCase()}
+                                    </span>
+                                  )}
                                 </div>
                               ) : (
                                 <div className="text-[10px] text-orange-600 mt-1 drop-shadow-md">
@@ -792,6 +837,8 @@ export const SuperAdminVarModal = ({
                                         getPointsTag(
                                           pred?.points_won,
                                           data?.scoreConfig,
+                                          m,
+                                          pred
                                         )
                                       ) : (
                                         <span className="text-gray-500/80 font-bold">

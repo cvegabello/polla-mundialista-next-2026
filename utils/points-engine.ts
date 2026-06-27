@@ -8,6 +8,7 @@ export interface ScoreConfig {
   group_single?: number; // Ej: 2
   champ_initial?: number; // Ej: 10
   champ_final?: number; // Ej: 5
+  penalty_winner?: number; // Ej: 3
 }
 
 /**
@@ -54,20 +55,77 @@ export const calculateMatchPoints = (
     predHomeScore === offHomeScore && predAwayScore === offAwayScore;
 
   // 🏆 APLICAMOS LA JERARQUÍA JUSTA (El marcador manda)
+  let basePoints = 0;
 
   if (hitExactScores) {
-    // 🎉 ¡PLENO! Le atinó al marcador. Se lleva todos los puntos, sin importar los penaltis.
-    return config.exact_score; // +5 Puntos
+    // 🎉 ¡PLENO! Le atinó al marcador. Se lleva todos los puntos.
+    basePoints = config.exact_score; // Ej: +5
   } else if (hitBaseOutcome && hitDiff) {
     // ⭐ DIFERENCIA: Le atinó a la diferencia de gol y al ganador/empate en cancha.
-    return config.goal_diff; // +3 Puntos
+    basePoints = config.goal_diff; // Ej: +3
   } else if (hitBaseOutcome) {
     // ✅ GANADOR: Solo le atinó a quién ganó en los 90/120 mins.
-    return config.winner_only; // +1 Punto
+    basePoints = config.winner_only; // Ej: +1
   }
 
-  // Fallo total en el marcador
-  return 0;
+  // 🎯 BONO DE PENALES (Solo aplica si el partido terminó en empate y el usuario pronosticó empate)
+  let penaltyPoints = 0;
+  if (offBaseOutcome === "TIE" && predBaseOutcome === "TIE") {
+    // Ambos pronosticaron y oficializaron empate.
+    // Verificamos si acertó el ganador de los penaltis
+    if (
+      predWinnerId &&
+      offWinnerId &&
+      predWinnerId === offWinnerId &&
+      config.penalty_winner
+    ) {
+      penaltyPoints = config.penalty_winner;
+    }
+  }
+
+  return basePoints + penaltyPoints;
+};
+
+export const calculateDetailedMatchPoints = (
+  predHomeScore: number | null,
+  predAwayScore: number | null,
+  predWinnerId: string | null | undefined,
+  offHomeScore: number | null,
+  offAwayScore: number | null,
+  offWinnerId: string | null | undefined,
+  config: ScoreConfig,
+): { total: number; basePoints: number; penaltyPoints: number } => {
+  if (
+    predHomeScore === null ||
+    predAwayScore === null ||
+    offHomeScore === null ||
+    offAwayScore === null
+  ) {
+    return { total: 0, basePoints: 0, penaltyPoints: 0 };
+  }
+
+  const predDiff = predHomeScore - predAwayScore;
+  const offDiff = offHomeScore - offAwayScore;
+  const predBaseOutcome = predDiff > 0 ? "HOME_WIN" : predDiff < 0 ? "AWAY_WIN" : "TIE";
+  const offBaseOutcome = offDiff > 0 ? "HOME_WIN" : offDiff < 0 ? "AWAY_WIN" : "TIE";
+
+  const hitBaseOutcome = predBaseOutcome === offBaseOutcome;
+  const hitDiff = predDiff === offDiff;
+  const hitExactScores = predHomeScore === offHomeScore && predAwayScore === offAwayScore;
+
+  let basePoints = 0;
+  if (hitExactScores) basePoints = config.exact_score;
+  else if (hitBaseOutcome && hitDiff) basePoints = config.goal_diff;
+  else if (hitBaseOutcome) basePoints = config.winner_only;
+
+  let penaltyPoints = 0;
+  if (offBaseOutcome === "TIE" && predBaseOutcome === "TIE") {
+    if (predWinnerId && offWinnerId && predWinnerId === offWinnerId && config.penalty_winner) {
+      penaltyPoints = config.penalty_winner;
+    }
+  }
+
+  return { total: basePoints + penaltyPoints, basePoints, penaltyPoints };
 };
 
 /**

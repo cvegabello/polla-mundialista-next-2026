@@ -35,7 +35,7 @@ interface BracketMatchCardProps {
   ) => void;
   pointsWon?: number | null;
   pointsCondition?: string | null;
-  officialScore?: { home: number; away: number };
+  officialScore?: { home: number; away: number; winner_id?: string | null };
   hasPrediction?: boolean;
   isUnlocked?: boolean;
   onAction?: (hScore: string, aScore: string, winnerId: string | null) => void;
@@ -236,18 +236,18 @@ export const BracketMatchCard = ({
     if (isSuccess) {
       const cond = (pointsCondition || "").toUpperCase();
       if (cond.includes("EXACT") || cond.includes("PLENO") || pointsWon === 5)
-        label = "EXACTO";
+        label = lang === "en" ? "EXACT" : "EXACTO";
       else if (cond.includes("DIFF") || cond.includes("DIF") || pointsWon === 3)
-        label = "DIF. GOL";
+        label = lang === "en" ? "GOAL DIFF" : "DIF. GOL";
       else if (
-        cond.includes("WINNER") ||
+        cond.includes("WIN") ||
         cond.includes("GANADOR") ||
         pointsWon === 1
       )
-        label = "GANADOR";
-      else label = cond || "ACIERTO";
+        label = lang === "en" ? "WINNER" : "GANADOR";
+      else label = lang === "en" ? "HIT" : cond || "ACIERTO";
     } else {
-      label = "FALLO";
+      label = lang === "en" ? "MISS" : "FALLO";
     }
 
     const displayPoints = isSuccess ? `+${pointsWon}` : `${pointsWon}`;
@@ -344,10 +344,17 @@ export const BracketMatchCard = ({
           <div className="flex justify-center items-center gap-2 mt-2 h-[24px]">
             {officialScore ? (
               <>
-                <div className="px-2 py-px rounded bg-[#8b4432] border border-white/50 shadow-md">
+                <div className="px-2 py-px rounded bg-[#8b4432] border border-white/50 shadow-md flex items-center gap-1">
                   <span className="text-[10px] font-bold text-white tracking-wider ">
-                    OFICIAL: {officialScore.home} - {officialScore.away}
+                    {lang === "en" ? "OFFICIAL" : "OFICIAL"}: {officialScore.home} - {officialScore.away}
                   </span>
+                  {officialScore.winner_id && officialScore.home === officialScore.away && (
+                    <span className="text-[#8b4432] font-black bg-white/90 px-1 rounded-sm border border-white/50 text-[10px]">
+                      {officialScore.winner_id === homeTeam?.id
+                        ? getName(homeTeam)?.substring(0, 3).toUpperCase()
+                        : getName(awayTeam)?.substring(0, 3).toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 {getPointsTag()}
               </>
@@ -361,7 +368,7 @@ export const BracketMatchCard = ({
               <>
                 <div className="px-2 py-[2px] rounded bg-white/5 border border-white/10">
                   <span className="text-[10px] font-bold text-white/40 tracking-wider">
-                    OFICIAL: -
+                    {lang === "en" ? "OFFICIAL" : "OFICIAL"}: -
                   </span>
                 </div>
                 {getPointsTag()}

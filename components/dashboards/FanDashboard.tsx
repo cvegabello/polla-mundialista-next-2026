@@ -617,6 +617,7 @@ export const FanDashboard = ({
                           ? {
                               home: offScore.home_score,
                               away: offScore.away_score,
+                              winner_id: offScore.winner_id,
                             }
                           : undefined;
 
@@ -658,7 +659,7 @@ export const FanDashboard = ({
                               const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
                               if (!saved) return;
                             }
-                            alert("¡Pronóstico guardado exitosamente!");
+                            alert(lang === "en" ? "Prediction saved successfully!" : "¡Pronóstico guardado exitosamente!");
                           }}
                           lang={lang}
                           onAdvanceTeam={handleAdvanceTeam}
@@ -738,6 +739,7 @@ export const FanDashboard = ({
                           ? {
                               home: offScore.home_score,
                               away: offScore.away_score,
+                              winner_id: offScore.winner_id,
                             }
                           : undefined;
 
@@ -774,7 +776,7 @@ export const FanDashboard = ({
                               const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
                               if (!saved) return;
                             }
-                            alert("¡Pronóstico guardado exitosamente!");
+                            alert(lang === "en" ? "Prediction saved successfully!" : "¡Pronóstico guardado exitosamente!");
                           }}
                           lang={lang}
                           onAdvanceTeam={handleAdvanceTeam}
@@ -852,6 +854,7 @@ export const FanDashboard = ({
                           ? {
                               home: offScore.home_score,
                               away: offScore.away_score,
+                              winner_id: offScore.winner_id,
                             }
                           : undefined;
 
@@ -888,7 +891,7 @@ export const FanDashboard = ({
                               const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
                               if (!saved) return;
                             }
-                            alert("¡Pronóstico guardado exitosamente!");
+                            alert(lang === "en" ? "Prediction saved successfully!" : "¡Pronóstico guardado exitosamente!");
                           }}
                           lang={lang}
                           onAdvanceTeam={handleAdvanceTeam}
@@ -966,6 +969,7 @@ export const FanDashboard = ({
                           ? {
                               home: offScore.home_score,
                               away: offScore.away_score,
+                              winner_id: offScore.winner_id,
                             }
                           : undefined;
 
@@ -1002,7 +1006,7 @@ export const FanDashboard = ({
                               const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
                               if (!saved) return;
                             }
-                            alert("¡Pronóstico guardado exitosamente!");
+                            alert(lang === "en" ? "Prediction saved successfully!" : "¡Pronóstico guardado exitosamente!");
                           }}
                           lang={lang}
                           onAdvanceTeam={handleAdvanceTeam}
@@ -1085,6 +1089,7 @@ export const FanDashboard = ({
                           ? {
                               home: offScore.home_score,
                               away: offScore.away_score,
+                              winner_id: offScore.winner_id,
                             }
                           : undefined;
 
@@ -1118,7 +1123,7 @@ export const FanDashboard = ({
                               const saved = await handleSaveSingleKnockoutMatch(pId, hScore, aScore, winnerId);
                               if (!saved) return;
                             }
-                            alert("¡Pronóstico guardado exitosamente!");
+                            alert(lang === "en" ? "Prediction saved successfully!" : "¡Pronóstico guardado exitosamente!");
                           }}
                           lang={lang}
                           onAdvanceTeam={(id, w, isManual) =>
