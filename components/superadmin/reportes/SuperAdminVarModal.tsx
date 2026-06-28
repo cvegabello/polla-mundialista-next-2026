@@ -827,13 +827,13 @@ export const SuperAdminVarModal = ({
                                   <React.Fragment key={`${user.id}-${m.id}`}>
                                     <td className="px-2 py-2 border-r border-orange-900/40 font-mono text-gray-300 text-xs text-center">
                                       {pred?.pred_home ?? "-"}
-                                      {pred?.pred_home !== null && pred?.pred_home === pred?.pred_away && pred?.predicted_winner === m.home_team_id && (
+                                      {pred?.pred_home != null && pred?.pred_home === pred?.pred_away && pred?.predicted_winner && pred?.predicted_winner === m.home?.id && (
                                         <span className="ml-1 text-[10px]" title="Ganador en Penales">⭐</span>
                                       )}
                                     </td>
                                     <td className="px-2 py-2 border-r border-orange-900/40 font-mono text-gray-300 text-xs text-center">
                                       {pred?.pred_away ?? "-"}
-                                      {pred?.pred_away !== null && pred?.pred_home === pred?.pred_away && pred?.predicted_winner === m.away_team_id && (
+                                      {pred?.pred_away != null && pred?.pred_home === pred?.pred_away && pred?.predicted_winner && pred?.predicted_winner === m.away?.id && (
                                         <span className="ml-1 text-[10px]" title="Ganador en Penales">⭐</span>
                                       )}
                                     </td>
