@@ -311,7 +311,7 @@ export const FanDashboard = ({
   };
 
   const formatMatchDate = (dateString?: string) => {
-    if (!dateString) return "";
+    if (!dateString || !isMounted) return "";
     const locale = lang === "es" ? "es-ES" : "en-US";
     return new Date(dateString).toLocaleDateString(locale, {
       month: "short",
