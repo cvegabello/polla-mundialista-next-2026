@@ -149,15 +149,6 @@ export const BracketMatchCard = ({
       setAwayWinner(false);
       if (onAdvanceTeam)
         onAdvanceTeam(matchId, null, isUserInteraction.current);
-      if (onSavePrediction && isUserInteraction.current) {
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = setTimeout(() => {
-          const valH = homeScore === "" ? null : parseInt(homeScore);
-          const valA = awayScore === "" ? null : parseInt(awayScore);
-          onSavePrediction(matchId, valH as any, valA as any, "" as any);
-          isUserInteraction.current = false;
-        }, 1000);
-      }
       return;
     }
 
@@ -195,15 +186,7 @@ export const BracketMatchCard = ({
         ? awayTeam?.id
         : null;
 
-    if (hasWinner && onSavePrediction && isUserInteraction.current) {
-      if (winnerId) {
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = setTimeout(() => {
-          onSavePrediction(matchId, hScore, aScore, winnerId);
-          isUserInteraction.current = false;
-        }, 1000);
-      }
-    }
+    // Ya no se guardan pronósticos automáticamente. Se espera al onAction (botón naranja).
   }, [
     homeScore,
     awayScore,
