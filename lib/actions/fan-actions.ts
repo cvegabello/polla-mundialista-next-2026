@@ -196,9 +196,17 @@ export async function saveKnockoutPredictionAction(
   try {
     const { data: realMatch } = await supabase
       .from("matches")
-      .select("id")
+      .select("id, match_date")
       .or(`id.eq.${matchId},match_number.eq.${matchId}`)
       .single();
+
+    if (realMatch && realMatch.match_date) {
+      const matchTime = new Date(realMatch.match_date).getTime();
+      const now = new Date().getTime();
+      if (now >= matchTime) {
+        return { success: false, error: "El tiempo para ingresar pronósticos ha finalizado." };
+      }
+    }
 
     const physicalId = realMatch ? realMatch.id : parseInt(matchId.toString());
 

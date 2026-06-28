@@ -40,6 +40,7 @@ interface BracketMatchCardProps {
   isUnlocked?: boolean;
   onAction?: (hScore: string, aScore: string, winnerId: string | null) => void;
   hideOfficialAndPoints?: boolean;
+  matchDate?: string;
 }
 
 export const BracketMatchCard = ({
@@ -61,6 +62,7 @@ export const BracketMatchCard = ({
   hasPrediction,
   onAction,
   hideOfficialAndPoints,
+  matchDate,
 }: BracketMatchCardProps) => {
   const getName = (team: TeamProps) => {
     if (lang === "en") return team.name_en || team.name_es || team.name;
@@ -81,6 +83,49 @@ export const BracketMatchCard = ({
   const [awayWinner, setAwayWinner] = useState(
     !!initialWinner && initialWinner === awayTeam?.id,
   );
+  
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [isTimeExpired, setIsTimeExpired] = useState(false);
+
+  useEffect(() => {
+    if (!matchDate || !isUnlocked || hasPrediction) return;
+
+    const targetDate = new Date(matchDate).getTime();
+    
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const diff = targetDate - now;
+      if (diff <= 0) {
+        setIsTimeExpired(true);
+        setTimeLeft(0);
+      } else {
+        setTimeLeft(diff);
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [matchDate, isUnlocked, hasPrediction]);
+
+  const formatTimeLeft = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    
+    const h = hours.toString().padStart(2, '0');
+    const m = minutes.toString().padStart(2, '0');
+    const s = seconds.toString().padStart(2, '0');
+
+    if (days > 0) {
+      return `${days}d ${h}:${m}:${s}`;
+    }
+    return `${h}:${m}:${s}`;
+  };
+
+  const effectivelyLocked = isLocked || isTimeExpired;
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isUserInteraction = useRef(false);
@@ -267,14 +312,14 @@ export const BracketMatchCard = ({
   return (
     <div
       style={style}
-      className={`shrink-0 group relative flex flex-col w-full bg-black/90 backdrop-blur-lg rounded-2xl border overflow-hidden transition-all duration-300 ${containerClasses} pb-2`}
+      className={`shrink-0 group relative flex flex-col w-full bg-black/90 backdrop-blur-lg rounded-xl border overflow-hidden transition-all duration-300 ${containerClasses} pb-1`}
     >
       <div
         className={`absolute left-0 top-0 bottom-0 w-1 ${accentLineClasses}`}
       />
 
       {/* HEADER: Limpio y Centrado */}
-      <div className="flex items-center justify-center px-3 py-1.5 bg-gray-600/20 border-b border-white/20">
+      <div className="flex items-center justify-center px-2 py-1 bg-gray-600/20 border-b border-white/20">
         <div
           className={`px-1.5 py-0.5 rounded-md ${isFinal ? "bg-amber-500/20" : "bg-blue-300"}`}
         >
@@ -286,34 +331,50 @@ export const BracketMatchCard = ({
         </div>
       </div>
 
-      <div className="flex flex-col px-2 py-2 gap-0 flex-grow justify-between">
+      <div className="flex flex-col px-1.5 py-1 gap-0 flex-grow justify-between">
         <div>
           <BracketMatchRow
             seed={getDisplaySeed(homeTeam) || "1A"}
             teamName={getName(homeTeam) || homeTeam.name}
             score={homeScore}
             isWinner={homeWinner}
-            isLocked={isLocked}
+            isLocked={effectivelyLocked}
             onScoreChange={handleUserHomeScore}
             onWinnerChange={handleUserHomeWin}
             isTie={isTie}
           />
 
-          <div className="h-px w-full bg-white/10 my-1" />
+          <div className="h-px w-full bg-white/10 my-[2px]" />
 
           <BracketMatchRow
             seed={getDisplaySeed(awayTeam) || "2B"}
             teamName={getName(awayTeam) || awayTeam.name}
             score={awayScore}
             isWinner={awayWinner}
-            isLocked={isLocked}
+            isLocked={effectivelyLocked}
             onScoreChange={handleUserAwayScore}
             onWinnerChange={handleUserAwayWin}
             isTie={isTie}
           />
         </div>
 
-        {isUnlocked && !hasPrediction && onAction && (
+        {isUnlocked && !hasPrediction && matchDate && !isTimeExpired && timeLeft !== null && (
+          <div className="text-center mt-1">
+            <span className="text-[12px] font-black text-red-500 animate-pulse uppercase tracking-wider drop-shadow-md">
+               {formatTimeLeft(timeLeft)}
+            </span>
+          </div>
+        )}
+
+        {isUnlocked && !hasPrediction && isTimeExpired && (
+          <div className="text-center mt-1">
+            <span className="text-[12px] font-black text-red-500 uppercase tracking-wider drop-shadow-md">
+               {lang === "en" ? "Time Expired" : "Tiempo Agotado"}
+            </span>
+          </div>
+        )}
+
+        {isUnlocked && !hasPrediction && onAction && !isTimeExpired && (
           <div className="px-2 mt-2">
             <button
               onClick={(e) => {

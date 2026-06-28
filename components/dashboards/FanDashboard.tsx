@@ -634,6 +634,7 @@ export const FanDashboard = ({
                         <BracketMatchCard
                           key={match.id}
                           matchId={match.id}
+                          matchDate={getMatchDateFromSchedule(match.id)}
                           matchCode={
                             getMatchDateFromSchedule(match.id)
                               ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
@@ -768,6 +769,7 @@ export const FanDashboard = ({
                         <BracketMatchCard
                           key={match.id}
                           matchId={match.id}
+                          matchDate={getMatchDateFromSchedule(match.id)}
                           matchCode={
                             getMatchDateFromSchedule(match.id)
                               ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
@@ -889,6 +891,7 @@ export const FanDashboard = ({
                         <BracketMatchCard
                           key={match.id}
                           matchId={match.id}
+                          matchDate={getMatchDateFromSchedule(match.id)}
                           matchCode={
                             getMatchDateFromSchedule(match.id)
                               ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
@@ -1010,6 +1013,7 @@ export const FanDashboard = ({
                         <BracketMatchCard
                           key={match.id}
                           matchId={match.id}
+                          matchDate={getMatchDateFromSchedule(match.id)}
                           matchCode={
                             getMatchDateFromSchedule(match.id)
                               ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
@@ -1133,6 +1137,7 @@ export const FanDashboard = ({
                         <BracketMatchCard
                           key={match.id}
                           matchId={match.id}
+                          matchDate={getMatchDateFromSchedule(match.id)}
                           matchCode={
                             getMatchDateFromSchedule(match.id)
                               ? `M${match.id} • ${formatMatchDate(getMatchDateFromSchedule(match.id))}`
